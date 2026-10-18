@@ -1,0 +1,331 @@
+from dataclasses import replace
+from typing import TYPE_CHECKING, ClassVar
+
+from dataclass_initializer import DataclassInitializer
+from omegaconf import DictConfig, OmegaConf
+from open_vocabulary_segmentation import (
+    DetectionThresholds,
+    DetectorSettings,
+    Device,
+    Precision,
+    SegmentationThresholds,
+    SegmenterBackend,
+    SegmenterSettings,
+)
+
+from ..prompting import QueryKind
+from ..recognition import RecognitionTask
+from .compute_device import ComputeDevice
+from .compute_precision import ComputePrecision
+from .detection_model import DetectionModel
+from .model_preset import ModelPreset
+from .model_selection import ModelSelection
+from .profile_option import ProfileOption
+from .recognition_model import RecognitionModel
+
+if TYPE_CHECKING:
+    from .recognizer import Recognizer
+
+
+class SegmentationModel(RecognitionModel):
+    """
+    Open-vocabulary instance segmenter of ``open_vocabulary_segmentation``.
+
+    SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector
+    of the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases
+    themselves. Thresholds of the masks and of the boxes are read at inference time.
+
+    A box-prompted backend accepts the query kinds of its box detector and the others phrases only.
+    """
+
+    TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
+    SECTION_KEY: ClassVar[str] = "segmenter"
+    BOX_DETECTOR_KEY: ClassVar[str] = "box_detector"
+
+    def __init__(self, preset: ModelPreset, settings: SegmenterSettings, box_detector_label: str | None) -> None:
+        """
+        Parameters
+        ----------
+        preset : ModelPreset
+            Preset the settings were read from.
+        settings : SegmenterSettings
+            Library settings, possibly overridden.
+        box_detector_label : str | None
+            Detection preset whose detector replaced the one of the segmentation preset; ``None`` when unchanged.
+        """
+        super().__init__(preset)
+        self._settings: SegmenterSettings = settings
+        self._box_detector_label: str | None = box_detector_label
+
+    @classmethod
+    def from_preset(cls, preset: ModelPreset) -> "SegmentationModel":
+        """
+        Read a segmentation preset, including its nested box detector.
+
+        Parameters
+        ----------
+        preset : ModelPreset
+            YAML preset with a ``segmenter`` section.
+
+        Returns
+        -------
+        SegmentationModel
+            Model of the preset.
+
+        Raises
+        ------
+        KeyError
+            If the section is missing.
+        TypeError
+            If the ``thresholds`` entry is not a mapping.
+        ValueError
+            If the section does not describe valid settings of the preset's backend.
+        """
+        section: DictConfig = preset.read_section(cls.SECTION_KEY)
+        box_section: object = section.get(cls.BOX_DETECTOR_KEY)
+        flat_section: DictConfig = OmegaConf.masked_copy(
+            section, [str(key) for key in section if key not in {cls.BOX_DETECTOR_KEY, "thresholds"}]
+        )
+        backend: SegmenterBackend = SegmenterBackend(str(flat_section["backend"]))
+        thresholds_section: object = section.get("thresholds")
+        if not isinstance(thresholds_section, DictConfig):
+            raise TypeError(f"{preset.label}: 'thresholds' must be a mapping")
+        box_detector: DetectorSettings | None = (
+            DataclassInitializer.build(DetectorSettings, box_section) if isinstance(box_section, DictConfig) else None
+        )
+        settings: SegmenterSettings = SegmenterSettings(
+            backend=backend,
+            weights_path=str(flat_section["weights_path"]),
+            thresholds=DataclassInitializer.build(SegmentationThresholds, thresholds_section),
+            box_detector=box_detector,
+            batch_size=int(flat_section.get("batch_size", 4)),
+            device=Device(str(flat_section.get("device", Device.AUTO.value))),
+            precision=Precision(str(flat_section.get("precision", Precision.FLOAT32.value))),
+        )
+        if backend.value != preset.backend:
+            raise ValueError(f"{preset.label}: preset declares backend {backend.value}")
+        return cls(preset, settings, None)
+
+    @staticmethod
+    def is_box_prompted_backend(backend: str) -> bool:
+        """
+        Whether a segmenter family masks the boxes of a detector.
+
+        Parameters
+        ----------
+        backend : str
+            Segmenter family.
+
+        Returns
+        -------
+        bool
+            True for SAM and SAM 2.
+        """
+        return SegmenterBackend(backend).is_box_prompted
+
+    @property
+    def settings(self) -> SegmenterSettings:
+        """
+        Library settings.
+
+        Returns
+        -------
+        SegmenterSettings
+            Settings with overrides applied.
+        """
+        return self._settings
+
+    @property
+    def is_box_prompted(self) -> bool:
+        """
+        Whether the model masks the boxes of a detector.
+
+        Returns
+        -------
+        bool
+            True for SAM and SAM 2.
+        """
+        return self._settings.box_detector is not None
+
+    @property
+    def box_detector_label(self) -> str | None:
+        """
+        Detection preset replacing the box detector of the preset.
+
+        Returns
+        -------
+        str | None
+            ``None`` when the preset's own detector is used.
+        """
+        return self._box_detector_label
+
+    @property
+    def box_detector_description(self) -> str:
+        """
+        Name of the detector finding the boxes.
+
+        Returns
+        -------
+        str
+            Detection preset, ``"<backend> <weights>"`` of the preset's own detector, or empty without one.
+        """
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        if box_detector is None:
+            return ""
+        if self._box_detector_label is not None:
+            return self._box_detector_label
+        return f"{box_detector.backend.value} {box_detector.weights_path}"
+
+    @property
+    def weights_path(self) -> str:
+        return self._settings.weights_path
+
+    @property
+    def device(self) -> ComputeDevice:
+        return ComputeDevice(self._settings.device.value)
+
+    @property
+    def precision(self) -> ComputePrecision:
+        return ComputePrecision(self._settings.precision.value)
+
+    @property
+    def supported_precisions(self) -> tuple[ComputePrecision, ...]:
+        return tuple(ComputePrecision(precision.value) for precision in Precision)
+
+    @property
+    def batch_size(self) -> int:
+        return self._settings.batch_size
+
+    @property
+    def supported_query_kinds(self) -> frozenset[QueryKind]:
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        if box_detector is None:
+            return frozenset({QueryKind.TEXT})
+        return DetectionModel.query_kinds_of(box_detector.backend)
+
+    @property
+    def options(self) -> tuple[ProfileOption, ...]:
+        options: list[ProfileOption] = [
+            ProfileOption("Conf", self.format_threshold(self._settings.thresholds.confidence_threshold)),
+            ProfileOption("NMS", self.format_threshold(self._settings.thresholds.nms_iou_threshold)),
+        ]
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        if box_detector is not None:
+            options.append(ProfileOption("Boxes", self.box_detector_description))
+            options.append(
+                ProfileOption("Box conf", self.format_threshold(box_detector.thresholds.confidence_threshold))
+            )
+            options.append(ProfileOption("Box NMS", self.format_threshold(box_detector.thresholds.nms_iou_threshold)))
+        return tuple(options)
+
+    def loading_signature(self) -> tuple[str, ...]:
+        signature: list[str] = [
+            self.TASK.value,
+            self._settings.backend.value,
+            self._settings.weights_path,
+            self._settings.device.value,
+            self._settings.precision.value,
+        ]
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        if box_detector is not None:
+            signature.extend(
+                (
+                    box_detector.backend.value,
+                    box_detector.weights_path,
+                    box_detector.device.value,
+                    str(box_detector.is_half_precision_enabled),
+                )
+            )
+        return tuple(signature)
+
+    def as_selection(self) -> ModelSelection:
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        return ModelSelection(
+            task=self.TASK,
+            backend=self.backend,
+            preset_name=self.preset.name,
+            device=self.device,
+            precision=self.precision,
+            confidence_threshold=self._settings.thresholds.confidence_threshold,
+            nms_iou_threshold=self._settings.thresholds.nms_iou_threshold,
+            box_detector_label=self._box_detector_label,
+            box_confidence_threshold=None if box_detector is None else box_detector.thresholds.confidence_threshold,
+        )
+
+    def default_box_confidence(self, box_model: DetectionModel | None) -> float | None:
+        """
+        Box threshold of the detector a selection would use.
+
+        Parameters
+        ----------
+        box_model : DetectionModel | None
+            Detection preset replacing the preset's own detector, or ``None``.
+
+        Returns
+        -------
+        float | None
+            Confidence threshold of that detector; ``None`` when the model masks no boxes.
+        """
+        if not self.is_box_prompted:
+            return None
+        if box_model is not None:
+            return box_model.settings.thresholds.confidence_threshold
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        return None if box_detector is None else box_detector.thresholds.confidence_threshold
+
+    def customized(self, selection: ModelSelection, box_model: DetectionModel | None) -> "SegmentationModel":
+        """
+        Same preset with the overrides of a selection.
+
+        Parameters
+        ----------
+        selection : ModelSelection
+            Device, precision and thresholds to use.
+        box_model : DetectionModel | None
+            Detection preset replacing the preset's own box detector; ignored unless the model masks boxes.
+
+        Returns
+        -------
+        SegmentationModel
+            Model with the overrides applied; the box detector runs on the same device and precision.
+        """
+        device: Device = Device(selection.device.value)
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        box_label: str | None = None
+        if box_detector is not None:
+            if box_model is not None:
+                box_detector = box_model.settings
+                box_label = box_model.preset.label
+            box_detector = replace(
+                box_detector,
+                device=device,
+                is_half_precision_enabled=selection.precision is ComputePrecision.FLOAT16,
+                thresholds=DetectionThresholds(
+                    confidence_threshold=(
+                        box_detector.thresholds.confidence_threshold
+                        if selection.box_confidence_threshold is None
+                        else selection.box_confidence_threshold
+                    ),
+                    nms_iou_threshold=box_detector.thresholds.nms_iou_threshold,
+                ),
+            )
+        settings: SegmenterSettings = replace(
+            self._settings,
+            device=device,
+            precision=Precision(selection.precision.value),
+            thresholds=SegmentationThresholds(
+                confidence_threshold=(
+                    self._settings.thresholds.confidence_threshold
+                    if selection.confidence_threshold is None
+                    else selection.confidence_threshold
+                ),
+                nms_iou_threshold=selection.nms_iou_threshold,
+            ),
+            box_detector=box_detector,
+        )
+        return SegmentationModel(self.preset, settings, box_label)
+
+    def build_recognizer(self) -> "Recognizer":
+        from .segmenter_recognizer import SegmenterRecognizer
+
+        return SegmenterRecognizer(self)

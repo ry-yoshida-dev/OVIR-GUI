@@ -1,0 +1,362 @@
+export type Box = [number, number, number, number];
+
+export type TaskValue = "classification" | "detection" | "segmentation";
+
+export type MediaKindValue = "image" | "video";
+
+export type MediaStateValue = "not_analyzed" | "partial" | "done" | "outdated" | "failed";
+
+export interface PictureKey {
+  path: string;
+  frame: number | null;
+}
+
+export interface MediaEntry {
+  path: string;
+  name: string;
+  kind: MediaKindValue;
+  state: MediaStateValue;
+  color: string;
+  count_text: string;
+  kept_count: number;
+  description: string;
+  frame_count: number | null;
+  fps: number | null;
+}
+
+export interface CurrentPicture {
+  path: string;
+  name: string;
+  kind: MediaKindValue;
+  frame: number | null;
+  version: string | null;
+  width: number | null;
+  height: number | null;
+  frame_count: number | null;
+  fps: number | null;
+  timestamp: string | null;
+  is_sampled: boolean;
+}
+
+export interface PresetEntry {
+  name: string;
+  label: string;
+}
+
+export interface BackendEntry {
+  value: string;
+  presets: PresetEntry[];
+  image_poolings: string[];
+  is_box_prompted: boolean;
+}
+
+export interface DeviceEntry {
+  value: string;
+  is_available: boolean;
+}
+
+export interface PrecisionEntry {
+  value: string;
+  label: string;
+  is_available: boolean;
+}
+
+export interface ModelSelection {
+  backend: string;
+  preset_name: string;
+  device: string;
+  precision: string;
+  confidence_threshold: number | null;
+  nms_iou_threshold: number | null;
+  image_pooling: string | null;
+  box_detector_label: string | null;
+  box_confidence_threshold: number | null;
+  tiling_grid_size: number | null;
+}
+
+export interface TaskState {
+  value: TaskValue;
+  options: { value: TaskValue; title: string }[];
+}
+
+export interface ModelState {
+  backends: BackendEntry[];
+  devices: DeviceEntry[];
+  precisions: PrecisionEntry[];
+  box_detectors: string[];
+  selection: ModelSelection;
+  is_image_prompt_supported: boolean;
+  query_kinds: string[];
+  weights_path: string;
+  description: string;
+}
+
+export interface ProfileOption {
+  name: string;
+  value: string;
+}
+
+export interface Profile {
+  key: string;
+  task: TaskValue;
+  backend: string;
+  model_name: string;
+  weights_path: string;
+  device: string;
+  precision: string;
+  options: ProfileOption[];
+  options_text: string;
+  media_count: number;
+  frame_count: number;
+  outdated_count: number;
+  finding_count: number;
+}
+
+export interface ReferenceEntry {
+  name: string;
+  digest: string;
+  width: number;
+  height: number;
+  boxes: Box[];
+}
+
+export interface ClassEntry {
+  name: string;
+  color: string;
+  phrases: string[];
+  references: ReferenceEntry[];
+}
+
+export interface ClassSetState {
+  name: string;
+  is_edited: boolean;
+  is_unsaved: boolean;
+  names: string[];
+  directory: string;
+}
+
+export interface Thresholds {
+  default_minimum: number;
+  class_minimums: Record<string, number>;
+}
+
+export interface Progress {
+  title: string;
+  processed_count: number;
+  total_count: number;
+  is_blocking: boolean;
+}
+
+export interface ExportSummary {
+  format_name: string;
+  output_directory: string;
+  picture_count: number;
+  finding_count: number;
+  file_count: number;
+}
+
+export interface BackgroundState {
+  scope: string;
+  scopes: { value: string; label: string }[];
+  is_paused: boolean;
+}
+
+export interface WorkspaceState {
+  media: MediaEntry[];
+  current: CurrentPicture | null;
+  background_key: PictureKey | null;
+  task: TaskState;
+  model: ModelState;
+  profiles: Profile[];
+  shown_profile_key: string | null;
+  compared_profile_key: string | null;
+  classes: ClassEntry[];
+  class_set: ClassSetState;
+  thresholds: Thresholds;
+  status: { message: string; serial: number };
+  activity: string;
+  summary: string;
+  progress: Progress | null;
+  is_busy: boolean;
+  background: BackgroundState;
+  sampling: { frame_step: number };
+  last_export: ExportSummary | null;
+  palette: string[];
+  upload_directory: string;
+  accepted_suffixes: string[];
+}
+
+export interface Finding {
+  index: number;
+  class_name: string;
+  query: string;
+  confidence: number;
+  box: Box | null;
+  area: number | null;
+  is_accepted: boolean;
+  is_above_minimum: boolean;
+}
+
+export interface FrameInstance extends Finding {
+  box: Box;
+  polygons: number[][];
+}
+
+export interface ClassScore {
+  class_name: string;
+  score: number;
+  logit: number;
+  query: string;
+}
+
+export interface FramePayload {
+  path: string;
+  frame: number | null;
+  task: TaskValue;
+  result_frame: number | null;
+  is_recognized: boolean;
+  is_exact: boolean;
+  outdated: string | null;
+  findings: (Finding | FrameInstance)[];
+  scores: ClassScore[];
+  compared: { model_name: string; findings: FrameInstance[]; top_class: string | null } | null;
+}
+
+export interface VideoFramesPayload {
+  path: string;
+  frames: FramePayload[];
+}
+
+export interface ResultPicture {
+  path: string;
+  name: string;
+  frame: number | null;
+  seconds: number | null;
+  outdated: string | null;
+  runner_up: string | null;
+  findings: Finding[];
+}
+
+export interface ResultsPayload {
+  profile_key: string | null;
+  task: TaskValue;
+  pictures: ResultPicture[];
+}
+
+export interface TimelinePayload {
+  path: string;
+  frame_count: number;
+  fps: number;
+  frame_step: number;
+  frames: number[];
+  top_classes: (string | null)[];
+  classes: { name: string; color: string; values: number[] }[];
+}
+
+export type ActionStatus = "done" | "rejected" | "needs_approval";
+
+export interface ActionReply {
+  status: ActionStatus;
+  message: string;
+  skipped_class_names: string[];
+}
+
+export interface HistogramPayload {
+  bin_counts: number[];
+  bin_width: number;
+}
+
+export interface ClassStatisticsPayload {
+  class_name: string;
+  picture_count: number;
+  finding_count: number;
+  rejected_count: number;
+  below_minimum_count: number;
+  kept_count: number;
+  mean_confidence: number | null;
+  median_confidence: number | null;
+  histogram: HistogramPayload;
+}
+
+export interface ClassComparisonPayload {
+  class_name: string;
+  shown_count: number;
+  compared_count: number;
+  matched_count: number;
+  shown_only_count: number;
+  compared_only_count: number;
+}
+
+export interface StatisticsPayload {
+  model: string | null;
+  task: TaskValue;
+  statistics: {
+    picture_count: number;
+    recognized_count: number;
+    classes: ClassStatisticsPayload[];
+    histogram: HistogramPayload;
+  } | null;
+  comparison: {
+    picture_count: number;
+    iou_threshold: number;
+    classes: ClassComparisonPayload[];
+  } | null;
+}
+
+export interface ClassSetListEntry {
+  name: string;
+  saved_at: string;
+  is_readable: boolean;
+  class_names: string[];
+  description: string;
+}
+
+export interface ClassSetPreview {
+  name: string;
+  classes: ClassEntry[];
+}
+
+export interface DirectoryListing {
+  path: string;
+  parent: string | null;
+  directories: string[];
+  files: { name: string; kind: MediaKindValue }[];
+  shortcuts: { name: string; path: string }[];
+}
+
+export interface ExportFormat {
+  value: string;
+  label: string;
+  is_confidence_supported: boolean;
+}
+
+export interface ExportPlan {
+  model_name: string;
+  options_text: string;
+  task: TaskValue;
+  picture_count: number;
+  pending_count: number;
+  issue: string;
+  formats: ExportFormat[];
+  scopes: { value: string; label: string; description: string }[];
+  default_directory: string;
+}
+
+export interface ReferenceDraft {
+  draft_id: string;
+  name: string;
+  width: number;
+  height: number;
+}
+
+export interface PictureFindings {
+  path: string;
+  frame: number | null;
+  indices: number[];
+}
+
+export type WorkspaceTopic = "state" | "results" | "class_sets";
+
+export type ServerEvent =
+  | { type: "changed"; topics: WorkspaceTopic[] }
+  | { type: "notice"; level: "info" | "error"; title: string; message: string };
