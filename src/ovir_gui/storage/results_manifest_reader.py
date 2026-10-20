@@ -19,6 +19,7 @@ from ..recognition import (
 from ..recognition.array_types import UInt8Array
 from ..results import ResultLibrary, StoredResult
 from .json_fields import JsonFields, JsonValue
+from .picture_prompt_codec import PicturePromptCodec
 from .results_manifest_writer import ResultsManifestWriter
 
 
@@ -140,6 +141,7 @@ class ResultsManifestReader:
                 QueryKind(JsonFields.string_of(kind, "query kind"))
                 for kind in JsonFields.list_of(entry.get("query_kinds", ["text"]), "query_kinds")
             ),
+            is_sequential=JsonFields.boolean_of(entry.get("is_sequential", False), "is_sequential"),
         )
 
     @staticmethod
@@ -178,6 +180,14 @@ class ResultsManifestReader:
                         for phrase in JsonFields.list_of(class_entry.get("phrases"), "phrases")
                     ),
                     reference_boxes=frozenset(boxes),
+                    exemplar_boxes=frozenset(
+                        PicturePromptCodec.exemplar_of(value)
+                        for value in JsonFields.list_of(class_entry.get("exemplars", []), "exemplars")
+                    ),
+                    object_marks=frozenset(
+                        PicturePromptCodec.mark_of(value)
+                        for value in JsonFields.list_of(class_entry.get("marks", []), "marks")
+                    ),
                 )
             )
         return PromptSignature(tuple(classes))

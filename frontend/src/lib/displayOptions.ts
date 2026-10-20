@@ -9,6 +9,7 @@ export interface DisplayOptions {
   isMaskBoxShown: boolean;
   maskOpacity: number;
   isScorePanelShown: boolean;
+  isInterpolated: boolean;
 }
 
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
@@ -22,6 +23,7 @@ export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   isMaskBoxShown: false,
   maskOpacity: 0.45,
   isScorePanelShown: true,
+  isInterpolated: true,
 };
 
 export function colorOf(palette: string[], classId: number): string {

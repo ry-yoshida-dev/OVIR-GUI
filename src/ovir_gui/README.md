@@ -8,7 +8,6 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 
 | Component | Description |
 | --- | --- |
-| [\_\_main\_\_.py](./__main__.py) | `main` entry point of the `ovir-gui` command: parses the command line and starts the web server. |
 | [analysis/](./analysis/README.md) | Per-class statistics, confidence histograms and model-to-model comparison of results. |
 | [cli/](./cli/README.md) | `CommandLine` parsing of the `ovir-gui` arguments into `LaunchOptions`. |
 | [export/](./export/README.md) | `ResultExporter` and the writers saving results as tables, box/segmentation labels, masks, class folders and annotated media. |
@@ -22,3 +21,4 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 | [vocabulary/](./vocabulary/README.md) | Class definitions and the class list remembered between runs. |
 | [web/](./web/README.md) | FastAPI application, routes and launcher serving the React frontend. |
 | [workspace/](./workspace/README.md) | `Workspace` state of the open media, classes, inference jobs and exports shared by the web routes. |
+| [\_\_main\_\_.py](./__main__.py) | `main` entry point of the `ovir-gui` command: parses the command line and starts the web server. |

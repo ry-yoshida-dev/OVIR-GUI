@@ -5,14 +5,17 @@ from typing import ClassVar
 
 from ..recognition import RecognitionTask
 from .model_preset import ModelPreset
+from .segmentation_mode import SegmentationMode
 
 
 class PresetCatalog:
     """
     Model presets of every task, discovered from ``<root>/<backend>/<name>.yaml``.
 
-    By default the roots are the ``config`` directories shipped with the three model libraries. Backends are listed in
-    the order the library declares them, and presets of a backend by name.
+    By default the roots are the ``config`` directories shipped with the three model libraries. A nested folder of a
+    task holds one sub-directory per family, read as backend ``"<folder>/<family>"``; the segmentation library keeps
+    its promptable, generation and tracking presets that way. Backends are listed in the order the library declares
+    them, plain backends before nested ones, and presets of a backend by name.
 
     Attributes
     ----------
@@ -29,7 +32,10 @@ class PresetCatalog:
     }
 
     def __init__(
-        self, roots: Mapping[RecognitionTask, Traversable], backend_order: Mapping[RecognitionTask, Sequence[str]]
+        self,
+        roots: Mapping[RecognitionTask, Traversable],
+        backend_order: Mapping[RecognitionTask, Sequence[str]],
+        nested_folders: Mapping[RecognitionTask, Sequence[str]] | None = None,
     ) -> None:
         """
         Parameters
@@ -37,7 +43,9 @@ class PresetCatalog:
         roots : Mapping[RecognitionTask, Traversable]
             Directory of presets of each task, one sub-directory per backend.
         backend_order : Mapping[RecognitionTask, Sequence[str]]
-            Backends of each task in display order; other sub-directories follow by name.
+            Families of each task in display order; other sub-directories follow by name.
+        nested_folders : Mapping[RecognitionTask, Sequence[str]] | None, optional
+            Sub-directories of each task holding one sub-directory per family, in display order; none by default.
 
         Raises
         ------
@@ -49,7 +57,13 @@ class PresetCatalog:
             root: Traversable | None = roots.get(task)
             if root is None or not root.is_dir():
                 continue
-            presets.extend(self._discover(task, root, backend_order.get(task, ())))
+            order: Sequence[str] = backend_order.get(task, ())
+            folders: Sequence[str] = () if nested_folders is None else nested_folders.get(task, ())
+            presets.extend(self._discover(task, root, order, "", frozenset(folders)))
+            for folder in folders:
+                nested_root: Traversable = root.joinpath(folder)
+                if nested_root.is_dir():
+                    presets.extend(self._discover(task, nested_root, order, f"{folder}/", frozenset()))
         if not presets:
             raise FileNotFoundError("no model presets found")
         self.presets: tuple[ModelPreset, ...] = tuple(presets)
@@ -75,6 +89,7 @@ class PresetCatalog:
                 RecognitionTask.DETECTION: [backend.value for backend in DetectorBackend],
                 RecognitionTask.SEGMENTATION: [backend.value for backend in SegmenterBackend],
             },
+            {RecognitionTask.SEGMENTATION: SegmentationMode.nested_folders()},
         )
 
     @property
@@ -152,8 +167,17 @@ class PresetCatalog:
         available: list[str] = [preset.name for preset in self.presets_of(task, backend)]
         raise KeyError(f"no {task.value} preset {backend}/{name}. available: {available}")
 
-    def _discover(self, task: RecognitionTask, root: Traversable, backend_order: Sequence[str]) -> list[ModelPreset]:
-        backend_directories: list[Traversable] = [entry for entry in root.iterdir() if entry.is_dir()]
+    def _discover(
+        self,
+        task: RecognitionTask,
+        root: Traversable,
+        backend_order: Sequence[str],
+        backend_prefix: str,
+        skipped_names: frozenset[str],
+    ) -> list[ModelPreset]:
+        backend_directories: list[Traversable] = [
+            entry for entry in root.iterdir() if entry.is_dir() and entry.name not in skipped_names
+        ]
         ranked: list[Traversable] = sorted(
             backend_directories,
             key=lambda entry: (
@@ -174,7 +198,7 @@ class PresetCatalog:
             presets.extend(
                 ModelPreset(
                     task=task,
-                    backend=backend_directory.name,
+                    backend=f"{backend_prefix}{backend_directory.name}",
                     name=entry.name.removesuffix(self.PRESET_SUFFIX),
                     source=entry,
                 )

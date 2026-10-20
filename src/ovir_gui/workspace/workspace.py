@@ -5,7 +5,7 @@ from typing import ClassVar
 
 from ..analysis import ProfileComparison, ResultStatistics
 from ..export import ExportItem, ExportReport, ExportScope, ExportSelection, ResultExporter
-from ..media import ClassColors, FrameKey, MediaCollection, MediaItem, VideoSampling
+from ..media import ClassColors, FrameKey, MediaCollection, MediaItem, PlaybackProxyWriter, VideoSampling
 from ..models import (
     ModelProfile,
     ModelSelection,
@@ -14,7 +14,17 @@ from ..models import (
     RecognitionOutcome,
     RecognizerSession,
 )
-from ..prompting import LabeledPrompt, PromptChange, PromptSignature, QueryKind, ReferenceBoard
+from ..prompting import (
+    LabeledPrompt,
+    PicturePromptBoard,
+    PicturePrompts,
+    PromptChange,
+    PromptClass,
+    PromptMode,
+    PromptSignature,
+    QueryKind,
+    ReferenceBoard,
+)
 from ..recognition import FrameResult, RecognitionTask
 from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
 from ..review import ClassThresholds
@@ -25,6 +35,7 @@ from .action_status import ActionStatus
 from .background_planner import BackgroundPlanner
 from .background_scope import BackgroundScope
 from .class_workbench import ClassWorkbench
+from .deferred_save import DeferredSave
 from .export_plan import ExportPlan
 from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
@@ -34,9 +45,9 @@ from .job_summary import JobSummary
 from .media_state import MediaState
 from .media_status import MediaStatus
 from .notice import Notice
+from .playback_state import PlaybackState
 from .prompt_preparation import PromptPreparation
 from .run_progress import RunProgress
-from .scheduled_call import ScheduledCall
 from .task_scheduler import TaskScheduler
 from .workspace_observer import WorkspaceObserver
 from .workspace_stores import WorkspaceStores
@@ -54,10 +65,11 @@ class Workspace:
 
     An image is recognized once; a video on its sampled frames (every ``VideoSampling.frame_step``-th frame), and any
     other frame on request. Results are kept per model profile, so switching tasks or models keeps every result.
-    Pictures without an up-to-date result of the selected model are recognized in the background, the shown picture
-    first, as far as the background scope allows; a foreground job (Run, Run Video, Run All, Update Outdated, export)
-    interrupts it after the current mini-batch. Editing the classes keeps every result and reports pictures recognized
-    with other classes as outdated. Results are saved shortly after every change, the session whenever it changes.
+    Images without an up-to-date result of the selected model are recognized in the background, the shown image first,
+    as far as the background scope allows; videos are recognized only when run. A foreground job (Run, Run Video,
+    Run All, Update Outdated, export) interrupts it after the current mini-batch. Editing the classes keeps every
+    result and reports pictures recognized with other classes as outdated. Results are saved shortly after every
+    change, the session whenever it changes.
     """
 
     DEFAULT_CLASS_NAMES: ClassVar[tuple[str, ...]] = ("person", "car", "dog")
@@ -95,9 +107,13 @@ class Workspace:
         self._is_exporting: bool = False
         self._last_export: ExportReport | None = None
         self._pending_export: ExportRequest | None = None
-        self._save_call: ScheduledCall | None = None
-        self._is_save_running: bool = False
-        self._is_save_requested: bool = False
+        self._results_save: DeferredSave[ResultsSnapshot] = DeferredSave(
+            scheduler,
+            self.SAVE_DELAY_SECONDS,
+            lambda: stores.results_store.snapshot(self._library),
+            stores.results_store.write,
+            lambda error: self._inform(f"Could not save the results: {error}"),
+        )
         self._media: dict[Path, MediaItem] = {}
         self._current_key: FrameKey | None = None
         self._sampling: VideoSampling = VideoSampling()
@@ -117,7 +133,13 @@ class Workspace:
             if remembered_classes is None
             else remembered_classes
         )
+        self._workbench.picture_board.replace(stores.picture_prompt_store.load())
+        self._workbench.picture_board.retain_classes(self._workbench.class_names)
+        self._requested_key: FrameKey | None = None
         self._approved_skipped_classes: frozenset[str] = frozenset()
+        self._playback_writer: PlaybackProxyWriter = PlaybackProxyWriter()
+        self._preparing_playback_paths: set[Path] = set()
+        self._failed_playback_paths: set[Path] = set()
         self._planner: BackgroundPlanner = BackgroundPlanner()
         self._engine: InferenceEngine = InferenceEngine(scheduler, self, session)
         self._apply_stored_settings(stores.session_store.load())
@@ -181,6 +203,83 @@ class Workspace:
         if path not in self._media:
             raise KeyError(f"{path} is not open")
         return self._media[path]
+
+    def playback_state(self, path: Path) -> PlaybackState:
+        """
+        Whether an open video has a browser-playable copy.
+
+        Parameters
+        ----------
+        path : Path
+            Open video.
+
+        Returns
+        -------
+        PlaybackState
+            State of its copy; ``NONE`` for an image.
+        """
+        if path in self._preparing_playback_paths:
+            return PlaybackState.PREPARING
+        if path in self._failed_playback_paths:
+            return PlaybackState.FAILED
+        if self._stores.playback_store.existing(path) is not None:
+            return PlaybackState.READY
+        return PlaybackState.NONE
+
+    def playback_path(self, path: Path) -> Path:
+        """
+        File the browser plays for an open video: its playable copy when one exists, else the file itself.
+
+        Parameters
+        ----------
+        path : Path
+            Open video.
+
+        Returns
+        -------
+        Path
+            File to serve.
+
+        Raises
+        ------
+        KeyError
+            If the file is not open.
+        """
+        item: MediaItem = self.media_item(path)
+        return self._stores.playback_store.existing(item.path) or item.path
+
+    def prepare_playback(self, path: Path) -> None:
+        """
+        Encode a browser-playable copy of an open video off the owning thread, unless one exists or is being made.
+
+        Parameters
+        ----------
+        path : Path
+            Open video the browser cannot decode.
+
+        Raises
+        ------
+        KeyError
+            If the file is not open.
+        ValueError
+            If the file is not a video.
+        """
+        item: MediaItem = self.media_item(path)
+        if not item.is_video:
+            raise ValueError(f"{path.name} is not a video.")
+        match self.playback_state(path):
+            case PlaybackState.PREPARING | PlaybackState.READY:
+                return
+            case PlaybackState.NONE | PlaybackState.FAILED:
+                pass
+        self._failed_playback_paths.discard(path)
+        self._preparing_playback_paths.add(path)
+        self._inform(f"The browser cannot play {path.name}; preparing a playable copy ...")
+        self._scheduler.run_blocking(
+            lambda: self._playback_writer.write(item, self._stores.playback_store.path_of(item.path)),
+            lambda _: self._on_playback_prepared(path),
+            lambda error: self._on_playback_failed(path, error),
+        )
 
     @property
     def current_key(self) -> FrameKey | None:
@@ -522,16 +621,27 @@ class Workspace:
         """
         return tuple(profile for profile in self._library.profiles if profile.task is self._task)
 
-    def current_signature(self) -> PromptSignature:
+    def signature_for(self, profile: ModelProfile) -> Callable[[FrameKey], PromptSignature]:
         """
-        What the current classes query.
+        What the current classes and drawings query on each picture, as results of a profile depend on them.
+
+        Parameters
+        ----------
+        profile : ModelProfile
+            Profile whose results are checked; a sequential profile depends on the drawings of whole videos.
 
         Returns
         -------
-        PromptSignature
-            Phrases and reference boxes of every class, whatever the model.
+        Callable[[FrameKey], PromptSignature]
+            Signature of a picture with every query kind, before narrowing to the profile.
         """
-        return self._workbench.reference_board.signature_of(self._workbench.classes)
+        class_signature: PromptSignature = self._workbench.reference_board.signature_of(self._workbench.classes)
+        prompts: PicturePrompts = self._workbench.picture_board.prompts
+
+        def current_of(frame_key: FrameKey) -> PromptSignature:
+            return class_signature.with_drawings(prompts.relevant_to(frame_key, profile.is_sequential))
+
+        return current_of
 
     def expected_keys(self, item: MediaItem) -> tuple[FrameKey, ...]:
         """
@@ -579,9 +689,10 @@ class Workspace:
         PromptChange | None
             ``None`` when it has no result of the shown profile.
         """
-        if self._shown_profile is None:
+        profile: ModelProfile | None = self._shown_profile
+        if profile is None:
             return None
-        return self._library.prompt_change_of(self._shown_profile, frame_key, self.current_signature())
+        return self._library.prompt_change_of(profile, frame_key, self.signature_for(profile)(frame_key))
 
     def media_statuses(self) -> dict[Path, MediaStatus]:
         """
@@ -652,7 +763,6 @@ class Workspace:
         tuple[ProfileSummary, ...]
             Summaries in the order the profiles were added.
         """
-        signature: PromptSignature = self.current_signature()
         summaries: list[ProfileSummary] = []
         for profile in self.task_profiles():
             catalog: ResultCatalog = self._library.catalog_of(profile)
@@ -667,7 +777,7 @@ class Workspace:
                     profile=profile,
                     media_count=len({key.path for key in keys}),
                     frame_count=len(keys),
-                    outdated_count=len(self._library.outdated_keys(profile, signature, keys)),
+                    outdated_count=len(self._library.outdated_keys(profile, self.signature_for(profile), keys)),
                     finding_count=finding_count,
                 )
             )
@@ -971,6 +1081,38 @@ class Workspace:
         edit(self._workbench)
         self._changed(WorkspaceTopic.STATE, WorkspaceTopic.CLASS_SETS)
 
+    def edit_picture_prompts(self, frame_key: FrameKey, edit: Callable[[PicturePromptBoard], object]) -> None:
+        """
+        Change the exemplar boxes or object marks drawn on a picture, remember them, and recognize the shown picture
+        again when the chosen model reads them there.
+
+        Parameters
+        ----------
+        frame_key : FrameKey
+            Picture the edit is drawn on.
+        edit : Callable[[PicturePromptBoard], object]
+            Edit applied to the drawings; an error it raises is passed on and nothing else happens.
+
+        Raises
+        ------
+        KeyError
+            If the picture's file is not open.
+        """
+        self.media_item(frame_key.path)
+        edit(self._workbench.picture_board)
+        try:
+            self._stores.picture_prompt_store.save(self._workbench.picture_board.prompts)
+        except OSError as error:
+            self._inform(f"Could not remember the drawings: {error}")
+        model: RecognitionModel = self.current_model()
+        is_drawing_read: bool = any(kind.is_drawn_on_picture for kind in model.supported_query_kinds)
+        if is_drawing_read and not model.is_sequential and frame_key == self._current_key:
+            self._requested_key = frame_key
+            self._planner.unpin()
+        self._changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
+        self._engine.interrupt_background()
+        self._resume_background()
+
     def run_current(self, is_skipping_approved: bool) -> ActionReply:
         """
         Recognize the shown image or video frame with the chosen model, even when it has a result.
@@ -989,7 +1131,7 @@ class Workspace:
             return self._reject("Open an image or a video first.")
         return self._start(JobPurpose.RUN_CURRENT, (self._current_key,), is_skipping_approved)
 
-    def run_media(self, is_skipping_approved: bool) -> ActionReply:
+    def run_media(self, is_skipping_approved: bool, start_frame: int | None = None) -> ActionReply:
         """
         Recognize every sampled frame of the shown video (or the shown image) lacking an up-to-date result.
 
@@ -997,6 +1139,9 @@ class Workspace:
         ----------
         is_skipping_approved : bool
             Whether the user approved leaving out classes the model cannot query.
+        start_frame : int | None, optional
+            Frame of the video recognized first, so results arrive ahead of playback from there; the frames before it
+            follow. From the first frame when absent.
 
         Returns
         -------
@@ -1009,6 +1154,10 @@ class Workspace:
         pending: tuple[FrameKey, ...] = self._pending_keys(self.current_model().profile(), (item,))
         if not pending:
             return self._reject(f"Every sampled picture of {item.path.name} is up to date.")
+        if start_frame is not None:
+            pending = tuple(
+                sorted(pending, key=lambda key: key.frame_index is not None and key.frame_index < start_frame)
+            )
         return self._start(JobPurpose.RUN_MEDIA, pending, is_skipping_approved)
 
     def run_all(self, is_skipping_approved: bool) -> ActionReply:
@@ -1051,7 +1200,7 @@ class Workspace:
         if catalog is None or profile is None:
             return self._reject("No results are shown.")
         outdated: tuple[FrameKey, ...] = tuple(
-            self._library.outdated_keys(profile, self.current_signature(), self.recognized_keys(catalog))
+            self._library.outdated_keys(profile, self.signature_for(profile), self.recognized_keys(catalog))
         )
         if not outdated:
             return self._reject("No outdated pictures to update.")
@@ -1158,20 +1307,23 @@ class Workspace:
         self._display_profile(profile)
         self._resume_background()
 
-    def remove_profile(self, profile: ModelProfile) -> None:
+    def remove_profiles(self, profiles: tuple[ModelProfile, ...]) -> None:
         """
-        Forget the results of one profile.
+        Forget the results of several profiles at once.
 
         Parameters
         ----------
-        profile : ModelProfile
-            Profile to forget; nothing happens if it is not stored.
+        profiles : tuple[ModelProfile, ...]
+            Profiles to forget; those that are not stored are skipped.
         """
-        self._library.remove(profile)
+        if not profiles:
+            return
+        for profile in profiles:
+            self._library.remove(profile)
         self._schedule_save()
-        if profile == self._compared_profile:
+        if self._compared_profile in profiles:
             self._compared_profile = None
-        if profile == self._shown_profile:
+        if self._shown_profile in profiles:
             remaining: tuple[ModelProfile, ...] = self.task_profiles()
             self._display_profile(remaining[-1] if remaining else None)
             self._planner.unpin()
@@ -1255,27 +1407,14 @@ class Workspace:
         """
         Write the stored results to the data directory soon, off the owning thread.
         """
-        if self._save_call is not None:
-            self._save_call.cancel()
-            self._save_call = None
-        if self._is_save_running:
-            self._is_save_requested = True
-            return
-        snapshot: ResultsSnapshot = self._stores.results_store.snapshot(self._library)
-        self._is_save_running = True
-        self._scheduler.run_blocking(
-            lambda: self._stores.results_store.write(snapshot), self._on_saved, self._on_save_failed
-        )
+        self._results_save.save_soon()
 
     def save_now(self) -> None:
         """
         Write the results and the session at once on the calling thread, e.g. when the application quits.
         """
-        if self._save_call is not None:
-            self._save_call.cancel()
-            self._save_call = None
         try:
-            self._stores.results_store.write(self._stores.results_store.snapshot(self._library))
+            self._results_save.save_now()
         except OSError as error:
             self._inform(f"Could not save the results: {error}")
         self._save_session()
@@ -1333,7 +1472,7 @@ class Workspace:
         """
         profile: ModelProfile = job.profile
         for frame_key, result in zip(frame_keys, outcome.results, strict=True):
-            self._library.record(profile, frame_key, result, job.prompt.signature)
+            self._library.record(profile, frame_key, result, job.prompt.signature_of(frame_key))
         self._schedule_save()
         if self._current_key in frame_keys:
             self._summarize(job, outcome, frame_keys)
@@ -1455,17 +1594,36 @@ class Workspace:
         if profile is None or profile not in self._library:
             return lambda frame_key: False
         catalog: ResultCatalog = self._library.catalog_of(profile)
-        narrowed: PromptSignature = self.current_signature().for_query_kinds(profile.query_kinds)
+        current_of: Callable[[FrameKey], PromptSignature] = self.signature_for(profile)
 
         def is_up_to_date(frame_key: FrameKey) -> bool:
-            change: PromptChange | None = catalog.prompt_change_of(frame_key, narrowed)
+            if frame_key not in catalog:
+                return False
+            change: PromptChange | None = catalog.prompt_change_of(
+                frame_key, current_of(frame_key).for_query_kinds(profile.query_kinds)
+            )
             return change is not None and change.is_unchanged
 
         return is_up_to_date
 
-    def _pending_keys(self, profile: ModelProfile, media: Iterable[MediaItem]) -> tuple[FrameKey, ...]:
+    def _settled_check(self, profile: ModelProfile) -> Callable[[FrameKey], bool]:
         is_up_to_date: Callable[[FrameKey], bool] = self._up_to_date_check(profile)
-        return tuple(key for item in media for key in self.expected_keys(item) if not is_up_to_date(key))
+        if QueryKind.MARK not in profile.query_kinds:
+            return is_up_to_date
+        prompts: PicturePrompts = self._workbench.picture_board.prompts
+        catalog: ResultCatalog | None = self._library.catalog_of(profile) if profile in self._library else None
+
+        def is_settled(frame_key: FrameKey) -> bool:
+            if is_up_to_date(frame_key):
+                return True
+            is_marked: bool = bool(prompts.relevant_to(frame_key, profile.is_sequential).marks)
+            return not is_marked and (catalog is None or frame_key not in catalog)
+
+        return is_settled
+
+    def _pending_keys(self, profile: ModelProfile, media: Iterable[MediaItem]) -> tuple[FrameKey, ...]:
+        is_settled: Callable[[FrameKey], bool] = self._settled_check(profile)
+        return tuple(key for item in media for key in self.expected_keys(item) if not is_settled(key))
 
     def _changed(self, *topics: WorkspaceTopic) -> None:
         changed_topics: frozenset[WorkspaceTopic] = frozenset(topics)
@@ -1526,19 +1684,7 @@ class Workspace:
             self._inform(f"Could not save the session: {error}")
 
     def _schedule_save(self) -> None:
-        if self._save_call is not None:
-            self._save_call.cancel()
-        self._save_call = self._scheduler.call_later(self.SAVE_DELAY_SECONDS, self.save_results)
-
-    def _on_saved(self, _: None) -> None:
-        self._is_save_running = False
-        if self._is_save_requested:
-            self._is_save_requested = False
-            self.save_results()
-
-    def _on_save_failed(self, error: Exception) -> None:
-        self._is_save_running = False
-        self._inform(f"Could not save the results: {error}")
+        self._results_save.schedule()
 
     def _prioritize_shown(self) -> None:
         job: InferenceJob | None = self._engine.running_job
@@ -1558,17 +1704,17 @@ class Workspace:
     def _detect_in_background(self) -> None:
         if self._is_exporting or self.is_busy or not self._engine.is_idle:
             return
-        if not self._workbench.classes or self._current_key is None:
-            return
         model: RecognitionModel = self.current_model()
+        if self._current_key is None or (model.prompt_mode.is_class_list_needed and not self._workbench.classes):
+            return
         profile: ModelProfile = model.profile()
-        keys: tuple[FrameKey, ...] = self._planner.next_keys(
+        is_settled: Callable[[FrameKey], bool] = self._settled_check(profile)
+        keys: tuple[FrameKey, ...] = self._requested_keys(profile, is_settled) or self._planner.next_keys(
             profile,
             self._background_scope,
             self._current_key,
             self.media,
-            self._sampling,
-            self._up_to_date_check(profile),
+            is_settled,
         )
         if not keys:
             return
@@ -1582,41 +1728,96 @@ class Workspace:
             self._switch_to(profile)
 
     def _prepare_prompt(self, model: RecognitionModel, is_skipping_approved: bool) -> PromptPreparation:
+        match model.prompt_mode:
+            case PromptMode.MARKS | PromptMode.AUTOMATIC:
+                return PromptPreparation(prompt=self._labeled_prompt(model, ()))
+            case PromptMode.CLASSES:
+                pass
         supported_kinds: frozenset[QueryKind] = model.supported_query_kinds
+        exemplar_names: frozenset[str] = self._exemplar_class_names()
         definitions: tuple[ClassDefinition, ...] = self._workbench.classes
         board: ReferenceBoard = self._workbench.reference_board
-        skipped_names: tuple[str, ...] = board.reference_only_classes(definitions, supported_kinds)
+        skipped_names: tuple[str, ...] = board.reference_only_classes(definitions, supported_kinds, exemplar_names)
         if skipped_names and len(skipped_names) < len(definitions):
             if frozenset(skipped_names) != self._approved_skipped_classes:
                 if not is_skipping_approved:
                     return PromptPreparation(prompt=None, unapproved_class_names=skipped_names)
                 self._approved_skipped_classes = frozenset(skipped_names)
             definitions = tuple(definition for definition in definitions if definition.name not in skipped_names)
-        issue: str | None = board.prompt_issue(definitions, supported_kinds)
+        issue: str | None = board.prompt_issue(definitions, supported_kinds, exemplar_names)
         if issue is not None:
             return PromptPreparation(prompt=None, issue=issue)
-        return PromptPreparation(prompt=board.build_prompt(definitions, supported_kinds))
+        return PromptPreparation(
+            prompt=self._labeled_prompt(model, board.build_classes(definitions, supported_kinds, exemplar_names))
+        )
 
     def _background_prompt(self, model: RecognitionModel) -> LabeledPrompt | None:
+        match model.prompt_mode:
+            case PromptMode.MARKS | PromptMode.AUTOMATIC:
+                return self._labeled_prompt(model, ())
+            case PromptMode.CLASSES:
+                pass
         supported_kinds: frozenset[QueryKind] = model.supported_query_kinds
+        exemplar_names: frozenset[str] = self._exemplar_class_names()
         definitions: tuple[ClassDefinition, ...] = self._workbench.classes
         board: ReferenceBoard = self._workbench.reference_board
-        skipped_names: tuple[str, ...] = board.reference_only_classes(definitions, supported_kinds)
+        skipped_names: tuple[str, ...] = board.reference_only_classes(definitions, supported_kinds, exemplar_names)
         if skipped_names and frozenset(skipped_names) != self._approved_skipped_classes:
             return None
         kept: tuple[ClassDefinition, ...] = tuple(
             definition for definition in definitions if definition.name not in skipped_names
         )
-        if board.prompt_issue(kept, supported_kinds) is not None:
+        if board.prompt_issue(kept, supported_kinds, exemplar_names) is not None:
             return None
-        return board.build_prompt(kept, supported_kinds)
+        return self._labeled_prompt(model, board.build_classes(kept, supported_kinds, exemplar_names))
+
+    def _labeled_prompt(self, model: RecognitionModel, classes: tuple[PromptClass, ...]) -> LabeledPrompt:
+        return LabeledPrompt(
+            classes=classes,
+            class_signature=self._workbench.reference_board.signature_of(self._workbench.classes),
+            query_kinds=model.supported_query_kinds,
+            picture_prompts=self._workbench.picture_board.prompts.restricted_to(self._media),
+            is_sequential=model.is_sequential,
+        )
+
+    def _exemplar_class_names(self) -> frozenset[str]:
+        return frozenset(box.class_name for box in self._workbench.picture_board.prompts.exemplars if box.is_positive)
+
+    def _requested_keys(self, profile: ModelProfile, is_settled: Callable[[FrameKey], bool]) -> tuple[FrameKey, ...]:
+        requested: FrameKey | None = self._requested_key
+        self._requested_key = None
+        if requested is None or requested.path not in self._media or self._planner.is_paused:
+            return ()
+        return () if is_settled(requested) else (requested,)
+
+    def _sequential_keys(self, frame_keys: tuple[FrameKey, ...]) -> tuple[FrameKey, ...]:
+        prompts: PicturePrompts = self._workbench.picture_board.prompts
+        ordered: list[FrameKey] = []
+        for path in dict.fromkeys(key.path for key in frame_keys):
+            item: MediaItem = self._media[path]
+            if not item.is_video:
+                ordered.append(item.key_at(None))
+                continue
+            keys: set[FrameKey] = {*self.expected_keys(item), *prompts.marked_keys(path)}
+            keys.update(key for key in frame_keys if key.path == path)
+            ordered.extend(sorted(keys, key=lambda key: key.sort_key()))
+        return tuple(ordered)
 
     def _start(self, purpose: JobPurpose, frame_keys: tuple[FrameKey, ...], is_skipping_approved: bool) -> ActionReply:
         if self.is_busy:
             return self._reject("A recognition is already running.")
-        if not self._workbench.classes:
-            return self._reject("Add at least one class to recognize.")
         model: RecognitionModel = self.current_model()
+        if model.prompt_mode.is_class_list_needed and not self._workbench.classes:
+            return self._reject("Add at least one class to recognize.")
+        if model.is_sequential:
+            frame_keys = self._sequential_keys(frame_keys)
+        if model.prompt_mode is PromptMode.MARKS and not any(
+            self._workbench.picture_board.prompts.relevant_to(key, model.is_sequential).marks for key in frame_keys
+        ):
+            return self._reject(
+                f"{model.preset.label} segments the objects you mark: choose a class, then click on an object or "
+                + "drag a box around it in the viewer."
+            )
         preparation: PromptPreparation = self._prepare_prompt(model, is_skipping_approved)
         if preparation.prompt is None:
             if preparation.unapproved_class_names:
@@ -1700,6 +1901,15 @@ class Workspace:
             self._on_export_written,
             self._on_export_failed,
         )
+
+    def _on_playback_prepared(self, path: Path) -> None:
+        self._preparing_playback_paths.discard(path)
+        self._inform(f"Prepared a playable copy of {path.name}.")
+
+    def _on_playback_failed(self, path: Path, error: Exception) -> None:
+        self._preparing_playback_paths.discard(path)
+        self._failed_playback_paths.add(path)
+        self._alert(f"Could not prepare a playable copy of {path.name}", str(error))
 
     def _on_export_written(self, report: ExportReport) -> None:
         self._is_exporting = False

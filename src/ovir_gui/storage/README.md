@@ -2,7 +2,7 @@
 
 ## Overview
 
-Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. The `workspace` package reads these stores at start and writes them after changes.
+Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. The `workspace` package reads these stores at start and writes them after changes.
 
 ## Components
 
@@ -15,6 +15,8 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [class_set_summary.py](./class_set_summary.py) | `ClassSetSummary` holds counts describing a class set, read from its manifest without decoding any image. |
 | [class_threshold_store.py](./class_threshold_store.py) | `ClassThresholdStore` remembers the minimum confidence per class and task in `class_thresholds.json`. |
 | [json_fields.py](./json_fields.py) | `JsonFields` gives typed access to parsed JSON values, raising `TypeError` naming the field on a type mismatch. |
+| [picture_prompt_codec.py](./picture_prompt_codec.py) | `PicturePromptCodec` writes and reads exemplar boxes and object marks as JSON, shared by the results archive and the remembered drawings. |
+| [picture_prompt_store.py](./picture_prompt_store.py) | `PicturePromptStore` remembers the exemplar boxes and object marks drawn on pictures in `picture_prompts.json`. |
 | [results_archive.py](./results_archive.py) | `ResultsArchive` stores every result in one ZIP file with `manifest.json` and, with masks, `masks.npz`. |
 | [results_manifest_reader.py](./results_manifest_reader.py) | `ResultsManifestReader` rebuilds a `ResultLibrary` from a manifest and its mask bits. |
 | [results_manifest_writer.py](./results_manifest_writer.py) | `ResultsManifestWriter` converts a `ResultLibrary` into a `ResultsSnapshot` of a JSON manifest and packed mask bits. |

@@ -3,6 +3,7 @@ from pathlib import Path
 from ..workspace import Workspace
 from .directory_browser import DirectoryBrowser
 from .event_hub import EventHub
+from .object_document_builder import ObjectDocumentBuilder
 from .payload_builder import PayloadBuilder
 from .picture_preview_cache import PicturePreviewCache
 from .reference_draft_store import ReferenceDraftStore
@@ -26,6 +27,7 @@ class WebContext:
         self.preview_cache: PicturePreviewCache = PicturePreviewCache()
         self.payloads: PayloadBuilder = PayloadBuilder(self.preview_cache)
         self.drafts: ReferenceDraftStore = ReferenceDraftStore()
+        self.documents: ObjectDocumentBuilder = ObjectDocumentBuilder()
         self.browser: DirectoryBrowser = DirectoryBrowser(working_directory, {})
 
     @property

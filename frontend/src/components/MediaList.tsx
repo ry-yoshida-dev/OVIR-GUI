@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MediaEntry, PictureKey } from "../api/types";
+import { groupMedia } from "../lib/mediaGroups";
+import { MediaKindGlyph } from "./MediaKindGlyph";
 import { useMenu } from "./Menu";
 
 interface MediaListProps {
@@ -15,6 +17,7 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
   const anchor = useRef<string | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const menu = useMenu();
+  const groups = useMemo(() => groupMedia(media), [media]);
 
   useEffect(() => {
     const open = new Set(media.map((entry) => entry.path));
@@ -85,49 +88,55 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
         }}
       >
         {media.length === 0 && <div className="list-item faint">Nothing open.</div>}
-        {media.map((entry) => {
-          const isCurrent = entry.path === currentPath;
-          const isSelected = selectedPaths.has(entry.path);
-          const isRecognizing = backgroundKey?.path === entry.path;
-          return (
-            <div
-              key={entry.path}
-              data-path={entry.path}
-              className={`list-item${isCurrent ? " current" : ""}${isSelected && !isCurrent ? " selected" : ""}`}
-              title={`${entry.path}\n${entry.description}${entry.frame_count === null ? "" : `\n${entry.frame_count} frames at ${entry.fps?.toFixed(2)} fps`}`}
-              onClick={(event) => onRowClick(event, entry.path)}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                if (!selectedPaths.has(entry.path) && entry.path !== currentPath) {
-                  setSelectedPaths(new Set([entry.path]));
-                }
-                const paths = selectedPaths.has(entry.path) ? effectiveSelection() : [entry.path];
-                menu.open(event.clientX, event.clientY, [
-                  {
-                    label: paths.length === 1 ? "Close" : `Close ${paths.length} Files`,
-                    shortcut: "Del",
-                    onSelect: () => onClose(paths),
-                  },
-                  { label: "Close All", onSelect: () => onClose(media.map((item) => item.path)) },
-                ]);
-              }}
-            >
-              <span
-                className="dot"
-                style={{
-                  borderColor: entry.color,
-                  background: entry.state === "done" || entry.state === "outdated" ? entry.color : "transparent",
-                }}
-              />
-              <span className="kind" title={entry.kind}>
-                {entry.kind === "video" ? "🎞" : "🖼"}
-              </span>
-              <span className="name">{entry.name}</span>
-              {isRecognizing && <span className="faint small">recognizing…</span>}
-              <span className="muted small">{entry.count_text}</span>
+        {groups.map((group) => (
+          <div key={group.kind} className="list-group" role="group" aria-label={group.label}>
+            <div className="list-group-heading">
+              <MediaKindGlyph kind={group.kind} />
+              <span>{group.label}</span>
+              <span className="faint">{group.entries.length}</span>
             </div>
-          );
-        })}
+            {group.entries.map((entry) => {
+              const isCurrent = entry.path === currentPath;
+              const isSelected = selectedPaths.has(entry.path);
+              const isRecognizing = backgroundKey?.path === entry.path;
+              return (
+                <div
+                  key={entry.path}
+                  data-path={entry.path}
+                  className={`list-item${isCurrent ? " current" : ""}${isSelected && !isCurrent ? " selected" : ""}`}
+                  title={`${entry.path}\n${entry.description}${entry.frame_count === null ? "" : `\n${entry.frame_count} frames at ${entry.fps?.toFixed(2)} fps`}`}
+                  onClick={(event) => onRowClick(event, entry.path)}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    if (!selectedPaths.has(entry.path) && entry.path !== currentPath) {
+                      setSelectedPaths(new Set([entry.path]));
+                    }
+                    const paths = selectedPaths.has(entry.path) ? effectiveSelection() : [entry.path];
+                    menu.open(event.clientX, event.clientY, [
+                      {
+                        label: paths.length === 1 ? "Close" : `Close ${paths.length} Files`,
+                        shortcut: "Del",
+                        onSelect: () => onClose(paths),
+                      },
+                      { label: "Close All", onSelect: () => onClose(media.map((item) => item.path)) },
+                    ]);
+                  }}
+                >
+                  <span
+                    className="dot"
+                    style={{
+                      borderColor: entry.color,
+                      background: entry.state === "done" || entry.state === "outdated" ? entry.color : "transparent",
+                    }}
+                  />
+                  <span className="name">{entry.name}</span>
+                  {isRecognizing && <span className="faint small">recognizing…</span>}
+                  <span className="muted small">{entry.count_text}</span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
       {menu.element}
     </>

@@ -13,8 +13,12 @@ from ..workspace import Workspace, WorkspaceStores
 from .access_guard import AccessGuard
 from .asyncio_task_scheduler import AsyncioTaskScheduler
 from .class_routes import ClassRoutes
+from .embedding_policy import EmbeddingPolicy
+from .embedding_routes import EmbeddingRoutes
 from .export_routes import ExportRoutes
+from .framing_headers import FramingHeaders
 from .media_routes import MediaRoutes
+from .picture_prompt_routes import PicturePromptRoutes
 from .recognition_routes import RecognitionRoutes
 from .web_context import WebContext
 
@@ -26,7 +30,8 @@ class WebApplication:
 
     The workspace is created when the server starts, on its event loop, and shut down with it. Errors caused by the
     request, such as an invalid class name or an unknown image, are answered with status 400 and their message. Only a
-    browser that opened the address with the access token can use the server (see ``AccessGuard``).
+    browser that opened the address with the access token can use the server (see ``AccessGuard``), and only pages of
+    the server and of the parent origins of the embedding policy may show it in a frame (see ``FramingHeaders``).
     """
 
     STATIC_DIRECTORY: ClassVar[Path] = Path(__file__).parent / "static"
@@ -44,6 +49,7 @@ class WebApplication:
         working_directory: Path,
         access_token: str,
         cookie_name: str,
+        embedding_policy: EmbeddingPolicy,
         session: RecognizerSession | None = None,
     ) -> None:
         """
@@ -61,10 +67,13 @@ class WebApplication:
             Secret a browser presents once, in the ``token`` query parameter, to use the server.
         cookie_name : str
             Name of the cookie keeping the access token in the browser.
+        embedding_policy : EmbeddingPolicy
+            Pages of other applications allowed to show the interface in a frame.
         session : RecognizerSession | None, optional
             Session keeping the loaded model; a new one by default.
         """
         self._model_selector: ModelSelector = model_selector
+        self._embedding_policy: EmbeddingPolicy = embedding_policy
         self._stores: WorkspaceStores = stores
         self._initial_paths: tuple[Path, ...] = tuple(initial_paths)
         self._session: RecognizerSession | None = session
@@ -95,13 +104,16 @@ class WebApplication:
         """
         application: FastAPI = FastAPI(title="OVIR GUI", lifespan=self._lifespan)
         application.add_middleware(AccessGuard, token=self._access_token, cookie_name=self._cookie_name)
+        application.add_middleware(FramingHeaders, policy=self._embedding_policy)
         for error_type in (ValueError, KeyError, IndexError, OSError):
             application.add_exception_handler(error_type, self._client_error)
         for routes in (
             MediaRoutes(self._context),
             RecognitionRoutes(self._context),
             ClassRoutes(self._context),
+            PicturePromptRoutes(self._context),
             ExportRoutes(self._context),
+            EmbeddingRoutes(self._context, self._embedding_policy),
         ):
             application.include_router(routes.router())
         context: WebContext = self._context

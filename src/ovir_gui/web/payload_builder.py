@@ -13,13 +13,19 @@ from ..models import (
     ClassificationModel,
     ComputeDevice,
     ComputePrecision,
+    ConceptTrackingModel,
+    DetectionModel,
+    MaskGenerationModel,
     ModelProfile,
     ModelSelection,
     ModelSelector,
+    ObjectTrackingModel,
+    PromptableSegmentationModel,
     RecognitionModel,
+    SegmentationMode,
     SegmentationModel,
 )
-from ..prompting import PromptChange, QueryKind, ReferenceBoard
+from ..prompting import FramePrompt, ObjectMark, PicturePrompts, PromptChange, QueryKind, ReferenceBoard
 from ..recognition import Finding, FrameResult, RecognitionTask, RecognizedInstance
 from ..results import ProfileSummary, ResultCatalog, StoredResult
 from ..review import ClassThresholds
@@ -45,6 +51,8 @@ class PayloadBuilder:
     Pictures are named by ``path`` and ``frame`` (``null`` for an image). Boxes and mask outlines are in pixels of the
     full upright picture.
     """
+
+    LISTED_SCORE_COUNT: int = 5
 
     def __init__(self, preview_cache: PicturePreviewCache) -> None:
         """
@@ -77,6 +85,7 @@ class PayloadBuilder:
         return {
             "media": [self._media_entry(item, statuses[item.path]) for item in workspace.media],
             "current": self._current(workspace),
+            "picture_prompt": self._picture_prompt(workspace),
             "background_key": None if background_key is None else self._key(background_key),
             "task": self._task(workspace),
             "model": self._model(workspace),
@@ -174,7 +183,9 @@ class PayloadBuilder:
             },
         }
 
-    def video_frames(self, workspace: Workspace, path: Path) -> JsonObject:
+    def video_frames(
+        self, workspace: Workspace, path: Path, after_frame: int | None = None, until_frame: int | None = None
+    ) -> JsonObject:
         """
         Findings of every recognized frame of a video, drawn over the video while it plays in the browser.
 
@@ -184,6 +195,11 @@ class PayloadBuilder:
             Workspace of the server.
         path : Path
             Open video.
+        after_frame : int | None, optional
+            Only frames after this one, so a browser following a running recognition fetches what is new; from the
+            first frame when absent.
+        until_frame : int | None, optional
+            Only frames up to this one; to the last frame when absent.
 
         Returns
         -------
@@ -200,6 +216,12 @@ class PayloadBuilder:
         _ = workspace.media_item(path).video_info
         catalog: ResultCatalog | None = workspace.shown_catalog()
         frame_indices: list[int] = [] if catalog is None else catalog.frame_indices_of(path)
+        first_frame: int = -1 if after_frame is None else after_frame
+        frame_indices = [
+            frame_index
+            for frame_index in frame_indices
+            if frame_index > first_frame and (until_frame is None or frame_index <= until_frame)
+        ]
         return {
             "path": str(path),
             "frames": [self.frame(workspace, path, frame_index) for frame_index in frame_indices],
@@ -217,7 +239,8 @@ class PayloadBuilder:
         Returns
         -------
         JsonObject
-            Profile key, task and pictures in media and frame order.
+            Profile key, task and pictures in media and frame order. A classified picture carries its best class
+            scores from best to worst and the count of every scored class.
         """
         catalog: ResultCatalog | None = workspace.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
@@ -225,7 +248,7 @@ class PayloadBuilder:
             return {"profile_key": None, "task": workspace.task.value, "pictures": []}
         thresholds: ClassThresholds = workspace.class_thresholds
         outdated: dict[FrameKey, PromptChange] = workspace.library.outdated_keys(
-            profile, workspace.current_signature(), workspace.recognized_keys(catalog)
+            profile, workspace.signature_for(profile), workspace.recognized_keys(catalog)
         )
         pictures: list[JsonValue] = []
         for frame_key in workspace.recognized_keys(catalog):
@@ -234,7 +257,6 @@ class PayloadBuilder:
                 continue
             item: MediaItem = workspace.media_item(frame_key.path)
             change: PromptChange | None = outdated.get(frame_key)
-            ranked = stored.result.ranked_scores
             pictures.append(
                 {
                     "path": str(frame_key.path),
@@ -244,7 +266,11 @@ class PayloadBuilder:
                     if item.video is None or frame_key.frame_index is None
                     else item.video.seconds_of(frame_key.frame_index),
                     "outdated": None if change is None else change.description,
-                    "runner_up": f"{ranked[1].class_name} {ranked[1].score:.2f}" if len(ranked) > 1 else None,
+                    "scores": [
+                        {"class_name": score.class_name, "score": score.score}
+                        for score in stored.result.ranked_scores[: self.LISTED_SCORE_COUNT]
+                    ],
+                    "class_count": len(stored.result.class_scores),
                     "findings": [
                         self._finding_entry(finding, stored, thresholds) for finding in stored.result.findings
                     ],
@@ -510,6 +536,7 @@ class PayloadBuilder:
             "height": height,
             "frame_count": None if item.video is None else item.video.frame_count,
             "fps": None if item.video is None else item.video.fps,
+            "playback": workspace.playback_state(item.path).value,
             "timestamp": None
             if item.video is None or frame_key.frame_index is None
             else item.video.timestamp_of(frame_key.frame_index),
@@ -541,11 +568,35 @@ class PayloadBuilder:
                     else [],
                     "is_box_prompted": task is RecognitionTask.SEGMENTATION
                     and SegmentationModel.is_box_prompted_backend(backend),
+                    "mode": SegmentationMode.of_backend(backend).value
+                    if task is RecognitionTask.SEGMENTATION
+                    else None,
                 }
             )
+        modes: list[JsonValue] = (
+            [
+                {"value": mode.value, "title": mode.title}
+                for mode in dict.fromkeys(
+                    SegmentationMode.of_backend(backend) for backend in selector.backends_of(task)
+                )
+            ]
+            if task is RecognitionTask.SEGMENTATION
+            else []
+        )
         availability = selector.device_availability
         return {
             "backends": backends,
+            "modes": modes,
+            "mode": SegmentationMode.of_backend(selection.backend).value
+            if task is RecognitionTask.SEGMENTATION
+            else None,
+            "prompt_mode": model.prompt_mode.value,
+            "drawing_kinds": [
+                kind.value for kind in QueryKind if kind in model.supported_query_kinds and kind.is_drawn_on_picture
+            ],
+            "is_sequential": model.is_sequential,
+            "is_point_supported": not isinstance(model, PromptableSegmentationModel) or model.is_point_supported,
+            "tuning": self._tuning(model),
             "devices": [
                 {"value": device.value, "is_available": availability.is_available(device)} for device in ComputeDevice
             ],
@@ -575,9 +626,88 @@ class PayloadBuilder:
                 templates: str = ", ".join(f"'{template}'" for template in model.text_templates)
                 return f"Templates: {templates}"
             case SegmentationModel():
-                return f"Boxes from {model.box_detector_description}" if model.is_box_prompted else ""
+                if model.is_box_prompted:
+                    return f"Boxes from {model.box_detector_description}"
+                if QueryKind.EXEMPLAR in model.supported_query_kinds:
+                    return (
+                        "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "
+                        + "a class without phrases is segmented from its boxes alone."
+                    )
+                return ""
+            case PromptableSegmentationModel():
+                if model.is_point_supported:
+                    return "Click on an object (right-click excludes a spot) or drag a box around it."
+                return "Drag a box around each object; this model takes boxes only."
+            case MaskGenerationModel():
+                return "Segments every region of the picture; no classes are needed."
+            case ObjectTrackingModel():
+                return "Mark objects on any frame, then Run Video follows them through the video."
+            case ConceptTrackingModel():
+                return "Detects every instance of the phrases and follows it through the video."
             case _:
                 return ""
+
+    @staticmethod
+    def _tuning(model: RecognitionModel) -> JsonObject:
+        confidence_label: str | None
+        is_nms_shown: bool
+        match model:
+            case DetectionModel():
+                confidence_label, is_nms_shown = "Confidence", True
+            case SegmentationModel():
+                confidence_label, is_nms_shown = "Mask conf.", True
+            case PromptableSegmentationModel():
+                confidence_label, is_nms_shown = "Min IoU", False
+            case MaskGenerationModel():
+                confidence_label, is_nms_shown = "Min IoU", True
+            case ObjectTrackingModel():
+                confidence_label, is_nms_shown = "Min presence", False
+            case ConceptTrackingModel():
+                confidence_label, is_nms_shown = "Conf.", False
+            case _:
+                confidence_label, is_nms_shown = None, False
+        return {"confidence_label": confidence_label, "is_nms_shown": is_nms_shown}
+
+    @staticmethod
+    def _picture_prompt(workspace: Workspace) -> JsonValue:
+        frame_key: FrameKey | None = workspace.current_key
+        if frame_key is None:
+            return None
+        prompts: PicturePrompts = workspace.workbench.picture_board.prompts
+        drawn: FramePrompt = prompts.of(frame_key)
+        media_marks: tuple[ObjectMark, ...] = prompts.of_media(frame_key.path).marks
+        objects: dict[int, tuple[str, list[JsonValue]]] = {}
+        for mark in media_marks:
+            frames: list[JsonValue] = objects.setdefault(mark.object_id, (mark.class_name, []))[1]
+            frames.append(mark.frame_key.frame_index)
+        return {
+            "path": str(frame_key.path),
+            "frame": frame_key.frame_index,
+            "exemplars": [
+                {
+                    "index": index,
+                    "class_name": box.class_name,
+                    "box": list[JsonValue](box.xyxy),
+                    "is_positive": box.is_positive,
+                }
+                for index, box in enumerate(drawn.exemplars)
+            ],
+            "marks": [
+                {
+                    "object_id": mark.object_id,
+                    "class_name": mark.class_name,
+                    "positive_points": [list[JsonValue](point) for point in mark.positive_points],
+                    "negative_points": [list[JsonValue](point) for point in mark.negative_points],
+                    "box": None if mark.box is None else list[JsonValue](mark.box),
+                }
+                for mark in drawn.marks
+            ],
+            "objects": [
+                {"object_id": object_id, "class_name": class_name, "frames": frames}
+                for object_id, (class_name, frames) in sorted(objects.items())
+            ],
+            "next_object_id": workspace.workbench.picture_board.next_object_id(frame_key.path),
+        }
 
     @staticmethod
     def _selection(selection: ModelSelection) -> JsonObject:
@@ -645,6 +775,10 @@ class PayloadBuilder:
             "is_accepted": is_accepted,
             "is_above_minimum": is_above_minimum,
             "polygons": polygons,
+            "color": ClassColors.hex_of(index)
+            if instance.class_name == MaskGenerationModel.REGION_CLASS_NAME
+            and instance.query_label == MaskGenerationModel.QUERY_LABEL
+            else None,
         }
 
     @staticmethod

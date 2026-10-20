@@ -14,6 +14,7 @@ interface VideoControlsProps {
   onSeek: (frame: number, isFinal: boolean) => void;
   onFrameStepChange: (frameStep: number) => void;
   onRunVideo: () => void;
+  onRunLive: (() => void) | null;
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
@@ -29,12 +30,13 @@ export function VideoControls({
   frame,
   timeline,
   frameStep,
-  isClassification,
+  isClassification: isTopClassBanded,
   isBusy,
   isPlaybackShown,
   onSeek,
   onFrameStepChange,
   onRunVideo,
+  onRunLive,
 }: VideoControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -74,7 +76,7 @@ export function VideoControls({
     if (timeline === null) return;
     const positions = recognized.map((_, position) => position);
     const hasFinding = (position: number) =>
-      isClassification
+      isTopClassBanded
         ? timeline.top_classes[position] !== null
         : timeline.classes.some((entry) => (entry.values[position] ?? 0) > 0);
     const candidates = direction > 0 ? positions : [...positions].reverse();
@@ -93,7 +95,7 @@ export function VideoControls({
         timeline={timeline}
         frameCount={frameCount}
         frame={frame}
-        isClassification={isClassification}
+        isTopClassBanded={isTopClassBanded}
         onSeek={onSeek}
       />
       {isPlaybackShown && (
@@ -144,6 +146,16 @@ export function VideoControls({
         <button className="small" disabled={isBusy} onClick={onRunVideo} title="Recognize every sampled frame of this video now">
           Run Video
         </button>
+        {onRunLive !== null && (
+          <button
+            className="small primary"
+            disabled={isBusy}
+            onClick={onRunLive}
+            title="Recognize from the shown frame onward and play the video as results arrive; playback slows down to stay behind recognition"
+          >
+            ▶ Run Live
+          </button>
+        )}
       </div>
     </div>
   );

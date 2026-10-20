@@ -1,6 +1,6 @@
 from collections.abc import Callable, Sequence
 
-from ..media import FrameKey, MediaItem, VideoSampling
+from ..media import FrameKey, MediaItem
 from ..models import ModelProfile
 from .background_scope import BackgroundScope
 
@@ -9,8 +9,9 @@ class BackgroundPlanner:
     """
     Chooses what to recognize next in the background, and remembers what failed.
 
-    The shown media comes first: the shown image, or the sampled frames of the shown video from the shown frame on and
-    then from its start. With ``BackgroundScope.ALL`` the other media follow in list order after the shown one.
+    Only images are recognized in the background; videos are long and costly, so their frames are recognized only when
+    the user runs them. The shown image comes first; with ``BackgroundScope.ALL`` the other images follow in list order
+    after the shown media.
     Pictures that could not be read are skipped for the profile they failed with; a model error pauses background
     recognition until the user does something that may fix it. While the user pins a stored profile other than the
     selected model, nothing runs, so the shown results are not replaced.
@@ -100,11 +101,10 @@ class BackgroundPlanner:
         scope: BackgroundScope,
         current: FrameKey | None,
         media: Sequence[MediaItem],
-        sampling: VideoSampling,
         is_up_to_date: Callable[[FrameKey], bool],
     ) -> tuple[FrameKey, ...]:
         """
-        Pictures of the next background job: the pending pictures of the first media that has any.
+        Picture of the next background job: the first image in order that still needs a result.
 
         Parameters
         ----------
@@ -116,53 +116,29 @@ class BackgroundPlanner:
             Shown picture.
         media : Sequence[MediaItem]
             Open media in list order.
-        sampling : VideoSampling
-            Sampled frames of videos.
         is_up_to_date : Callable[[FrameKey], bool]
             Whether a picture has an up-to-date result of the profile.
 
         Returns
         -------
         tuple[FrameKey, ...]
-            Pictures in recognition order; empty when nothing is to do.
+            The picture to recognize; empty when nothing is to do.
         """
         if self._is_paused or self._is_pinned or scope is BackgroundScope.OFF or current is None:
             return ()
-        paths: list[MediaItem] = list(media)
-        shown_index: int = next((index for index, item in enumerate(paths) if item.path == current.path), -1)
+        items: list[MediaItem] = list(media)
+        shown_index: int = next((index for index, item in enumerate(items) if item.path == current.path), -1)
         if shown_index < 0:
             return ()
-        ordered: list[MediaItem] = [paths[shown_index]]
+        ordered: list[MediaItem] = [items[shown_index]]
         if scope is BackgroundScope.ALL:
-            ordered.extend(paths[shown_index + 1 :])
-            ordered.extend(paths[:shown_index])
+            ordered.extend(items[shown_index + 1 :])
+            ordered.extend(items[:shown_index])
         failed: set[FrameKey] = self._failed_keys.get(profile, set())
         for item in ordered:
-            keys: list[FrameKey] = list(item.frame_keys(sampling))
-            if item is paths[shown_index] and current.frame_index is not None:
-                start: int = next(
-                    (
-                        position
-                        for position, key in enumerate(keys)
-                        if key.frame_index is not None and key.frame_index >= current.frame_index
-                    ),
-                    0,
-                )
-                keys = keys[start:] + keys[:start]
-            pending: tuple[FrameKey, ...] = tuple(key for key in keys if key not in failed and not is_up_to_date(key))
-            if pending:
-                return self._ascending_runs_first(pending)
+            if item.is_video:
+                continue
+            key: FrameKey = item.key_at(None)
+            if key not in failed and not is_up_to_date(key):
+                return (key,)
         return ()
-
-    @staticmethod
-    def _ascending_runs_first(keys: tuple[FrameKey, ...]) -> tuple[FrameKey, ...]:
-        if not keys or keys[0].frame_index is None:
-            return keys
-        end: int = 1
-        while end < len(keys):
-            previous: int | None = keys[end - 1].frame_index
-            following: int | None = keys[end].frame_index
-            if previous is None or following is None or following <= previous:
-                break
-            end += 1
-        return keys[:end]

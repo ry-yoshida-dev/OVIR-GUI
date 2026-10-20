@@ -33,6 +33,8 @@ class ModelProfile:
         Task-specific settings, e.g. thresholds or pooling.
     query_kinds : frozenset[QueryKind]
         Query kinds the model accepts, deciding which edits of the classes make its results outdated.
+    is_sequential : bool
+        Whether the model follows objects through a video, so every frame depends on the drawings of its whole file.
     """
 
     task: RecognitionTask
@@ -43,6 +45,7 @@ class ModelProfile:
     precision: str
     options: tuple[ProfileOption, ...]
     query_kinds: frozenset[QueryKind] = field(default=frozenset({QueryKind.TEXT}), compare=False)
+    is_sequential: bool = field(default=False, compare=False)
 
     @property
     def key(self) -> str:

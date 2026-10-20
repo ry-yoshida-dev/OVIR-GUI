@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from ..media import FrameKey
 from ..models import ModelProfile
@@ -128,7 +128,8 @@ class ResultLibrary:
         frame_key : FrameKey
             Picture to look up.
         current : PromptSignature
-            What the classes query now, with every query kind.
+            What the classes query on the picture now, with every query kind and the drawings the picture depends
+            on with the profile.
 
         Returns
         -------
@@ -141,7 +142,10 @@ class ResultLibrary:
         return catalog.prompt_change_of(frame_key, current.for_query_kinds(profile.query_kinds))
 
     def outdated_keys(
-        self, profile: ModelProfile, current: PromptSignature, frame_keys: Iterable[FrameKey]
+        self,
+        profile: ModelProfile,
+        current_of: Callable[[FrameKey], PromptSignature],
+        frame_keys: Iterable[FrameKey],
     ) -> dict[FrameKey, PromptChange]:
         """
         Pictures recognized with other classes than the current ones.
@@ -150,8 +154,9 @@ class ResultLibrary:
         ----------
         profile : ModelProfile
             Model and options.
-        current : PromptSignature
-            What the classes query now, with every query kind.
+        current_of : Callable[[FrameKey], PromptSignature]
+            What the classes query on a picture now, with every query kind and the drawings the picture depends on
+            with the profile.
         frame_keys : Iterable[FrameKey]
             Pictures to check.
 
@@ -163,10 +168,13 @@ class ResultLibrary:
         catalog: ResultCatalog | None = self._catalogs.get(profile)
         if catalog is None:
             return {}
-        narrowed: PromptSignature = current.for_query_kinds(profile.query_kinds)
         changes: dict[FrameKey, PromptChange] = {}
         for frame_key in frame_keys:
-            change: PromptChange | None = catalog.prompt_change_of(frame_key, narrowed)
+            if frame_key not in catalog:
+                continue
+            change: PromptChange | None = catalog.prompt_change_of(
+                frame_key, current_of(frame_key).for_query_kinds(profile.query_kinds)
+            )
             if change is not None and not change.is_unchanged:
                 changes[frame_key] = change
         return changes

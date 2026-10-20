@@ -3,14 +3,15 @@ from dataclasses import replace
 import pytest
 
 from ovir_gui.models import (
-    ClassificationModel,
     ComputePrecision,
-    DetectionModel,
     ModelPreset,
+    ModelSelector,
     PresetCatalog,
     RecognitionModel,
+    SegmentationMode,
     SegmentationModel,
 )
+from ovir_gui.prompting import PromptMode
 from ovir_gui.recognition import RecognitionTask
 
 CATALOG: PresetCatalog = PresetCatalog.from_packages()
@@ -21,24 +22,35 @@ class TestModelPresets:
     Every preset shipped with the model libraries is read into the settings of the library it belongs to.
     """
 
-    @staticmethod
-    def model_of(preset: ModelPreset) -> RecognitionModel:
-        match preset.task:
-            case RecognitionTask.CLASSIFICATION:
-                return ClassificationModel.from_preset(preset)
-            case RecognitionTask.DETECTION:
-                return DetectionModel.from_preset(preset)
-            case RecognitionTask.SEGMENTATION:
-                return SegmentationModel.from_preset(preset)
-
     def test_every_task_has_presets(self) -> None:
         assert {preset.task for preset in CATALOG.presets} == set(RecognitionTask)
 
+    def test_every_segmentation_mode_has_presets(self) -> None:
+        modes: set[SegmentationMode] = {
+            SegmentationMode.of_backend(backend) for backend in CATALOG.backends_of(RecognitionTask.SEGMENTATION)
+        }
+        assert modes == set(SegmentationMode)
+
     @pytest.mark.parametrize("preset", CATALOG.presets, ids=lambda preset: preset.label)
     def test_preset_is_read(self, preset: ModelPreset) -> None:
-        model: RecognitionModel = self.model_of(preset)
+        model: RecognitionModel = ModelSelector.read_preset(preset)
         assert model.precision in model.supported_precisions
         assert model.loading_signature()
+        assert model.as_selection().backend == preset.backend
+
+    @pytest.mark.parametrize(
+        "preset",
+        [preset for preset in CATALOG.presets if preset.task is RecognitionTask.SEGMENTATION],
+        ids=lambda preset: preset.label,
+    )
+    def test_segmentation_mode_decides_prompting(self, preset: ModelPreset) -> None:
+        model: RecognitionModel = ModelSelector.read_preset(preset)
+        mode: SegmentationMode = SegmentationMode.of_backend(preset.backend)
+        assert model.prompt_mode is mode.prompt_mode
+        assert model.is_sequential is mode.is_sequential
+        assert model.profile().is_sequential is mode.is_sequential
+        if mode.prompt_mode is PromptMode.AUTOMATIC:
+            assert not model.supported_query_kinds
 
     @pytest.mark.parametrize(
         "preset", CATALOG.presets_of(RecognitionTask.SEGMENTATION, "sam3"), ids=lambda preset: preset.label

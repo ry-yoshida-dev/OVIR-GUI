@@ -64,7 +64,7 @@ export class FindingPainter {
   }
 
   private drawInstance(surface: DrawingSurface, transform: ViewportTransform, finding: FrameInstance, isHighlighted: boolean): void {
-    const color = this.colorOf(finding.class_name);
+    const color = finding.color ?? this.colorOf(finding.class_name);
     const lineWidth = this.options.lineWidth;
     const isMaskDrawn = this.isMaskDrawn(finding);
     surface.save();

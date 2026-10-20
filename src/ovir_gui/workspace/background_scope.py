@@ -3,16 +3,16 @@ from enum import Enum
 
 class BackgroundScope(Enum):
     """
-    Which pictures are recognized in the background while the user works.
+    Which images are recognized in the background while the user works; videos are recognized only when run.
 
     Attributes
     ----------
     OFF : str
         None; only what the user runs.
     SHOWN : str
-        The shown image, or the sampled frames of the shown video from the shown frame on.
+        The shown image.
     ALL : str
-        The shown media first, then every other open image and video.
+        The shown image first, then every other open image.
     """
 
     OFF = "off"
@@ -27,12 +27,12 @@ class BackgroundScope(Enum):
         Returns
         -------
         str
-            E.g. ``"Shown media"``.
+            E.g. ``"Shown image"``.
         """
         match self:
             case BackgroundScope.OFF:
                 return "Off"
             case BackgroundScope.SHOWN:
-                return "Shown media"
+                return "Shown image"
             case BackgroundScope.ALL:
-                return "All media"
+                return "All images"

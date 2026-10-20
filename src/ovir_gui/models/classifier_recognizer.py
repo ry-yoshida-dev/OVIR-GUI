@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from open_vocabulary_classification import ClassificationResult, OpenVocabularyClassifier, Prompt
 from PIL import Image
 
+from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
 from ..recognition import ClassScore, FrameResult, ImageSize, RecognitionTask
 from .classification_model import ClassificationModel
@@ -40,7 +41,8 @@ class ClassifierRecognizer(Recognizer):
         self._model = model
         self._classifier.settings = model.settings
 
-    def recognize(self, images: Sequence[Image.Image], prompt: LabeledPrompt) -> list[FrameResult]:
+    def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
+        images: list[Image.Image] = [picture.image for picture in pictures]
         library_prompt: Prompt = self._prompts.build(prompt)
         query_labels: tuple[str, ...] = prompt.query_labels
         results: list[ClassificationResult] = self._classifier.classify_images(

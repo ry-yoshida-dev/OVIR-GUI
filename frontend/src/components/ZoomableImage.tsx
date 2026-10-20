@@ -15,7 +15,8 @@ interface ZoomableImageProps {
   children?: (scale: number) => ReactNode;
   isDrawing?: boolean;
   drawColor?: string;
-  onDrawn?: (box: Box) => void;
+  onDrawn?: (box: Box, isNegative: boolean) => void;
+  onPointClicked?: (point: [number, number], isNegative: boolean) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onBackgroundClick?: () => void;
   hud?: ReactNode;
@@ -33,6 +34,7 @@ export function ZoomableImage({
   isDrawing = false,
   drawColor = "#ffcc00",
   onDrawn,
+  onPointClicked,
   onKeyDown,
   onBackgroundClick,
   hud,
@@ -45,7 +47,7 @@ export function ZoomableImage({
   const isUserZoomed = useRef(false);
   const gesture = useRef<
     | { kind: "pan"; startX: number; startY: number; view: View; hasMoved: boolean }
-    | { kind: "draw"; start: [number, number] }
+    | { kind: "draw"; start: [number, number]; isNegative: boolean }
     | null
   >(null);
 
@@ -115,9 +117,10 @@ export function ZoomableImage({
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
-    if (event.button === 0 && isDrawing) {
+    if ((event.button === 0 || event.button === 2) && isDrawing) {
       const start = toImage(event.clientX, event.clientY);
-      gesture.current = { kind: "draw", start };
+      const isNegative = event.button === 2 || event.ctrlKey || event.metaKey;
+      gesture.current = { kind: "draw", start, isNegative };
       setDraft([start[0], start[1], start[0], start[1]]);
       event.currentTarget.setPointerCapture(event.pointerId);
     }
@@ -153,7 +156,11 @@ export function ZoomableImage({
         Math.max(draft[1], draft[3]),
       ];
       setDraft(null);
-      if (box[2] - box[0] >= MIN_DRAWN_SIDE && box[3] - box[1] >= MIN_DRAWN_SIDE) onDrawn?.(box);
+      if (box[2] - box[0] >= MIN_DRAWN_SIDE && box[3] - box[1] >= MIN_DRAWN_SIDE) {
+        onDrawn?.(box, current.isNegative);
+      } else {
+        onPointClicked?.(current.start, current.isNegative);
+      }
     }
   };
 
@@ -170,7 +177,10 @@ export function ZoomableImage({
         setIsPanning(false);
         setDraft(null);
       }}
-      onDoubleClick={fit}
+      onDoubleClick={isDrawing ? undefined : fit}
+      onContextMenu={(event) => {
+        if (isDrawing) event.preventDefault();
+      }}
       onKeyDown={onKeyDown}
     >
       <svg>

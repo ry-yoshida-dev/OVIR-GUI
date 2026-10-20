@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
-from ..prompting import QueryKind
+from ..prompting import PromptMode, QueryKind
 from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
@@ -145,8 +145,33 @@ class RecognitionModel(ABC):
         Returns
         -------
         frozenset[QueryKind]
-            ``TEXT`` and possibly ``VISUAL``.
+            E.g. ``TEXT`` and ``VISUAL``; ``MARK`` for models segmenting marked objects, empty for automatic mask
+            generation.
         """
+
+    @property
+    def prompt_mode(self) -> PromptMode:
+        """
+        How the model is told what to recognize.
+
+        Returns
+        -------
+        PromptMode
+            ``CLASSES`` unless a subclass segments marked objects or every region.
+        """
+        return PromptMode.CLASSES
+
+    @property
+    def is_sequential(self) -> bool:
+        """
+        Whether the model follows objects through a video, reading its frames in order with a memory of the past.
+
+        Returns
+        -------
+        bool
+            False unless a subclass tracks.
+        """
+        return False
 
     @property
     @abstractmethod
@@ -211,6 +236,7 @@ class RecognitionModel(ABC):
             precision=self.precision.short_name,
             options=self.options,
             query_kinds=self.supported_query_kinds,
+            is_sequential=self.is_sequential,
         )
 
     @staticmethod

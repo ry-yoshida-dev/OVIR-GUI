@@ -6,8 +6,10 @@ import type { CurrentPicture, FramePayload } from "../api/types";
 import type { DisplayOptions } from "../lib/displayOptions";
 import { FindingPainter, type FrameScene } from "../lib/findingPainter";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
+import type { PlaybackPosition } from "../lib/playbackPosition";
 import { visibleInstancesOf } from "../lib/frameView";
 import { pictureKeyOf } from "../lib/resultTable";
+import { type LiveRun, LivePlaybackGate } from "./LivePlaybackGate";
 import { ScorePanel } from "./ScorePanel";
 
 export interface HighlightedFinding {
@@ -23,18 +25,30 @@ interface VideoResultPlayerProps {
   highlighted: HighlightedFinding | null;
   options: DisplayOptions;
   classColors: Record<string, string>;
+  position: PlaybackPosition;
+  live: LiveRun | null;
   onSeek: (frame: number, isFinal: boolean) => void;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onNavigate: (step: number) => void;
   onError: (error: Error) => void;
 }
 
-interface FindingsOverlayProps extends Omit<VideoResultPlayerProps, "onError"> {
+interface FindingsOverlayProps extends Omit<VideoResultPlayerProps, "onError" | "live"> {
   onShownFrame: (frame: number) => void;
 }
 
 const PLAYBACK_REPORT_MILLISECONDS = 150;
 const TIMELINE = { indexBase: IndexBase.ZERO };
+
+function shownResultOf(
+  results: FrameResultIndex | null,
+  frame: FramePayload | null,
+  timeId: number,
+  isInterpolated: boolean,
+): FramePayload | null {
+  const indexed = results === null ? null : isInterpolated ? results.interpolatedAt(timeId) : results.resultAt(timeId);
+  return indexed ?? (frame !== null && frame.frame === timeId ? frame : null);
+}
 
 function isLoaded(snapshot: PlayerSnapshot): boolean {
   return snapshot.timeline !== null && snapshot.state !== PlaybackState.IDLE && snapshot.state !== PlaybackState.LOADING;
@@ -52,6 +66,7 @@ function FindingsOverlay({
   onSelectFinding,
   onNavigate,
   onShownFrame,
+  position,
 }: FindingsOverlayProps) {
   const controller: PlayerController = usePlayerController();
   const reportedFrame = useRef<number | null>(current.frame);
@@ -62,7 +77,7 @@ function FindingsOverlay({
 
   const sceneAt = useCallback(
     (timeId: number): FrameScene | null => {
-      const shown = results?.resultAt(timeId) ?? (frame !== null && frame.frame === timeId ? frame : null);
+      const shown = shownResultOf(results, frame, timeId, options.isInterpolated);
       if (shown === null || !shown.is_recognized) return null;
       return {
         frame: shown,
@@ -70,7 +85,7 @@ function FindingsOverlay({
         highlightedIndex: highlighted !== null && highlighted.frame === shown.result_frame ? highlighted.index : null,
       };
     },
-    [results, frame, listed, highlighted],
+    [results, frame, listed, highlighted, options.isInterpolated],
   );
 
   const draw = useCallback(
@@ -102,6 +117,7 @@ function FindingsOverlay({
     const report = (snapshot: PlayerSnapshot) => {
       const timeId = snapshot.timeId;
       if (isDisposed || timeId === null || !isLoaded(snapshot)) return;
+      position.publish(timeId);
       if (!isPositioned) {
         isPositioned = true;
         const target = reportedFrame.current;
@@ -140,7 +156,7 @@ function FindingsOverlay({
       isDisposed = true;
       unsubscribe();
     };
-  }, [controller, onSeek, onShownFrame]);
+  }, [controller, onSeek, onShownFrame, position]);
 
   useEffect(() => {
     const target = current.frame;
@@ -168,10 +184,13 @@ function FindingsOverlay({
 }
 
 export function VideoResultPlayer(props: VideoResultPlayerProps) {
-  const { current, frame, results, listed, options, classColors, onSelectFinding, onError } = props;
+  const { current, frame, results, listed, options, classColors, live, onSelectFinding, onError, ...overlayProps } = props;
   const [shownFrame, setShownFrame] = useState<number | null>(current.frame);
-  const source = useMemo(() => api.videoUrl(current.path, current.version), [current.path, current.version]);
-  const shown = shownFrame === null ? null : (results?.resultAt(shownFrame) ?? (frame?.frame === shownFrame ? frame : null));
+  const source = useMemo(
+    () => api.videoUrl(current.path, current.version, current.playback),
+    [current.path, current.version, current.playback],
+  );
+  const shown = shownFrame === null ? null : shownResultOf(results, frame, shownFrame, options.isInterpolated);
   const listedIndices =
     shown === null || listed === null ? null : (listed.get(pictureKeyOf(shown.path, shown.result_frame)) ?? new Set<number>());
   const resultNote =
@@ -179,7 +198,9 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
       ? "not recognized"
       : shown.result_frame === shownFrame
         ? `${visibleInstancesOf(shown, listedIndices, options).length} findings`
-        : `result of #${shown.result_frame}`;
+        : shown.frame === shownFrame
+          ? `interpolated from #${shown.result_frame}`
+          : `result of #${shown.result_frame}`;
 
   return (
     <div className="video-result-player">
@@ -191,7 +212,23 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
         onError={onError}
         className="ovir-player"
       >
-        <FindingsOverlay {...props} onShownFrame={setShownFrame} />
+        <FindingsOverlay
+          {...overlayProps}
+          current={current}
+          frame={frame}
+          results={results}
+          listed={listed}
+          options={options}
+          classColors={classColors}
+          onSelectFinding={onSelectFinding}
+          onShownFrame={setShownFrame}
+        />
+        <LivePlaybackGate
+          live={live}
+          results={results}
+          framesPerSecond={current.fps ?? 30}
+          frameCount={current.frame_count ?? 1}
+        />
         <div className="video-hud">
           {current.name} ({current.width}×{current.height}) · {resultNote}
           {shown !== null && shown.outdated !== null && (

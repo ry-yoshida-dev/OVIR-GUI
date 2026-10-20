@@ -2,8 +2,8 @@ from collections.abc import Sequence
 
 import numpy as np
 from open_vocabulary_detector import DetectionResult, OpenVocabularyDetector, Prompt
-from PIL import Image
 
+from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
 from ..recognition import FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance
 from .detection_model import DetectionModel
@@ -41,10 +41,12 @@ class DetectorRecognizer(Recognizer):
         self._model = model
         self._detector.settings = model.settings
 
-    def recognize(self, images: Sequence[Image.Image], prompt: LabeledPrompt) -> list[FrameResult]:
+    def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         library_prompt: Prompt = self._prompts.build(prompt)
         query_labels: tuple[str, ...] = prompt.query_labels
-        results: list[DetectionResult] = self._detector.detect_images(images, library_prompt)
+        results: list[DetectionResult] = self._detector.detect_images(
+            [picture.image for picture in pictures], library_prompt
+        )
         return [self._convert(result, query_labels) for result in results]
 
     @staticmethod

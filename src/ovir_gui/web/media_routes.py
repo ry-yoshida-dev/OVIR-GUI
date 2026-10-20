@@ -10,14 +10,14 @@ from ..media import MediaItem
 from ..workspace import BackgroundScope, Workspace
 from .image_preview import ImagePreview
 from .json_value import JsonObject
-from .schema import BackgroundBody, PathsBody, SamplingBody, ShowBody
+from .schema import BackgroundBody, PathBody, PathsBody, SamplingBody, ShowBody
 from .web_context import WebContext
 
 
 class MediaRoutes:
     """
     Requests opening, closing, showing and uploading images and videos, their previews, the video files played in the
-    browser, video sampling, background recognition and server folder listings.
+    browser and their playable copies, video sampling, background recognition and server folder listings.
     """
 
     PREVIEW_CACHE_CONTROL = "private, max-age=86400"
@@ -79,9 +79,10 @@ class MediaRoutes:
             workspace: Workspace = context.workspace
             saved_paths: list[Path] = []
             for upload_file in files:
-                content: bytes = await upload_file.read()
                 saved_paths.append(
-                    await asyncio.to_thread(workspace.stores.upload_store.save, upload_file.filename or "", content)
+                    await asyncio.to_thread(
+                        workspace.stores.upload_store.save, upload_file.filename or "", upload_file.file
+                    )
                 )
             workspace.open_paths(saved_paths, is_first_shown)
             return {}
@@ -98,13 +99,19 @@ class MediaRoutes:
             preview: ImagePreview = await asyncio.to_thread(context.preview_cache.frame_preview, item, frame)
             return self._response(preview)
 
+        @router.post("/media/playback")
+        async def prepare_playback(body: PathBody) -> JsonObject:
+            context.workspace.prepare_playback(Path(body.path))
+            return {}
+
         @router.get("/media/video")
         async def video(path: str) -> FileResponse:
             item: MediaItem = context.workspace.media_item(Path(path))
             _ = item.video_info
-            media_type: str | None = mimetypes.guess_type(item.path.name)[0]
+            played: Path = context.workspace.playback_path(item.path)
+            media_type: str | None = mimetypes.guess_type(played.name)[0]
             return FileResponse(
-                item.path,
+                played,
                 media_type=media_type or self.FALLBACK_VIDEO_MEDIA_TYPE,
                 headers={"Cache-Control": self.VIDEO_CACHE_CONTROL},
             )

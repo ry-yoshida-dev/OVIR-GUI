@@ -19,6 +19,10 @@ class LaunchOptions:
         Whether the interface is opened in the default browser.
     data_directory : Path
         Directory keeping classes, results, uploads and the session.
+    embed_origins : tuple[str, ...]
+        Origins of the pages allowed to show the interface in a frame.
+    access_token : str | None
+        Secret of the printed address given by the environment; ``None`` creates one for the run.
     """
 
     paths: tuple[Path, ...]
@@ -26,3 +30,5 @@ class LaunchOptions:
     port: int
     is_browser_opened: bool
     data_directory: Path
+    embed_origins: tuple[str, ...] = ()
+    access_token: str | None = None

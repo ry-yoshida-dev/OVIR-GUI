@@ -1,5 +1,9 @@
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field, replace
 
+from ..media import FrameKey
+from .frame_prompt import FramePrompt
+from .picture_prompts import PicturePrompts
 from .prompt_class import PromptClass
 from .prompt_signature import PromptSignature
 from .query_kind import QueryKind
@@ -8,38 +12,39 @@ from .query_kind import QueryKind
 @dataclass(frozen=True, eq=False)
 class LabeledPrompt:
     """
-    Classes to recognize with their queries, independent of the model library, and the signature of what they query.
+    What a run recognizes, independent of the model library: the classes with their queries, the exemplar boxes and
+    object marks drawn on the pictures, and how to tell later whether a result is still current.
 
-    Model adapters turn it into the prompt type of their library; queries keep the order of ``query_labels`` (every
-    class in order, its phrases first, then its reference images), so a matched query index names its label.
+    Model adapters turn it into the prompt type of their library; class queries keep the order of ``query_labels``
+    (every class in order, its phrases first, then its reference images), so a matched query index names its label.
+    Models taking object marks ask for the marks of each picture instead, and automatic mask generation ignores the
+    prompt.
 
     Attributes
     ----------
     classes : tuple[PromptClass, ...]
-        Classes in class-id order.
-    signature : PromptSignature
-        What the classes query, telling later whether they have changed since.
-
-    Raises
-    ------
-    ValueError
-        If there is no class, or the signature does not query the classes of the prompt.
+        Classes queried by phrases, reference images or exemplar boxes, in class-id order; empty for models taking
+        object marks or nothing.
+    class_signature : PromptSignature
+        What every current class queries, with every query kind and without drawings.
+    query_kinds : frozenset[QueryKind]
+        Query kinds of the model, narrowing the signature of every result.
+    picture_prompts : PicturePrompts
+        Exemplar boxes and object marks of the media being recognized.
+    is_sequential : bool
+        Whether the model follows objects through a video, so each frame depends on the drawings of its whole file.
     """
 
     classes: tuple[PromptClass, ...]
-    signature: PromptSignature
-
-    def __post_init__(self) -> None:
-        if not self.classes:
-            raise ValueError("a prompt needs at least one class.")
-        signature_names: tuple[str, ...] = tuple(queried_class.name for queried_class in self.signature.classes)
-        if signature_names != self.class_names:
-            raise ValueError(f"signature must query {self.class_names}. got {signature_names}")
+    class_signature: PromptSignature
+    query_kinds: frozenset[QueryKind]
+    picture_prompts: PicturePrompts = field(default_factory=PicturePrompts)
+    is_sequential: bool = False
 
     @property
     def class_names(self) -> tuple[str, ...]:
         """
-        Class names in class-id order.
+        Names of the queried classes in class-id order.
 
         Returns
         -------
@@ -51,32 +56,26 @@ class LabeledPrompt:
     @property
     def query_labels(self) -> tuple[str, ...]:
         """
-        Label of every query in query order.
+        Label of every class query in query order.
 
         Returns
         -------
         tuple[str, ...]
-            Phrases and reference image names.
+            Phrases, reference image names and exemplar labels.
         """
         return tuple(label for prompt_class in self.classes for label in prompt_class.query_labels)
 
     @property
-    def kinds(self) -> frozenset[QueryKind]:
+    def has_exemplars(self) -> bool:
         """
-        Kinds of the queries.
+        Whether exemplar boxes take part in the run.
 
         Returns
         -------
-        frozenset[QueryKind]
-            ``TEXT`` with any phrase, ``VISUAL`` with any reference image.
+        bool
+            True when the model takes exemplars and some are drawn.
         """
-        kinds: set[QueryKind] = set()
-        for prompt_class in self.classes:
-            if prompt_class.phrases:
-                kinds.add(QueryKind.TEXT)
-            if prompt_class.visual_examples:
-                kinds.add(QueryKind.VISUAL)
-        return frozenset(kinds)
+        return QueryKind.EXEMPLAR in self.query_kinds and bool(self.picture_prompts.exemplars)
 
     @property
     def description(self) -> str:
@@ -86,13 +85,79 @@ class LabeledPrompt:
         Returns
         -------
         str
-            E.g. ``"5 text + 2 image prompts"``.
+            E.g. ``"5 text + 2 image prompts"``, ``"3 object marks"`` or ``"automatic"``.
         """
         text_count: int = sum(len(prompt_class.phrases) for prompt_class in self.classes)
         visual_count: int = sum(len(prompt_class.visual_examples) for prompt_class in self.classes)
-        parts: list[str] = []
-        if text_count:
-            parts.append(f"{text_count} text")
-        if visual_count:
-            parts.append(f"{visual_count} image")
-        return f"{' + '.join(parts)} prompt{'' if text_count + visual_count == 1 else 's'}"
+        exemplar_count: int = len(self.picture_prompts.exemplars) if QueryKind.EXEMPLAR in self.query_kinds else 0
+        mark_count: int = len(self.picture_prompts.marks) if QueryKind.MARK in self.query_kinds else 0
+        parts: list[str] = [
+            f"{count} {noun}"
+            for count, noun in (
+                (text_count, "text"),
+                (visual_count, "image"),
+                (exemplar_count, "exemplar"),
+            )
+            if count
+        ]
+        descriptions: list[str] = []
+        if parts:
+            total: int = text_count + visual_count + exemplar_count
+            descriptions.append(f"{' + '.join(parts)} prompt{'' if total == 1 else 's'}")
+        if mark_count:
+            descriptions.append(f"{mark_count} object mark{'' if mark_count == 1 else 's'}")
+        return " + ".join(descriptions) if descriptions else "automatic"
+
+    def frame_prompt_of(self, frame_key: FrameKey) -> FramePrompt:
+        """
+        Drawings of one picture the model takes.
+
+        Parameters
+        ----------
+        frame_key : FrameKey
+            Recognized picture.
+
+        Returns
+        -------
+        FramePrompt
+            Its exemplar boxes and object marks, each kept only when the model takes it.
+        """
+        drawn: FramePrompt = self.picture_prompts.of(frame_key)
+        return FramePrompt(
+            exemplars=drawn.exemplars if QueryKind.EXEMPLAR in self.query_kinds else (),
+            marks=drawn.marks if QueryKind.MARK in self.query_kinds else (),
+        )
+
+    def signature_of(self, frame_key: FrameKey) -> PromptSignature:
+        """
+        What the result of one picture is recognized with.
+
+        Parameters
+        ----------
+        frame_key : FrameKey
+            Recognized picture.
+
+        Returns
+        -------
+        PromptSignature
+            Classes with the drawings the picture depends on, narrowed to the query kinds of the model.
+        """
+        drawings: FramePrompt = self.picture_prompts.relevant_to(frame_key, self.is_sequential)
+        return self.class_signature.with_drawings(drawings).for_query_kinds(self.query_kinds)
+
+    def restricted_to(self, class_names: Iterable[str]) -> "LabeledPrompt":
+        """
+        Same prompt querying some of its classes only.
+
+        Parameters
+        ----------
+        class_names : Iterable[str]
+            Classes to keep.
+
+        Returns
+        -------
+        LabeledPrompt
+            Copy whose classes are those named, in class-id order.
+        """
+        kept: frozenset[str] = frozenset(class_names)
+        return replace(self, classes=tuple(prompt_class for prompt_class in self.classes if prompt_class.name in kept))

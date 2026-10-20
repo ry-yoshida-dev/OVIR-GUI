@@ -17,6 +17,8 @@ from .schema import (
     ModelSelectionBody,
     PresetBody,
     ProfileBody,
+    ProfilesBody,
+    RunMediaBody,
     TableBody,
     TaskBody,
     ThresholdsBody,
@@ -66,8 +68,8 @@ class RecognitionRoutes:
             return context.payloads.frame(context.workspace, Path(path), frame)
 
         @router.get("/video-frames")
-        async def video_frames(path: str) -> JsonObject:
-            return context.payloads.video_frames(context.workspace, Path(path))
+        async def video_frames(path: str, after: int | None = None, until: int | None = None) -> JsonObject:
+            return context.payloads.video_frames(context.workspace, Path(path), after, until)
 
         @router.get("/timeline")
         async def timeline(path: str) -> JsonObject:
@@ -112,8 +114,8 @@ class RecognitionRoutes:
             return context.payloads.reply(context.workspace.run_current(body.is_skipping_approved))
 
         @router.post("/run-media")
-        async def run_media(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.run_media(body.is_skipping_approved))
+        async def run_media(body: RunMediaBody) -> JsonObject:
+            return context.payloads.reply(context.workspace.run_media(body.is_skipping_approved, body.start_frame))
 
         @router.post("/run-all")
         async def run_all(body: ApprovalBody) -> JsonObject:
@@ -135,9 +137,9 @@ class RecognitionRoutes:
             return {}
 
         @router.post("/profiles/remove")
-        async def remove_profile(body: ProfileBody) -> JsonObject:
+        async def remove_profiles(body: ProfilesBody) -> JsonObject:
             workspace: Workspace = context.workspace
-            workspace.remove_profile(self._profile_of(workspace, body))
+            workspace.remove_profiles(tuple(workspace.library.profile_of_key(key) for key in body.keys))
             return {}
 
         @router.post("/profiles/clear")

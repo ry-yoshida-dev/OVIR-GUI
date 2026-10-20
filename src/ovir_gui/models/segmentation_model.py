@@ -22,6 +22,7 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
+from .segmentation_mode import SegmentationMode
 
 if TYPE_CHECKING:
     from .recognizer import Recognizer
@@ -33,9 +34,11 @@ class SegmentationModel(RecognitionModel):
 
     SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector
     of the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases
-    themselves. Thresholds of the masks and of the boxes are read at inference time.
+    themselves, and SAM 3 also of the exemplar boxes drawn on each picture. Thresholds of the masks and of the boxes
+    are read at inference time.
 
-    A box-prompted backend accepts the query kinds of its box detector and the others phrases only.
+    A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases and exemplar boxes, and the
+    others phrases only.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
@@ -119,8 +122,10 @@ class SegmentationModel(RecognitionModel):
         Returns
         -------
         bool
-            True for SAM and SAM 2.
+            True for SAM, SAM 2 and EdgeTAM finding instances of phrases; False for the other segmentation modes.
         """
+        if SegmentationMode.of_backend(backend) is not SegmentationMode.CONCEPT:
+            return False
         return SegmenterBackend(backend).is_box_prompted
 
     @property
@@ -199,9 +204,11 @@ class SegmentationModel(RecognitionModel):
     @property
     def supported_query_kinds(self) -> frozenset[QueryKind]:
         box_detector: DetectorSettings | None = self._settings.box_detector
-        if box_detector is None:
-            return frozenset({QueryKind.TEXT})
-        return DetectionModel.query_kinds_of(box_detector.backend)
+        if box_detector is not None:
+            return DetectionModel.query_kinds_of(box_detector.backend)
+        if self._settings.backend is SegmenterBackend.SAM3:
+            return frozenset({QueryKind.TEXT, QueryKind.EXEMPLAR})
+        return frozenset({QueryKind.TEXT})
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:

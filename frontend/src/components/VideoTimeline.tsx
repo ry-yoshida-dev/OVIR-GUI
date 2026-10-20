@@ -5,7 +5,7 @@ interface VideoTimelineProps {
   timeline: TimelinePayload | null;
   frameCount: number;
   frame: number;
-  isClassification: boolean;
+  isTopClassBanded: boolean;
   onSeek: (frame: number, isFinal: boolean) => void;
 }
 
@@ -13,7 +13,7 @@ const ROW_HEIGHT = 7;
 const MAX_ROWS = 8;
 const TOP_ROW_HEIGHT = 10;
 
-export function VideoTimeline({ timeline, frameCount, frame, isClassification, onSeek }: VideoTimelineProps) {
+export function VideoTimeline({ timeline, frameCount, frame, isTopClassBanded, onSeek }: VideoTimelineProps) {
   const element = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastFrame = Math.max(1, frameCount - 1);
@@ -65,9 +65,9 @@ export function VideoTimeline({ timeline, frameCount, frame, isClassification, o
               x={index / frameCount}
               y={1}
               width={widthOf(position)}
-              height={isClassification ? TOP_ROW_HEIGHT - 2 : 3}
+              height={isTopClassBanded ? TOP_ROW_HEIGHT - 2 : 3}
               fill={color}
-              opacity={isClassification && topClass !== null ? 0.9 : 0.6}
+              opacity={isTopClassBanded && topClass !== null ? 0.9 : 0.6}
             />
           );
         })}
@@ -81,7 +81,7 @@ export function VideoTimeline({ timeline, frameCount, frame, isClassification, o
                 width={widthOf(position)}
                 height={ROW_HEIGHT - 1}
                 fill={entry.color}
-                opacity={isClassification ? Math.max(0.15, value) : Math.max(0.35, value / largest)}
+                opacity={isTopClassBanded ? Math.max(0.15, value) : Math.max(0.35, value / largest)}
               />
             ) : null,
           ),

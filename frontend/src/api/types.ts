@@ -4,6 +4,8 @@ export type TaskValue = "classification" | "detection" | "segmentation";
 
 export type MediaKindValue = "image" | "video";
 
+export type PlaybackValue = "none" | "preparing" | "ready" | "failed";
+
 export type MediaStateValue = "not_analyzed" | "partial" | "done" | "outdated" | "failed";
 
 export interface PictureKey {
@@ -34,6 +36,7 @@ export interface CurrentPicture {
   height: number | null;
   frame_count: number | null;
   fps: number | null;
+  playback: PlaybackValue;
   timestamp: string | null;
   is_sampled: boolean;
 }
@@ -48,6 +51,18 @@ export interface BackendEntry {
   presets: PresetEntry[];
   image_poolings: string[];
   is_box_prompted: boolean;
+  mode: SegmentationModeValue | null;
+}
+
+export type SegmentationModeValue = "concept" | "promptable" | "generation" | "tracker" | "concept_tracker";
+
+export type PromptModeValue = "classes" | "marks" | "automatic";
+
+export type DrawingKindValue = "exemplar" | "mark";
+
+export interface ModelTuning {
+  confidence_label: string | null;
+  is_nms_shown: boolean;
 }
 
 export interface DeviceEntry {
@@ -81,6 +96,13 @@ export interface TaskState {
 
 export interface ModelState {
   backends: BackendEntry[];
+  modes: { value: SegmentationModeValue; title: string }[];
+  mode: SegmentationModeValue | null;
+  prompt_mode: PromptModeValue;
+  drawing_kinds: DrawingKindValue[];
+  is_sequential: boolean;
+  is_point_supported: boolean;
+  tuning: ModelTuning;
   devices: DeviceEntry[];
   precisions: PrecisionEntry[];
   box_detectors: string[];
@@ -161,9 +183,40 @@ export interface BackgroundState {
   is_paused: boolean;
 }
 
+export interface ExemplarEntry {
+  index: number;
+  class_name: string;
+  box: Box;
+  is_positive: boolean;
+}
+
+export interface MarkEntry {
+  object_id: number;
+  class_name: string;
+  positive_points: [number, number][];
+  negative_points: [number, number][];
+  box: Box | null;
+}
+
+export interface MarkedObject {
+  object_id: number;
+  class_name: string;
+  frames: (number | null)[];
+}
+
+export interface PicturePrompt {
+  path: string;
+  frame: number | null;
+  exemplars: ExemplarEntry[];
+  marks: MarkEntry[];
+  objects: MarkedObject[];
+  next_object_id: number;
+}
+
 export interface WorkspaceState {
   media: MediaEntry[];
   current: CurrentPicture | null;
+  picture_prompt: PicturePrompt | null;
   background_key: PictureKey | null;
   task: TaskState;
   model: ModelState;
@@ -200,6 +253,25 @@ export interface Finding {
 export interface FrameInstance extends Finding {
   box: Box;
   polygons: number[][];
+  color?: string | null;
+}
+
+export interface DocumentObject {
+  index: number;
+  class_name: string;
+  source: string;
+  confidence: number;
+  box: Box;
+  area: number;
+  polygons: [number, number][][];
+}
+
+export interface ObjectDocument {
+  format: "ovir-gui-objects";
+  version: number;
+  model: string | null;
+  coordinate_space: string;
+  pictures: { path: string; frame: number | null; width: number; height: number; objects: DocumentObject[] }[];
 }
 
 export interface ClassScore {
@@ -207,6 +279,11 @@ export interface ClassScore {
   score: number;
   logit: number;
   query: string;
+}
+
+export interface RankedScore {
+  class_name: string;
+  score: number;
 }
 
 export interface FramePayload {
@@ -233,7 +310,8 @@ export interface ResultPicture {
   frame: number | null;
   seconds: number | null;
   outdated: string | null;
-  runner_up: string | null;
+  scores: RankedScore[];
+  class_count: number;
   findings: Finding[];
 }
 

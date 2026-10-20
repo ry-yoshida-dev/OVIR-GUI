@@ -2,8 +2,7 @@ import gc
 from collections.abc import Sequence
 from time import perf_counter
 
-from PIL import Image
-
+from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
 from ..recognition import FrameResult
 from .recognition_model import RecognitionModel
@@ -52,19 +51,19 @@ class RecognizerSession:
         return loaded_model is not None and loaded_model.loading_signature() == model.loading_signature()
 
     def recognize(
-        self, model: RecognitionModel, images: Sequence[Image.Image], prompt: LabeledPrompt
+        self, model: RecognitionModel, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt
     ) -> RecognitionOutcome:
         """
-        Recognize images, loading the requested model first if needed.
+        Recognize pictures, loading the requested model first if needed.
 
         Parameters
         ----------
         model : RecognitionModel
             Settings to run with.
-        images : Sequence[Image.Image]
-            RGB images.
+        pictures : Sequence[KeyedPicture]
+            RGB pictures with their keys.
         prompt : LabeledPrompt
-            Classes and their queries.
+            Classes with their queries and the drawings of the pictures.
 
         Returns
         -------
@@ -74,7 +73,7 @@ class RecognizerSession:
         is_model_reloaded: bool = not self.is_loaded_for(model)
         recognizer: Recognizer = self._prepare(model)
         started_at: float = perf_counter()
-        results: tuple[FrameResult, ...] = tuple(recognizer.recognize(images, prompt))
+        results: tuple[FrameResult, ...] = tuple(recognizer.recognize(pictures, prompt))
         return RecognitionOutcome(
             results=results,
             inference_seconds=perf_counter() - started_at,

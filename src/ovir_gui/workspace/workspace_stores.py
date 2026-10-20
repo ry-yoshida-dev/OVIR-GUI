@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from ..storage import ClassSetStore, ClassThresholdStore, ResultsStore, SessionStore
+from ..storage import ClassSetStore, ClassThresholdStore, PicturePromptStore, ResultsStore, SessionStore
 from ..vocabulary import ClassListStore
+from .playback_store import PlaybackStore
 from .upload_store import UploadStore
 
 
@@ -18,8 +19,10 @@ class WorkspaceStores:
     ├── classes/<name>.ovirset  # saved class sets with their reference images
     ├── results.ovirresults     # results of every model profile
     ├── class_thresholds.json   # minimum confidence per task and class
+    ├── picture_prompts.json    # exemplar boxes and object marks drawn on pictures
     ├── session.json            # open media, shown picture, task, sampling, model choices
-    └── uploads/                # files uploaded from a browser
+    ├── uploads/                # files uploaded from a browser
+    └── playback/               # browser-playable copies of videos the browser cannot decode
     ```
 
     Attributes
@@ -34,10 +37,14 @@ class WorkspaceStores:
         Results of every model.
     class_threshold_store : ClassThresholdStore
         Minimum confidence of each class per task.
+    picture_prompt_store : PicturePromptStore
+        Exemplar boxes and object marks drawn on pictures.
     session_store : SessionStore
         What was open and chosen.
     upload_store : UploadStore
         Files sent from a browser.
+    playback_store : PlaybackStore
+        Browser-playable copies of videos.
     """
 
     DEFAULT_DIRECTORY_NAME: ClassVar[str] = "ovir_gui_data"
@@ -47,8 +54,10 @@ class WorkspaceStores:
     class_set_store: ClassSetStore
     results_store: ResultsStore
     class_threshold_store: ClassThresholdStore
+    picture_prompt_store: PicturePromptStore
     session_store: SessionStore
     upload_store: UploadStore
+    playback_store: PlaybackStore
 
     @classmethod
     def in_directory(cls, root_directory: Path) -> "WorkspaceStores":
@@ -71,8 +80,10 @@ class WorkspaceStores:
             class_set_store=ClassSetStore(root_directory),
             results_store=ResultsStore(root_directory),
             class_threshold_store=ClassThresholdStore(root_directory),
+            picture_prompt_store=PicturePromptStore(root_directory),
             session_store=SessionStore(root_directory),
             upload_store=UploadStore(root_directory),
+            playback_store=PlaybackStore(root_directory),
         )
 
     @classmethod

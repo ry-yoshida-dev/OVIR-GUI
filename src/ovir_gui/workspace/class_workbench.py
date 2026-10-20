@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from ..prompting import ReferenceBoard, ReferenceBox, ReferenceImage
+from ..prompting import PicturePromptBoard, ReferenceBoard, ReferenceBox, ReferenceImage
 from ..storage import ClassSet, ClassSetArchive, ClassSetStore
 from ..vocabulary import ClassDefinition, ClassListFile, ClassVocabulary
 
@@ -12,8 +12,8 @@ class ClassWorkbench:
     """
     Classes to detect with their phrases and reference images, edited by class id, and the class set they belong to.
 
-    Edits that would break the vocabulary rules raise ``ValueError`` and change nothing. Reference boxes follow their
-    class when it is renamed and are dropped with it. The workbench remembers the saved class set the classes were
+    Edits that would break the vocabulary rules raise ``ValueError`` and change nothing. Reference boxes, and the
+    exemplar boxes and object marks drawn on pictures, follow their class when it is renamed and are dropped with it. The workbench remembers the saved class set the classes were
     last loaded from or saved to, and whether they were edited since.
     """
 
@@ -27,6 +27,7 @@ class ClassWorkbench:
         self._class_set_store: ClassSetStore = class_set_store
         self._vocabulary: ClassVocabulary = ClassVocabulary()
         self._board: ReferenceBoard = ReferenceBoard()
+        self._picture_board: PicturePromptBoard = PicturePromptBoard()
         self._class_set_name: str = ""
         self._is_edited: bool = False
 
@@ -53,6 +54,18 @@ class ClassWorkbench:
             Name of every class.
         """
         return self._vocabulary.class_names
+
+    @property
+    def picture_board(self) -> PicturePromptBoard:
+        """
+        Exemplar boxes and object marks drawn on the pictures for the classes.
+
+        Returns
+        -------
+        PicturePromptBoard
+            Drawings; they follow renamed classes and are dropped with removed ones.
+        """
+        return self._picture_board
 
     @property
     def reference_board(self) -> ReferenceBoard:
@@ -213,6 +226,7 @@ class ClassWorkbench:
         self._require_class(class_index)
         previous: ClassDefinition = self._vocabulary.rename_class(class_index, name)
         self._board.rename_class(previous.name, self._vocabulary.class_names[class_index])
+        self._picture_board.rename_class(previous.name, self._vocabulary.class_names[class_index])
         self._is_edited = True
 
     def rename_phrase(self, class_index: int, phrase_index: int, phrase: str) -> None:
@@ -266,6 +280,7 @@ class ClassWorkbench:
                 self._vocabulary.remove_phrases(class_index, positions)
         self._vocabulary.remove_classes(class_indices)
         self._board.retain_classes(self._vocabulary.class_names)
+        self._picture_board.retain_classes(self._vocabulary.class_names)
         self._is_edited = True
 
     def move_phrase(self, class_index: int, phrase_index: int, target_class_index: int, position: int) -> None:
@@ -465,6 +480,7 @@ class ClassWorkbench:
     def _replace(self, definitions: Iterable[ClassDefinition]) -> None:
         self._vocabulary.replace(definitions)
         self._board.retain_classes(self._vocabulary.class_names)
+        self._picture_board.retain_classes(self._vocabulary.class_names)
 
     def _apply_class_set(self, class_set: ClassSet, source_name: str) -> None:
         if not class_set.classes:

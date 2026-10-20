@@ -1,66 +1,22 @@
-import type { Finding, PictureFindings, ResultsPayload, TaskValue } from "../api/types";
+import type { Finding, PictureFindings, RankedScore, ResultsPayload, TaskValue } from "../api/types";
+import type { ColumnDefinition, ColumnKey, ResultScope } from "./resultColumns";
+import { taskViewOf } from "./taskViews";
 
-export type ColumnKey =
-  | "keep"
-  | "media"
-  | "frame"
-  | "class"
-  | "query"
-  | "confidence"
-  | "runner_up"
-  | "area"
-  | "x1"
-  | "y1"
-  | "x2"
-  | "y2";
+export type { ColumnDefinition, ColumnKey, ColumnKind, ResultScope } from "./resultColumns";
 
-export type ColumnKind = "values" | "range";
-
-export interface ColumnDefinition {
-  key: ColumnKey;
-  label: string;
-  kind: ColumnKind;
-  width: number;
+export function columnsOf(task: TaskValue, scope: ResultScope): ColumnDefinition[] {
+  const columns = taskViewOf(task).columns;
+  return scope === "videos" ? columns : columns.filter((column) => column.key !== "frame");
 }
 
-const KEEP: ColumnDefinition = { key: "keep", label: "Keep", kind: "values", width: 50 };
-const MEDIA: ColumnDefinition = { key: "media", label: "Media", kind: "values", width: 140 };
-const FRAME: ColumnDefinition = { key: "frame", label: "Frame", kind: "range", width: 92 };
-const CLASS: ColumnDefinition = { key: "class", label: "Class", kind: "values", width: 110 };
-const QUERY: ColumnDefinition = { key: "query", label: "Query", kind: "values", width: 104 };
-const BOX_COLUMNS: ColumnDefinition[] = [
-  { key: "x1", label: "x1", kind: "range", width: 54 },
-  { key: "y1", label: "y1", kind: "range", width: 54 },
-  { key: "x2", label: "x2", kind: "range", width: 54 },
-  { key: "y2", label: "y2", kind: "range", width: 54 },
-];
+export function isRowInScope(row: TableRow, scope: ResultScope): boolean {
+  return scope === "videos" ? row.frame !== null && row.kind === "finding" : row.frame === null;
+}
 
-export function columnsOf(task: TaskValue): ColumnDefinition[] {
-  switch (task) {
-    case "classification":
-      return [
-        KEEP,
-        MEDIA,
-        FRAME,
-        CLASS,
-        QUERY,
-        { key: "confidence", label: "Score", kind: "range", width: 72 },
-        { key: "runner_up", label: "Runner-up", kind: "values", width: 120 },
-      ];
-    case "detection":
-      return [KEEP, MEDIA, FRAME, CLASS, QUERY, { key: "confidence", label: "Confidence", kind: "range", width: 82 }, ...BOX_COLUMNS];
-    case "segmentation":
-      return [
-        KEEP,
-        MEDIA,
-        FRAME,
-        CLASS,
-        QUERY,
-        { key: "confidence", label: "Confidence", kind: "range", width: 82 },
-        { key: "area", label: "Area", kind: "range", width: 70 },
-        ...BOX_COLUMNS,
-      ];
-  }
+export function filterOfScope(filter: TableFilter, scope: ResultScope): TableFilter {
+  if (scope === "videos" || filter.frame === undefined) return filter;
+  const { frame: _frame, ...rest } = filter;
+  return rest;
 }
 
 export type ColumnCondition =
@@ -82,7 +38,8 @@ interface RowBase {
   mediaName: string;
   pictureOrder: number;
   outdated: string | null;
-  runnerUp: string | null;
+  scores: RankedScore[];
+  classCount: number;
 }
 
 export interface FindingRow extends RowBase {
@@ -104,6 +61,11 @@ export function pictureKeyOf(path: string, frame: number | null): string {
   return `${path}@${frame ?? ""}`;
 }
 
+export function runnerUpTextOf(scores: RankedScore[]): string | null {
+  const runnerUp = scores[1];
+  return runnerUp === undefined ? null : `${runnerUp.class_name} ${runnerUp.score.toFixed(2)}`;
+}
+
 export function rowKeyOf(path: string, frame: number | null, index: number): string {
   return `${pictureKeyOf(path, frame)}#${index}`;
 }
@@ -120,7 +82,8 @@ export function buildRows(payload: ResultsPayload | null): TableRow[] {
       mediaName: picture.name,
       pictureOrder,
       outdated: picture.outdated,
-      runnerUp: picture.runner_up,
+      scores: picture.scores,
+      classCount: picture.class_count,
     };
     const listed = picture.findings.filter((finding) => finding.is_above_minimum);
     if (listed.length === 0) {
@@ -128,7 +91,7 @@ export function buildRows(payload: ResultsPayload | null): TableRow[] {
         ...base,
         kind: "status",
         key: `${pictureKeyOf(picture.path, picture.frame)}#status`,
-        text: payload.task === "classification" ? "Below the class minimum" : "Nothing found",
+        text: taskViewOf(payload.task).emptyPictureText,
       });
       return;
     }
@@ -146,7 +109,7 @@ export function cellValue(row: TableRow, key: ColumnKey): string | number | null
     case "frame":
       return row.frame;
     case "runner_up":
-      return row.runnerUp;
+      return runnerUpTextOf(row.scores);
     default:
       break;
   }

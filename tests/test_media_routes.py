@@ -1,3 +1,4 @@
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -8,14 +9,16 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
 
+from ovir_gui.media import VideoInfo
 from ovir_gui.models import DeviceAvailability, ModelSelector, PresetCatalog
-from ovir_gui.web import WebApplication
+from ovir_gui.web import EmbeddingPolicy, WebApplication
 from ovir_gui.workspace import WorkspaceStores
 
 ACCESS_TOKEN = "test-token"
 FRAME_COUNT = 12
 FRAME_WIDTH = 64
 FRAME_HEIGHT = 48
+PLAYBACK_TIMEOUT_SECONDS = 60.0
 
 
 class TestMediaRoutes:
@@ -38,13 +41,15 @@ class TestMediaRoutes:
 
     @pytest.fixture
     def client(self, tmp_path: Path, media_directory: Path) -> Iterator[TestClient]:
+        availability: DeviceAvailability = DeviceAvailability.detect()
         application: FastAPI = WebApplication(
-            ModelSelector(PresetCatalog.from_packages(), DeviceAvailability.detect()),
+            ModelSelector(PresetCatalog.from_packages(), availability),
             WorkspaceStores.in_directory(tmp_path / "data"),
             [media_directory],
             tmp_path,
             ACCESS_TOKEN,
             "ovir_gui_test",
+            EmbeddingPolicy(),
         ).build()
         with TestClient(application) as client:
             _ = client.get(f"/?token={ACCESS_TOKEN}")
@@ -52,7 +57,9 @@ class TestMediaRoutes:
 
     def test_video_is_served_in_ranges(self, client: TestClient, media_directory: Path) -> None:
         video_path: Path = media_directory / "clip.mp4"
-        response: Response = client.get("/api/media/video", params={"path": str(video_path)}, headers={"Range": "bytes=0-99"})
+        response: Response = client.get(
+            "/api/media/video", params={"path": str(video_path)}, headers={"Range": "bytes=0-99"}
+        )
         assert response.status_code == 206
         assert response.headers["content-type"] == "video/mp4"
         assert response.content == video_path.read_bytes()[:100]
@@ -77,3 +84,25 @@ class TestMediaRoutes:
         client.cookies.clear()
         response: Response = client.get("/api/media/video", params={"path": str(media_directory / "clip.mp4")})
         assert response.status_code == 403
+
+    def test_playable_copy_replaces_the_served_video(
+        self, client: TestClient, media_directory: Path, tmp_path: Path
+    ) -> None:
+        video_path: Path = media_directory / "clip.mp4"
+        original: bytes = video_path.read_bytes()
+        response: Response = client.post("/api/media/playback", json={"path": str(video_path)})
+        assert response.status_code == 200
+        deadline: float = time.monotonic() + PLAYBACK_TIMEOUT_SECONDS
+        served: bytes = original
+        while served == original and time.monotonic() < deadline:
+            time.sleep(0.2)
+            served = client.get("/api/media/video", params={"path": str(video_path)}).content
+        assert served != original
+        copies: list[Path] = list((tmp_path / "data" / "playback").glob("*.mp4"))
+        assert len(copies) == 1
+        assert copies[0].read_bytes() == served
+        assert VideoInfo.probe(copies[0]).frame_count == FRAME_COUNT
+
+    def test_image_has_no_playable_copy(self, client: TestClient, media_directory: Path) -> None:
+        response: Response = client.post("/api/media/playback", json={"path": str(media_directory / "still.png")})
+        assert response.status_code == 400

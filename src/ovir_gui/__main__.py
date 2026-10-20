@@ -10,7 +10,14 @@ def main() -> None:
     options: LaunchOptions = CommandLine().parse(sys.argv[1:])
     from .web import WebLauncher
 
-    WebLauncher(options.host, options.port, options.is_browser_opened, options.data_directory).run(options.paths)
+    WebLauncher(
+        options.host,
+        options.port,
+        options.is_browser_opened,
+        options.data_directory,
+        options.embed_origins,
+        options.access_token,
+    ).run(options.paths)
 
 
 if __name__ == "__main__":

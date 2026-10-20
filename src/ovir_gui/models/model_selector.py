@@ -6,12 +6,17 @@ from ..recognition import RecognitionTask
 from .classification_model import ClassificationModel
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
+from .concept_tracking_model import ConceptTrackingModel
 from .detection_model import DetectionModel
 from .device_availability import DeviceAvailability
+from .mask_generation_model import MaskGenerationModel
 from .model_preset import ModelPreset
 from .model_selection import ModelSelection
+from .object_tracking_model import ObjectTrackingModel
 from .preset_catalog import PresetCatalog
+from .promptable_segmentation_model import PromptableSegmentationModel
 from .recognition_model import RecognitionModel
+from .segmentation_mode import SegmentationMode
 from .segmentation_model import SegmentationModel
 
 
@@ -231,6 +236,12 @@ class ModelSelector:
                     validated = replace(validated, box_detector_label=None, box_confidence_threshold=None)
                 elif selection.box_confidence_threshold is None:
                     validated = replace(validated, box_confidence_threshold=base.default_box_confidence(box_model))
+            case PromptableSegmentationModel() | ObjectTrackingModel() | ConceptTrackingModel():
+                validated = replace(
+                    validated, nms_iou_threshold=None, box_detector_label=None, box_confidence_threshold=None
+                )
+            case MaskGenerationModel():
+                validated = replace(validated, box_detector_label=None, box_confidence_threshold=None)
             case _:
                 pass
         return validated
@@ -262,6 +273,8 @@ class ModelSelector:
                 return base.customized(selection)
             case SegmentationModel():
                 return base.customized(selection, self._box_model_of(selection.box_detector_label))
+            case PromptableSegmentationModel() | MaskGenerationModel() | ObjectTrackingModel() | ConceptTrackingModel():
+                return base.customized(selection)
             case _:
                 raise TypeError(f"unsupported model {type(base).__name__}")
 
@@ -292,17 +305,53 @@ class ModelSelector:
         cached: RecognitionModel | None = self._base_models.get(key)
         if cached is not None:
             return cached
-        preset: ModelPreset = self._catalog.preset(task, backend, preset_name)
-        model: RecognitionModel
-        match task:
-            case RecognitionTask.CLASSIFICATION:
-                model = ClassificationModel.from_preset(preset)
-            case RecognitionTask.DETECTION:
-                model = DetectionModel.from_preset(preset)
-            case RecognitionTask.SEGMENTATION:
-                model = SegmentationModel.from_preset(preset)
+        model: RecognitionModel = self.read_preset(self._catalog.preset(task, backend, preset_name))
         self._base_models[key] = model
         return model
+
+    @classmethod
+    def read_preset(cls, preset: ModelPreset) -> RecognitionModel:
+        """
+        Model of a preset as written in its file, read by the model class of its task and segmentation mode.
+
+        Parameters
+        ----------
+        preset : ModelPreset
+            Preset to read.
+
+        Returns
+        -------
+        RecognitionModel
+            Model of the preset.
+
+        Raises
+        ------
+        KeyError
+            If the preset lacks its section.
+        ValueError
+            If the section does not describe valid settings of the preset's backend.
+        """
+        match preset.task:
+            case RecognitionTask.CLASSIFICATION:
+                return ClassificationModel.from_preset(preset)
+            case RecognitionTask.DETECTION:
+                return DetectionModel.from_preset(preset)
+            case RecognitionTask.SEGMENTATION:
+                return cls._segmentation_model_of(preset)
+
+    @staticmethod
+    def _segmentation_model_of(preset: ModelPreset) -> RecognitionModel:
+        match SegmentationMode.of_backend(preset.backend):
+            case SegmentationMode.CONCEPT:
+                return SegmentationModel.from_preset(preset)
+            case SegmentationMode.PROMPTABLE:
+                return PromptableSegmentationModel.from_preset(preset)
+            case SegmentationMode.GENERATION:
+                return MaskGenerationModel.from_preset(preset)
+            case SegmentationMode.OBJECT_TRACKING:
+                return ObjectTrackingModel.from_preset(preset)
+            case SegmentationMode.CONCEPT_TRACKING:
+                return ConceptTrackingModel.from_preset(preset)
 
     def _box_model_of(self, label: str | None) -> DetectionModel | None:
         if label is None:

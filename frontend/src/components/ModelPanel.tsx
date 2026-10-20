@@ -1,4 +1,5 @@
-import type { ModelSelection, ModelState, TaskValue } from "../api/types";
+import type { BackendEntry, ModelSelection, ModelState, TaskValue } from "../api/types";
+import { taskViewOf } from "../lib/taskViews";
 import { NumberField } from "./NumberField";
 
 interface ModelPanelProps {
@@ -11,28 +12,51 @@ interface ModelPanelProps {
 
 const TILING_CHOICES = [null, 2, 3, 4];
 
+function familyOf(backend: string): string {
+  return backend.slice(backend.indexOf("/") + 1);
+}
+
 export function ModelPanel({ model, task, isDisabled, onSelectPreset, onChange }: ModelPanelProps) {
   const selection = model.selection;
   const backend = model.backends.find((entry) => entry.value === selection.backend);
   const change = (update: Partial<ModelSelection>) => onChange({ ...selection, ...update });
-  const isClassification = task === "classification";
+  const taskView = taskViewOf(task);
   const isBoxPrompted = backend?.is_box_prompted ?? false;
+  const modeBackends = model.backends.filter((entry) => entry.mode === model.mode);
+  const selectFirstPreset = (entry: BackendEntry | undefined) => {
+    const firstPreset = entry?.presets[0];
+    if (entry !== undefined && firstPreset !== undefined) onSelectPreset(entry.value, firstPreset.name);
+  };
+  const confidenceLabel = model.tuning.confidence_label;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div className="form-grid">
+        {model.modes.length > 1 && (
+          <>
+            <span>Mode</span>
+            <select
+              value={model.mode ?? ""}
+              disabled={isDisabled}
+              title="How the segmenter is told what to segment"
+              onChange={(event) => selectFirstPreset(model.backends.find((entry) => entry.mode === event.target.value))}
+            >
+              {model.modes.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.title}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
         <span>Backend</span>
         <select
           value={selection.backend}
           disabled={isDisabled}
-          onChange={(event) => {
-            const next = model.backends.find((entry) => entry.value === event.target.value);
-            const firstPreset = next?.presets[0];
-            if (next !== undefined && firstPreset !== undefined) onSelectPreset(next.value, firstPreset.name);
-          }}
+          onChange={(event) => selectFirstPreset(model.backends.find((entry) => entry.value === event.target.value))}
         >
-          {model.backends.map((entry) => (
+          {modeBackends.map((entry) => (
             <option key={entry.value} value={entry.value}>
-              {entry.value}
+              {familyOf(entry.value)}
             </option>
           ))}
         </select>
@@ -67,7 +91,7 @@ export function ModelPanel({ model, task, isDisabled, onSelectPreset, onChange }
             </option>
           ))}
         </select>
-        {isClassification && (
+        {taskView.isEmbeddingTuningShown && (
           <>
             <span>Pooling</span>
             <select
@@ -99,14 +123,18 @@ export function ModelPanel({ model, task, isDisabled, onSelectPreset, onChange }
             </select>
           </>
         )}
-        {!isClassification && (
+        {confidenceLabel !== null && (
           <>
-            <span>{task === "segmentation" ? "Mask conf." : "Confidence"}</span>
+            <span>{confidenceLabel}</span>
             <NumberField
               value={selection.confidence_threshold ?? 0}
               isDisabled={isDisabled}
               onCommit={(value) => change({ confidence_threshold: value })}
             />
+          </>
+        )}
+        {model.tuning.is_nms_shown && (
+          <>
             <span>NMS</span>
             <div className="row">
               <label>
@@ -161,8 +189,13 @@ export function ModelPanel({ model, task, isDisabled, onSelectPreset, onChange }
       </div>
       {model.description !== "" && <div className="hint">{model.description}</div>}
       <div className="hint">
-        Queries: {model.query_kinds.join(" + ")}
-        {model.is_image_prompt_supported ? "" : " (image prompts are not used by this model)"}
+        {model.prompt_mode === "automatic"
+          ? "Queries: none (every region is segmented)"
+          : `Queries: ${model.query_kinds.join(" + ")}`}
+        {model.prompt_mode === "classes" && !model.is_image_prompt_supported
+          ? " (image prompts are not used by this model)"
+          : ""}
+        {model.is_sequential ? " · tracks through videos" : ""}
       </div>
     </div>
   );

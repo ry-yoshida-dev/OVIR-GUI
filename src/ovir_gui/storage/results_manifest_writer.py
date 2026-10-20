@@ -9,6 +9,7 @@ from ..recognition import FrameResult, InstanceMask, RecognizedInstance
 from ..recognition.array_types import UInt8Array
 from ..results import ResultCatalog, ResultLibrary, StoredResult
 from .json_fields import JsonValue
+from .picture_prompt_codec import PicturePromptCodec
 from .results_snapshot import ResultsSnapshot
 
 
@@ -91,6 +92,7 @@ class ResultsManifestWriter:
             "precision": profile.precision,
             "options": [[option.name, option.value] for option in profile.options],
             "query_kinds": list[JsonValue](sorted(kind.value for kind in profile.query_kinds)),
+            "is_sequential": profile.is_sequential,
             "frames": frames,
         }
 
@@ -151,7 +153,7 @@ class ResultsManifestWriter:
         boxes: list[ReferenceBox] = sorted(
             queried_class.reference_boxes, key=lambda box: (box.reference_image.digest, box.xyxy)
         )
-        return {
+        entry: dict[str, JsonValue] = {
             "name": queried_class.name,
             "phrases": list[JsonValue](sorted(queried_class.phrases)),
             "boxes": [
@@ -159,3 +161,18 @@ class ResultsManifestWriter:
                 for box in boxes
             ],
         }
+        if queried_class.exemplar_boxes:
+            entry["exemplars"] = [
+                PicturePromptCodec.exemplar_entry(box)
+                for box in sorted(
+                    queried_class.exemplar_boxes, key=lambda box: (box.frame_key.sort_key(), box.xyxy, box.is_positive)
+                )
+            ]
+        if queried_class.object_marks:
+            entry["marks"] = [
+                PicturePromptCodec.mark_entry(mark)
+                for mark in sorted(
+                    queried_class.object_marks, key=lambda mark: (mark.frame_key.sort_key(), mark.object_id)
+                )
+            ]
+        return entry

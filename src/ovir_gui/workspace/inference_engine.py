@@ -5,7 +5,7 @@ from threading import Thread
 
 from PIL import Image
 
-from ..media import FrameKey, PictureLoader
+from ..media import FrameKey, KeyedPicture, PictureLoader
 from ..models import RecognitionOutcome, RecognizerSession
 from .inference_job import InferenceJob
 from .inference_listener import InferenceListener
@@ -282,7 +282,11 @@ class InferenceEngine:
         span: str = frame_keys[0].label if len(frame_keys) == 1 else f"{frame_keys[0].label} … {frame_keys[-1].label}"
         self._dispatch_activity(f"Recognizing {span} ({first_number}-{last_number}/{total_count}) ...")
         try:
-            outcome: RecognitionOutcome = self._session.recognize(job.model, images, job.prompt)
+            pictures: list[KeyedPicture] = [
+                KeyedPicture(frame_key=frame_key, image=image)
+                for frame_key, image in zip(frame_keys, images, strict=True)
+            ]
+            outcome: RecognitionOutcome = self._session.recognize(job.model, pictures, job.prompt)
         except Exception as error:
             message: str = f"{frame_keys[0].label}: {type(error).__name__}: {error}"
             self._scheduler.dispatch(partial(self._on_failed, job, message))

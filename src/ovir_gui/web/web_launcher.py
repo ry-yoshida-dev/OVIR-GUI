@@ -9,6 +9,7 @@ import uvicorn
 from ..models import DeviceAvailability, ModelSelector, PresetCatalog
 from ..workspace import WorkspaceStores
 from .access_guard import AccessGuard
+from .embedding_policy import EmbeddingPolicy
 from .web_application import WebApplication
 
 
@@ -18,13 +19,23 @@ class WebLauncher:
 
     The server listens on the loopback interface by default, so only this machine can reach it; on a remote machine,
     forward the port over SSH (``ssh -L 8000:localhost:8000 host``) instead of listening on every interface. The
-    printed address carries an access token created for this run; only browsers that opened it can use the server.
+    printed address carries an access token, created for this run unless one is given; only browsers that opened it can
+    use the server. Pages of the embedding origins may show the interface in a frame, e.g. a GIS application opening
+    pictures in a window of its own page.
     """
 
     BROWSER_DELAY_SECONDS: ClassVar[float] = 1.0
     COOKIE_NAME_PREFIX: ClassVar[str] = "ovir_gui_token_"
 
-    def __init__(self, host: str, port: int, is_browser_opened: bool, data_directory: Path) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        is_browser_opened: bool,
+        data_directory: Path,
+        embed_origins: Sequence[str],
+        access_token: str | None,
+    ) -> None:
         """
         Parameters
         ----------
@@ -36,12 +47,22 @@ class WebLauncher:
             Whether to open the user interface in the default browser once the server runs.
         data_directory : Path
             Directory keeping classes, results, uploads and the session.
+        embed_origins : Sequence[str]
+            Origins of the pages allowed to show the interface in a frame, e.g. ``http://localhost:3000``.
+        access_token : str | None
+            Secret of the printed address; a new one for this run when ``None``.
+
+        Raises
+        ------
+        ValueError
+            If an embedding origin is not an ``http`` or ``https`` origin.
         """
         self._host: str = host
         self._port: int = port
         self._is_browser_opened: bool = is_browser_opened
         self._data_directory: Path = data_directory
-        self._access_token: str = AccessGuard.new_token()
+        self._embedding_policy: EmbeddingPolicy = EmbeddingPolicy.of(embed_origins)
+        self._access_token: str = AccessGuard.new_token() if access_token is None else access_token
 
     @property
     def url(self) -> str:
@@ -73,8 +94,11 @@ class WebLauncher:
             Path.cwd(),
             self._access_token,
             f"{self.COOKIE_NAME_PREFIX}{self._port}",
+            self._embedding_policy,
         )
         print(f"OVIR GUI is running at {self.url}", flush=True)
+        if self._embedding_policy.is_embedding_allowed:
+            print(f"Pages of {', '.join(self._embedding_policy.parent_origins)} may embed it.", flush=True)
         if self._is_browser_opened:
             Timer(self.BROWSER_DELAY_SECONDS, webbrowser.open, args=(self.url,)).start()
         uvicorn.run(application.build(), host=self._host, port=self._port, log_level="warning")

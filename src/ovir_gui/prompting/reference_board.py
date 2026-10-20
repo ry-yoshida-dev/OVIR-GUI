@@ -3,7 +3,6 @@ from collections.abc import Mapping, Sequence
 from PIL import Image
 
 from ..vocabulary import ClassDefinition
-from .labeled_prompt import LabeledPrompt
 from .prompt_class import PromptClass
 from .prompt_signature import PromptSignature
 from .queried_class import QueriedClass
@@ -15,7 +14,7 @@ from .visual_example import VisualExample
 
 class ReferenceBoard:
     """
-    Reference boxes drawn on reference images, turned into the prompt of a recognition run.
+    Reference boxes drawn on reference images, turned into the queried classes of a recognition run.
 
     The boxes of one class on one reference image form one visual query: detectors average the embeddings of the
     boxes, classifiers the embeddings of the crops. Different images of a class are separate queries, so a sedan photo
@@ -239,7 +238,10 @@ class ReferenceBoard:
         self._forget_unused_images()
 
     def reference_only_classes(
-        self, definitions: Sequence[ClassDefinition], supported_kinds: frozenset[QueryKind]
+        self,
+        definitions: Sequence[ClassDefinition],
+        supported_kinds: frozenset[QueryKind],
+        exemplar_class_names: frozenset[str],
     ) -> tuple[str, ...]:
         """
         Classes queried only by reference images that the selected model cannot take.
@@ -250,19 +252,23 @@ class ReferenceBoard:
             Classes to recognize.
         supported_kinds : frozenset[QueryKind]
             Query kinds the selected model accepts.
+        exemplar_class_names : frozenset[str]
+            Classes shown by a positive exemplar box on some picture.
 
         Returns
         -------
         tuple[str, ...]
-            Names of classes without a phrase but with reference images, in class order; empty when the model
-            accepts reference images.
+            Names of classes without a phrase or usable exemplar box but with reference images, in class order;
+            empty when the model accepts reference images.
         """
         if QueryKind.VISUAL in supported_kinds:
             return ()
         return tuple(
             definition.name
             for definition in definitions
-            if not definition.text_queries and self.reference_images_of(definition.name)
+            if not definition.text_queries
+            and self.reference_images_of(definition.name)
+            and not self._is_exemplar_queried(definition.name, supported_kinds, exemplar_class_names)
         )
 
     def signature_of(self, definitions: Sequence[ClassDefinition]) -> PromptSignature:
@@ -277,8 +283,8 @@ class ReferenceBoard:
         Returns
         -------
         PromptSignature
-            Phrases and reference boxes of every class; narrow it to a model with
-            ``PromptSignature.for_query_kinds``.
+            Phrases and reference boxes of every class; add the drawings of a picture with
+            ``PromptSignature.with_drawings`` and narrow it to a model with ``PromptSignature.for_query_kinds``.
         """
         return PromptSignature(
             tuple(
@@ -291,9 +297,14 @@ class ReferenceBoard:
             )
         )
 
-    def prompt_issue(self, definitions: Sequence[ClassDefinition], supported_kinds: frozenset[QueryKind]) -> str | None:
+    def prompt_issue(
+        self,
+        definitions: Sequence[ClassDefinition],
+        supported_kinds: frozenset[QueryKind],
+        exemplar_class_names: frozenset[str],
+    ) -> str | None:
         """
-        Why no prompt can be built from the classes, checked before ``build_prompt``.
+        Why no class prompt can be built from the classes, checked before ``build_classes``.
 
         Parameters
         ----------
@@ -301,6 +312,8 @@ class ReferenceBoard:
             Classes to recognize.
         supported_kinds : frozenset[QueryKind]
             Query kinds the selected model accepts.
+        exemplar_class_names : frozenset[str]
+            Classes shown by a positive exemplar box on some picture.
 
         Returns
         -------
@@ -313,16 +326,27 @@ class ReferenceBoard:
         is_visual_supported: bool = QueryKind.VISUAL in supported_kinds
         for definition in definitions:
             has_references: bool = bool(self.reference_images_of(definition.name))
-            if definition.text_queries or (is_visual_supported and has_references):
+            if (
+                definition.text_queries
+                or (is_visual_supported and has_references)
+                or self._is_exemplar_queried(definition.name, supported_kinds, exemplar_class_names)
+            ):
                 continue
-            return self._describe_missing_queries(definition.name, has_references=has_references)
+            return self._describe_missing_queries(
+                definition.name,
+                has_references=has_references,
+                is_exemplar_supported=QueryKind.EXEMPLAR in supported_kinds,
+            )
         return None
 
-    def build_prompt(
-        self, definitions: Sequence[ClassDefinition], supported_kinds: frozenset[QueryKind]
-    ) -> LabeledPrompt:
+    def build_classes(
+        self,
+        definitions: Sequence[ClassDefinition],
+        supported_kinds: frozenset[QueryKind],
+        exemplar_class_names: frozenset[str],
+    ) -> tuple[PromptClass, ...]:
         """
-        Prompt querying every class by its phrases and, when supported, by its reference images.
+        Classes queried by their phrases and, when supported, by their reference images and exemplar boxes.
 
         Parameters
         ----------
@@ -330,18 +354,20 @@ class ReferenceBoard:
             Classes to recognize, in class-id order.
         supported_kinds : frozenset[QueryKind]
             Query kinds the selected model accepts; reference images are left out without ``VISUAL``.
+        exemplar_class_names : frozenset[str]
+            Classes shown by a positive exemplar box on some picture.
 
         Returns
         -------
-        LabeledPrompt
-            Classes with their queries and the signature of what they query.
+        tuple[PromptClass, ...]
+            Classes with their queries.
 
         Raises
         ------
         ValueError
             If ``prompt_issue`` reports an issue.
         """
-        issue: str | None = self.prompt_issue(definitions, supported_kinds)
+        issue: str | None = self.prompt_issue(definitions, supported_kinds, exemplar_class_names)
         if issue is not None:
             raise ValueError(issue)
         is_visual_supported: bool = QueryKind.VISUAL in supported_kinds
@@ -360,19 +386,34 @@ class ReferenceBoard:
                 else ()
             )
             classes.append(
-                PromptClass(name=definition.name, phrases=definition.text_queries, visual_examples=visual_examples)
+                PromptClass(
+                    name=definition.name,
+                    phrases=definition.text_queries,
+                    visual_examples=visual_examples,
+                    is_exemplar_queried=self._is_exemplar_queried(
+                        definition.name, supported_kinds, exemplar_class_names
+                    ),
+                )
             )
-        return LabeledPrompt(
-            classes=tuple(classes),
-            signature=self.signature_of(definitions).for_query_kinds(supported_kinds),
-        )
+        return tuple(classes)
 
     @staticmethod
-    def _describe_missing_queries(class_name: str, has_references: bool) -> str:
+    def _is_exemplar_queried(
+        class_name: str, supported_kinds: frozenset[QueryKind], exemplar_class_names: frozenset[str]
+    ) -> bool:
+        return QueryKind.EXEMPLAR in supported_kinds and class_name in exemplar_class_names
+
+    @staticmethod
+    def _describe_missing_queries(class_name: str, has_references: bool, is_exemplar_supported: bool) -> str:
         if has_references:
             return (
                 f"'{class_name}' is queried only by reference images, which the selected model does not take. "
                 + "Add a phrase to the class or choose a model that takes image prompts."
+            )
+        if is_exemplar_supported:
+            return (
+                f"'{class_name}' has no phrase and no exemplar box. "
+                + "Add a phrase to the class or draw an exemplar box of it on a picture."
             )
         return f"'{class_name}' has no phrase and no reference image. Add a phrase to the class."
 

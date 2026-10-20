@@ -11,7 +11,8 @@ class DetectorPromptBuilder:
 
     A visual example becomes one visual query whose reference holds every box of the example. The query of an
     unchanged example is reused, so the detector finds its embedding in its cache; queries of examples no longer
-    prompted are forgotten.
+    prompted are forgotten. A class queried by exemplar boxes alone gets its name as the one text query, which SAM 3
+    ignores where the boxes define the class.
     """
 
     def __init__(self) -> None:
@@ -35,6 +36,8 @@ class DetectorPromptBuilder:
         class_queries: dict[str, tuple[PromptQuery, ...]] = {}
         for prompt_class in prompt.classes:
             queries: list[PromptQuery] = [TextQuery(phrase) for phrase in prompt_class.phrases]
+            if prompt_class.is_exemplar_only:
+                queries.append(TextQuery(prompt_class.name))
             for example in prompt_class.visual_examples:
                 query: VisualQuery = self._queries.get(example) or self._query_of(example)
                 used_queries[example] = query

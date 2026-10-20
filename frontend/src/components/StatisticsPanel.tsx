@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import type { HistogramPayload, Profile, StatisticsPayload, Thresholds } from "../api/types";
+import { DEFAULT_TASK, taskViewOf } from "../lib/taskViews";
 import { NumberField } from "./NumberField";
 
 interface StatisticsPanelProps {
@@ -105,6 +106,7 @@ export function StatisticsPanel({
   }, [refreshToken]);
 
   const statistics = payload?.statistics ?? null;
+  const taskView = taskViewOf(payload?.task ?? DEFAULT_TASK);
   const selected = statistics?.classes.find((entry) => entry.class_name === selectedClass) ?? null;
   const histogram = selected?.histogram ?? statistics?.histogram ?? null;
   const histogramMinimum = selected === null ? thresholds.default_minimum : minimumOf(thresholds, selected.class_name);
@@ -142,9 +144,7 @@ export function StatisticsPanel({
             width={90}
           />
           <span className="hint">
-            {payload?.task === "classification"
-              ? "Pictures whose top score is below it get no label and are not exported."
-              : "Findings below it are hidden and not exported."}
+            {taskView.minimumConfidenceHint}
           </span>
         </div>
         <div className="table-wrap" style={{ flex: "none", maxHeight: 260, border: "1px solid var(--border)", borderRadius: 6 }}>
@@ -164,7 +164,7 @@ export function StatisticsPanel({
               <tr>
                 <th>Class</th>
                 <th>Pictures</th>
-                <th>{payload?.task === "classification" ? "Top-1" : "Found"}</th>
+                <th>{taskView.topCountLabel}</th>
                 <th>Rejected</th>
                 <th>Below min.</th>
                 <th>Kept</th>
@@ -259,9 +259,7 @@ export function StatisticsPanel({
           <>
             <div className="hint">
               {payload.comparison.picture_count} pictures recognized by both;{" "}
-              {payload.task === "classification"
-                ? "matched when both give the same top class."
-                : `instances paired by IoU ≥ ${payload.comparison.iou_threshold}. The compared ones are drawn dotted.`}
+              {taskView.comparisonHintOf(payload.comparison.iou_threshold)}
             </div>
             <div className="table-wrap" style={{ flex: "none", maxHeight: 220, border: "1px solid var(--border)", borderRadius: 6 }}>
               <table className="grid">

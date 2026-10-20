@@ -3,6 +3,7 @@ import { api, errorMessage } from "../api/client";
 import type { ClassEntry, ClassSetState, ReferenceEntry } from "../api/types";
 import { useDialogs } from "./DialogHost";
 import { useMenu } from "./Menu";
+import { SaveGlyph } from "./SaveGlyph";
 
 interface ClassEditorProps {
   classes: ClassEntry[];
@@ -351,8 +352,14 @@ export function ClassEditor({
           ))}
         </select>
         {classSet.name !== "" && classSet.is_edited && <span className="badge warning">Edited</span>}
-        <button onClick={() => void saveClassSet()} disabled={classes.length === 0}>
-          Save…
+        <button
+          className="ghost icon"
+          onClick={() => void saveClassSet()}
+          disabled={classes.length === 0}
+          title="Save the classes as a class set…"
+          aria-label="Save class set"
+        >
+          <SaveGlyph />
         </button>
       </div>
       <div className="row">

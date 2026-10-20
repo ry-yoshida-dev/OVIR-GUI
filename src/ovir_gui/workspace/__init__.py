@@ -3,6 +3,7 @@ from .action_status import ActionStatus
 from .background_planner import BackgroundPlanner
 from .background_scope import BackgroundScope
 from .class_workbench import ClassWorkbench
+from .deferred_save import DeferredSave
 from .export_plan import ExportPlan
 from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
@@ -15,6 +16,8 @@ from .media_state import MediaState
 from .media_status import MediaStatus
 from .notice import Notice
 from .notice_level import NoticeLevel
+from .playback_state import PlaybackState
+from .playback_store import PlaybackStore
 from .prompt_preparation import PromptPreparation
 from .run_progress import RunProgress
 from .scheduled_call import ScheduledCall
@@ -31,6 +34,7 @@ __all__ = [
     "BackgroundPlanner",
     "BackgroundScope",
     "ClassWorkbench",
+    "DeferredSave",
     "ExportPlan",
     "ExportRequest",
     "InferenceEngine",
@@ -43,6 +47,8 @@ __all__ = [
     "MediaStatus",
     "Notice",
     "NoticeLevel",
+    "PlaybackState",
+    "PlaybackStore",
     "PromptPreparation",
     "RunProgress",
     "ScheduledCall",

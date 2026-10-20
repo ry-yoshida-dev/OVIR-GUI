@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../api/types";
 import { useDialogs } from "./DialogHost";
 
@@ -6,29 +7,58 @@ interface ProfileTableProps {
   shownKey: string | null;
   comparedKey: string | null;
   onSelect: (key: string) => void;
-  onRemove: (key: string) => void;
+  onRemove: (keys: string[]) => void;
 }
 
 export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemove }: ProfileTableProps) {
   const dialogs = useDialogs();
-  const shown = profiles.find((profile) => profile.key === shownKey);
+  const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
+  const headerCheckbox = useRef<HTMLInputElement>(null);
+  const checked = profiles.filter((profile) => checkedKeys.has(profile.key));
+  const isAllChecked = profiles.length > 0 && checked.length === profiles.length;
+  const isSomeChecked = checked.length > 0 && !isAllChecked;
   const optionNames = [...new Set(profiles.flatMap((profile) => profile.options.map((option) => option.name)))];
+
+  useEffect(() => {
+    if (headerCheckbox.current !== null) headerCheckbox.current.indeterminate = isSomeChecked;
+  }, [isSomeChecked]);
+
+  const setChecked = (key: string, isChecked: boolean) =>
+    setCheckedKeys((current) => {
+      const next = new Set(current);
+      if (isChecked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+
   const remove = async () => {
-    if (shown === undefined) return;
+    if (checked.length === 0) return;
+    const findingCount = checked.reduce((total, profile) => total + profile.finding_count, 0);
+    const [only] = checked;
     const isConfirmed = await dialogs.confirm({
       title: "Remove Model Results",
-      message: `Forget the ${shown.finding_count} findings of ${shown.backend}/${shown.model_name} (${shown.options_text}) on ${shown.frame_count} pictures?`,
+      message:
+        checked.length === 1 && only !== undefined
+          ? `Forget the ${findingCount} findings of ${only.backend}/${only.model_name} (${only.options_text}) on ${only.frame_count} pictures?`
+          : `Forget the ${findingCount} findings of ${checked.length} models?`,
       confirmLabel: "Remove",
       isDanger: true,
     });
-    if (isConfirmed) onRemove(shown.key);
+    if (!isConfirmed) return;
+    onRemove(checked.map((profile) => profile.key));
+    setCheckedKeys(new Set());
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
       <div className="panel-title">
         <span className="grow">Models</span>
-        <button className="small" disabled={shown === undefined} onClick={() => void remove()}>
-          Remove
+        <button
+          className="ghost icon"
+          disabled={checked.length === 0}
+          onClick={() => void remove()}
+          title="Remove the checked models (Delete)"
+        >
+          🗑
         </button>
       </div>
       <div
@@ -47,6 +77,18 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
         <table className="grid">
           <thead>
             <tr>
+              <th>
+                <input
+                  ref={headerCheckbox}
+                  type="checkbox"
+                  checked={isAllChecked}
+                  disabled={profiles.length === 0}
+                  title="Check every model"
+                  onChange={(event) =>
+                    setCheckedKeys(new Set(event.target.checked ? profiles.map((profile) => profile.key) : []))
+                  }
+                />
+              </th>
               <th>Backend</th>
               <th>Model</th>
               <th>Device</th>
@@ -63,7 +105,7 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
           <tbody>
             {profiles.length === 0 && (
               <tr className="status">
-                <td colSpan={8 + optionNames.length}>No results yet. Open images or videos to fill this table.</td>
+                <td colSpan={9 + optionNames.length}>No results yet. Open images or videos to fill this table.</td>
               </tr>
             )}
             {profiles.map((profile) => (
@@ -73,6 +115,14 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
                 onClick={() => onSelect(profile.key)}
                 title={profile.weights_path}
               >
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={checkedKeys.has(profile.key)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => setChecked(profile.key, event.target.checked)}
+                  />
+                </td>
                 <td>{profile.backend}</td>
                 <td>
                   {profile.model_name}

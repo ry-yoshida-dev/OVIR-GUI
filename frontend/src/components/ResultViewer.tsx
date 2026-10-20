@@ -3,10 +3,16 @@ import type { CurrentPicture, FrameInstance, FramePayload } from "../api/types";
 import { usePreloadedSource } from "../hooks/usePreloadedSource";
 import type { DisplayOptions } from "../lib/displayOptions";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
+import type { PlaybackPosition } from "../lib/playbackPosition";
+import type { ViewerDrawing } from "../lib/viewerDrawing";
+import { DEFAULT_TASK, taskViewOf } from "../lib/taskViews";
 import { comparedOf, FALLBACK_CLASS_COLOR, labelOf, visibleInstancesOf } from "../lib/frameView";
 import { BoxShape } from "./BoxShape";
 import { MaskShape } from "./MaskShape";
+import { MediaKindBadges } from "./MediaKindBadges";
 import { ScorePanel } from "./ScorePanel";
+import { PlayerErrorBoundary } from "./PlayerErrorBoundary";
+import type { LiveRun } from "./LivePlaybackGate";
 import { type HighlightedFinding, VideoResultPlayer } from "./VideoResultPlayer";
 import { ZoomableImage } from "./ZoomableImage";
 
@@ -20,8 +26,11 @@ interface ResultViewerProps {
   highlightedIndex: number | null;
   options: DisplayOptions;
   classColors: Record<string, string>;
+  position: PlaybackPosition;
+  live: LiveRun | null;
   isMediaEmpty: boolean;
   isVideoPlayerUsed: boolean;
+  drawing?: ViewerDrawing | null;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onClearSelection: () => void;
   onNavigate: (step: number) => void;
@@ -50,8 +59,11 @@ export function ResultViewer({
   highlightedIndex,
   options,
   classColors,
+  position,
+  live,
   isMediaEmpty,
   isVideoPlayerUsed,
+  drawing = null,
   onSelectFinding,
   onClearSelection,
   onNavigate,
@@ -65,19 +77,23 @@ export function ResultViewer({
   const source = usePreloadedSource(sourceOf(current, isVideoPlayerUsed));
   if (isPlayerShown) {
     return (
-      <VideoResultPlayer
-        current={current}
-        frame={frame !== null && frame.path === current.path ? frame : null}
-        results={videoResults}
-        listed={listed}
-        highlighted={highlighted}
-        options={options}
-        classColors={classColors}
-        onSeek={onSeek}
-        onSelectFinding={onSelectFinding}
-        onNavigate={onNavigate}
-        onError={onVideoPlayerFailed}
-      />
+      <PlayerErrorBoundary key={current.path} onError={onVideoPlayerFailed}>
+        <VideoResultPlayer
+          current={current}
+          frame={frame !== null && frame.path === current.path ? frame : null}
+          results={videoResults}
+          listed={listed}
+          highlighted={highlighted}
+          options={options}
+          classColors={classColors}
+          position={position}
+          live={live}
+          onSeek={onSeek}
+          onSelectFinding={onSelectFinding}
+          onNavigate={onNavigate}
+          onError={onVideoPlayerFailed}
+        />
+      </PlayerErrorBoundary>
     );
   }
   if (current === null || current.width === null || current.height === null || source === null) {
@@ -85,6 +101,7 @@ export function ResultViewer({
       <div className="empty-center">
         {isMediaEmpty ? (
           <div className="drop-zone">
+            <MediaKindBadges />
             <div className="headline">Drop images, videos or folders here</div>
             <div className="small" style={{ color: "#aab0b8" }}>
               Dropped files are uploaded to the server. Files already on the server can be opened by path.
@@ -122,10 +139,10 @@ export function ResultViewer({
     current.kind === "video" && current.frame !== null
       ? ` · #${current.frame}/${(current.frame_count ?? 1) - 1}${current.timestamp === null ? "" : ` (${current.timestamp})`}`
       : "";
-  const countNote = scores.length > 0 ? "" : ` · ${visible.length} ${frame?.task === "segmentation" ? "instances" : "boxes"}`;
+  const countNote = scores.length > 0 ? "" : ` · ${visible.length} ${taskViewOf(frame?.task ?? DEFAULT_TASK).drawnShapeNoun}`;
 
   const renderInstance = (finding: FrameInstance, isHighlighted: boolean, scale: number) => {
-    const color = colorOf(finding.class_name);
+    const color = finding.color ?? colorOf(finding.class_name);
     const isRejected = !finding.is_accepted;
     const hasMask = finding.polygons.length > 0;
     return (
@@ -164,6 +181,10 @@ export function ResultViewer({
         fitKey={current.path}
         width={current.width}
         height={current.height}
+        isDrawing={drawing !== null}
+        drawColor={drawing?.color}
+        onDrawn={drawing?.onBox}
+        onPointClicked={drawing?.onPoint ?? undefined}
         onBackgroundClick={onClearSelection}
         onKeyDown={(event) => {
           const isVideo = current.kind === "video";
@@ -227,6 +248,7 @@ export function ResultViewer({
             {visible
               .filter((finding) => finding.index === highlightedIndex)
               .map((finding) => renderInstance(finding, true, scale))}
+            {drawing?.overlay(scale)}
           </>
         )}
       </ZoomableImage>

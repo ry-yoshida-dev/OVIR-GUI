@@ -1,12 +1,16 @@
 import type {
   ActionReply,
+  Box,
   ClassSetListEntry,
   ClassSetPreview,
   DirectoryListing,
   ExportPlan,
   FramePayload,
+  MarkEntry,
   ModelSelection,
+  ObjectDocument,
   PictureFindings,
+  PictureKey,
   ReferenceDraft,
   ResultsPayload,
   StatisticsPayload,
@@ -49,6 +53,8 @@ const put = <T = unknown>(url: string, body: unknown) => request<T>("PUT", url, 
 const remove = <T = unknown>(url: string) => request<T>("DELETE", url);
 
 const query = (parameters: Record<string, string>) => new URLSearchParams(parameters).toString();
+const pathQuery = (paths: string[] | null) =>
+  paths === null ? "" : `?${new URLSearchParams(paths.map((path) => ["path", path])).toString()}`;
 
 export const api = {
   state: () => get<WorkspaceState>("/api/state"),
@@ -56,7 +62,10 @@ export const api = {
   frame: (path: string, frame: number | null) =>
     get<FramePayload>(`/api/frame?${query(frame === null ? { path } : { path, frame: String(frame) })}`),
   timeline: (path: string) => get<TimelinePayload>(`/api/timeline?${query({ path })}`),
-  videoFrames: (path: string) => get<VideoFramesPayload>(`/api/video-frames?${query({ path })}`),
+  videoFrames: (path: string, range: { afterFrame: number; untilFrame: number } | null = null) =>
+    get<VideoFramesPayload>(
+      `/api/video-frames?${query(range === null ? { path } : { path, after: String(range.afterFrame), until: String(range.untilFrame) })}`,
+    ),
   statistics: () => get<StatisticsPayload>("/api/statistics"),
 
   openPaths: (paths: string[]) => post("/api/media/open", { paths }),
@@ -64,6 +73,7 @@ export const api = {
   show: (path: string, frame: number | null) => post("/api/media/show", { path, frame }),
   setSampling: (frameStep: number) => put("/api/sampling", { frame_step: frameStep }),
   setBackground: (scope: string) => put("/api/background", { scope }),
+  preparePlayback: (path: string) => post("/api/media/playback", { path }),
   upload: (files: { file: File; name: string }[], isFirstShown: boolean) => {
     const form = new FormData();
     for (const entry of files) {
@@ -73,7 +83,8 @@ export const api = {
   },
   files: (path?: string) => get<DirectoryListing>(`/api/files${path === undefined ? "" : `?${query({ path })}`}`),
   imageUrl: (path: string, version: string | null) => `/api/media/image?${query({ path, v: version ?? "" })}`,
-  videoUrl: (path: string, version: string | null) => `/api/media/video?${query({ path, v: version ?? "" })}`,
+  videoUrl: (path: string, version: string | null, playback: string) =>
+    `/api/media/video?${query({ path, v: version ?? "", playback })}`,
   frameUrl: (path: string, frame: number, version: string | null) =>
     `/api/media/frame?${query({ path, frame: String(frame), v: version ?? "" })}`,
 
@@ -81,8 +92,8 @@ export const api = {
   selectModel: (selection: ModelSelection) => put("/api/model", selection),
   selectPreset: (backend: string, presetName: string) => put("/api/model/preset", { backend, preset_name: presetName }),
   run: (isSkippingApproved = false) => post<ActionReply>("/api/run", { is_skipping_approved: isSkippingApproved }),
-  runMedia: (isSkippingApproved = false) =>
-    post<ActionReply>("/api/run-media", { is_skipping_approved: isSkippingApproved }),
+  runMedia: (isSkippingApproved = false, startFrame: number | null = null) =>
+    post<ActionReply>("/api/run-media", { is_skipping_approved: isSkippingApproved, start_frame: startFrame }),
   runAll: (isSkippingApproved = false) =>
     post<ActionReply>("/api/run-all", { is_skipping_approved: isSkippingApproved }),
   updateOutdated: (isSkippingApproved = false) =>
@@ -90,7 +101,7 @@ export const api = {
   cancel: () => post("/api/cancel"),
 
   selectProfile: (key: string) => post("/api/profiles/select", { key }),
-  removeProfile: (key: string) => post("/api/profiles/remove", { key }),
+  removeProfiles: (keys: string[]) => post("/api/profiles/remove", { keys }),
   clearResults: () => post("/api/profiles/clear"),
   compare: (key: string | null) => put("/api/comparison", { key }),
   setAccepted: (findings: PictureFindings[], isAccepted: boolean) =>
@@ -162,6 +173,20 @@ export const api = {
     return post("/api/class-sets/import", form);
   },
   classSetFileUrl: (name: string) => `/api/class-sets/${encodeURIComponent(name)}/file`,
+
+  addExemplar: (picture: PictureKey, className: string, box: Box, isPositive: boolean) =>
+    post("/api/prompts/exemplars", { ...picture, class_name: className, box, is_positive: isPositive }),
+  removeExemplar: (picture: PictureKey, index: number) => post("/api/prompts/exemplars/remove", { ...picture, index }),
+  setMark: (picture: PictureKey, mark: Omit<MarkEntry, "object_id"> & { object_id: number | null }) =>
+    put<{ object_id: number }>("/api/prompts/marks", { ...picture, ...mark }),
+  removeMark: (picture: PictureKey, objectId: number) =>
+    post("/api/prompts/marks/remove", { ...picture, object_id: objectId }),
+  removeObject: (path: string, objectId: number) =>
+    post("/api/prompts/marks/remove", { path, frame: null, object_id: objectId }),
+  clearPicturePrompts: (picture: PictureKey) => post("/api/prompts/clear", picture),
+
+  embedding: () => get<{ parent_origins: string[] }>("/api/embedding"),
+  resultDocument: (paths: string[] | null) => get<ObjectDocument>(`/api/results/document${pathQuery(paths)}`),
 
   exportPlan: () => get<ExportPlan>("/api/export/plan"),
   exportResults: (body: {

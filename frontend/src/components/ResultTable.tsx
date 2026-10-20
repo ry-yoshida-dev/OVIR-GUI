@@ -8,16 +8,23 @@ import {
   formatNumber,
   frameText,
   pictureKeyOf,
+  type ResultScope,
+  runnerUpTextOf,
   type SortOrder,
   type TableFilter,
   type TableRow,
 } from "../lib/resultTable";
+import { taskViewOf } from "../lib/taskViews";
 import { useDialogs } from "./DialogHost";
 import { FilterPopup } from "./FilterPopup";
 import { useMenu } from "./Menu";
+import { ResultScopeToggle } from "./ResultScopeToggle";
 
 interface ResultTableProps {
   task: TaskValue;
+  scope: ResultScope;
+  isScopeSelectable: boolean;
+  onScopeChange: (scope: ResultScope) => void;
   rows: TableRow[];
   allRows: TableRow[];
   filter: TableFilter;
@@ -41,19 +48,11 @@ interface ResultTableProps {
 const ROW_HEIGHT = 25;
 const OVERSCAN = 12;
 
-function titleOf(task: TaskValue): string {
-  switch (task) {
-    case "classification":
-      return "Predictions";
-    case "detection":
-      return "Detections";
-    case "segmentation":
-      return "Instances";
-  }
-}
-
 export function ResultTable({
   task,
+  scope,
+  isScopeSelectable,
+  onScopeChange,
   rows,
   allRows,
   filter,
@@ -79,7 +78,8 @@ export function ResultTable({
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(400);
   const [popup, setPopup] = useState<{ column: ColumnDefinition; x: number; y: number } | null>(null);
-  const columns = columnsOf(task);
+  const columns = columnsOf(task, scope);
+  const statusLeadCount = columns.findIndex((column) => column.key === "class");
 
   useLayoutEffect(() => {
     const element = scroller.current;
@@ -167,7 +167,7 @@ export function ResultTable({
       case "frame":
         return frameText(row.frame, row.seconds);
       case "runner_up":
-        return <span className="muted">{row.runnerUp ?? ""}</span>;
+        return <span className="muted">{runnerUpTextOf(row.scores) ?? ""}</span>;
       default:
         break;
     }
@@ -211,7 +211,9 @@ export function ResultTable({
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
       <div className="panel-title">
-        <span className="grow">{titleOf(task)}</span>
+        <span>{taskViewOf(task).resultTitle}</span>
+        {isScopeSelectable && <ResultScopeToggle scope={scope} onChange={onScopeChange} />}
+        <span className="grow" />
         <label className="small" title="List only the findings of the shown image or video">
           <input
             type="checkbox"
@@ -287,9 +289,11 @@ export function ResultTable({
             {rows.length === 0 && (
               <tr className="status">
                 <td colSpan={columns.length}>
-                  {allRows.length === 0
-                    ? "Open images or videos; their results are listed here as they are recognized."
-                    : "Nothing passes the filters."}
+                  {allRows.length > 0
+                    ? "Nothing passes the filters."
+                    : scope === "videos"
+                      ? "Run a video to list the findings on its sampled frames here."
+                      : "Open images or videos; their results are listed here as they are recognized."}
                 </td>
               </tr>
             )}
@@ -309,12 +313,12 @@ export function ResultTable({
                 <tr key={row.key} className={classes} onClick={() => onSelectRow(row)} style={{ height: ROW_HEIGHT }}>
                   {row.kind === "status" ? (
                     <>
-                      {columns.slice(0, 3).map((column) => (
+                      {columns.slice(0, statusLeadCount).map((column) => (
                         <td key={column.key} title={column.key === "media" ? row.path : undefined}>
                           {renderCell(row, column)}
                         </td>
                       ))}
-                      <td colSpan={columns.length - 3}>{row.text}</td>
+                      <td colSpan={columns.length - statusLeadCount}>{row.text}</td>
                     </>
                   ) : (
                     columns.map((column) => (

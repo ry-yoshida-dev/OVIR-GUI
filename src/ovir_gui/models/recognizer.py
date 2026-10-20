@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from PIL import Image
-
+from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
 from ..recognition import FrameResult
 from .recognition_model import RecognitionModel
@@ -47,16 +46,17 @@ class Recognizer(ABC):
         """
 
     @abstractmethod
-    def recognize(self, images: Sequence[Image.Image], prompt: LabeledPrompt) -> list[FrameResult]:
+    def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         """
-        Recognize the prompt classes in some images.
+        Recognize what the prompt asks for in some pictures.
 
         Parameters
         ----------
-        images : Sequence[Image.Image]
-            RGB images, processed in mini-batches of the model's batch size.
+        pictures : Sequence[KeyedPicture]
+            RGB pictures with their keys, processed in mini-batches of the model's batch size; a sequential model
+            receives the frames of a video in ascending order.
         prompt : LabeledPrompt
-            Classes and their queries.
+            Classes with their queries and the drawings of the pictures.
 
         Returns
         -------

@@ -7,7 +7,7 @@ interface BackgroundControlProps {
 
 export function BackgroundControl({ background, onChange }: BackgroundControlProps) {
   return (
-    <label className="background-control" title="Which pictures are recognized automatically while you work">
+    <label className="background-control" title="Which images are recognized automatically while you work; videos are recognized when you run them">
       Auto
       <select value={background.scope} onChange={(event) => onChange(event.target.value)}>
         {background.scopes.map((scope) => (
