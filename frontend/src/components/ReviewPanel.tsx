@@ -33,7 +33,7 @@ interface ReviewPanelProps {
   onSuppressionChange: (suppression: DuplicateSuppression) => void;
 }
 
-const OVERALL_COLOR = "var(--accent)";
+const OVERALL_COLOR = "var(--overall-series)";
 
 function isSameValue(left: number, right: number, step: number): boolean {
   return Math.abs(left - right) < step / 2;

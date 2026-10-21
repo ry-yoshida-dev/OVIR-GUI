@@ -234,7 +234,7 @@ export function StatisticsPanel({
             <Histogram
               histogram={histogram}
               minimum={histogramMinimum}
-              color={selected === null ? "var(--accent)" : (classColors[selected.class_name] ?? "var(--accent)")}
+              color={selected === null ? "var(--overall-series)" : (classColors[selected.class_name] ?? "var(--overall-series)")}
             />
           </div>
         )}

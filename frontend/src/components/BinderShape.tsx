@@ -1,5 +1,5 @@
 import type { TaskValue } from "../api/types";
-import { backPath, isTabAtSheetEdge, tabPath, tabXOf } from "./binderGeometry";
+import { backPath, tabPath, tabXOf } from "./binderGeometry";
 
 interface BinderShapeProps {
   task: TaskValue;
@@ -22,10 +22,7 @@ export function BinderShape({ task, tasks }: BinderShapeProps) {
         <svg className="binder-front-tab">
           <path d={tabPath(tabX)} style={{ fill: sheetColor }} />
         </svg>
-        <div
-          className={`binder-front-sheet${isTabAtSheetEdge(tabX) ? " is-tab-at-edge" : ""}`}
-          style={{ background: sheetColor }}
-        />
+        <div className="binder-front-sheet" style={{ background: sheetColor }} />
       </div>
     </div>
   );

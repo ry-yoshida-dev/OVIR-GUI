@@ -3,7 +3,7 @@ export const BINDER_GEOMETRY = {
   tabGap: 2,
   band: 40,
   backDrop: 7,
-  sheetRadius: 14,
+  sheetRadius: 0,
   tabRadius: 11,
   fillet: 10,
 } as const;

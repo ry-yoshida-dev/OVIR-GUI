@@ -506,7 +506,9 @@ export function App() {
 
   const runAll = useCallback(async () => {
     const path = currentPath;
-    const startFrame = isVideo ? (playbackPosition.current() ?? current?.frame ?? null) : null;
+    const startFrame = isVideo
+      ? (playbackPosition.current() ?? current?.frame ?? null)
+      : null;
     const isStarted = await runAction((isSkippingApproved) =>
       api.runAll(isSkippingApproved, startFrame),
     );
@@ -641,6 +643,10 @@ export function App() {
   const orderedMedia = useMemo(
     () => orderMedia(state?.media ?? []),
     [state?.media],
+  );
+
+  const currentMediaIndex = orderedMedia.findIndex(
+    (entry) => entry.path === currentPath,
   );
 
   const navigate = useCallback(
@@ -1106,6 +1112,17 @@ export function App() {
                 leading={
                   taskView.isGalleryAvailable ? centerModeToggle : undefined
                 }
+                navigation={
+                  isGalleryShown || current === null
+                    ? undefined
+                    : {
+                        isFirst: currentMediaIndex <= 0,
+                        isLast:
+                          currentMediaIndex < 0 ||
+                          currentMediaIndex >= orderedMedia.length - 1,
+                        onNavigate: navigate,
+                      }
+                }
               >
                 <PopoverButton
                   className="sheet-button"
@@ -1262,7 +1279,9 @@ export function App() {
                 style={
                   isCollapsed("models")
                     ? { flex: "none" }
-                    : { height: layout.profileHeight, flex: "none" }
+                    : isCollapsed("results")
+                      ? undefined
+                      : { height: layout.profileHeight, flex: "none" }
                 }
               >
                 <ProfileTable
@@ -1277,7 +1296,7 @@ export function App() {
                   onUpdateOutdated={() => void runAction(api.updateOutdated)}
                 />
               </div>
-              {!isCollapsed("models") && (
+              {!isCollapsed("models") && !isCollapsed("results") && (
                 <Splitter
                   isHorizontal
                   onResize={(delta) =>
@@ -1291,135 +1310,145 @@ export function App() {
                   }
                 />
               )}
-              <div className="pane-region results-panel">
-                <div className="section-header">
-                  <span className="section-icon">
-                    <FindingsGlyph />
-                  </span>
-                  <span className="section-title">{taskView.resultTitle}</span>
-                </div>
-                {state.model.tuning.is_minimum_confidence_shown &&
-                  reviewFilter !== null && (
-                    <>
-                      <div
-                        className="review-area"
-                        style={
-                          isCollapsed("review")
-                            ? undefined
-                            : { height: layout.reviewHeight }
-                        }
-                      >
-                        <ReviewPanel
-                          classes={state.classes}
-                          results={markedResults}
-                          reviewFilter={reviewFilter}
-                          thresholds={draftThresholds.value ?? state.thresholds}
-                          suppression={
-                            draftSuppression.value ?? state.suppression
+              <div
+                className="pane-region results-panel"
+                style={isCollapsed("results") ? { flex: "none" } : undefined}
+              >
+                <Section
+                  title={taskView.resultTitle}
+                  icon={<FindingsGlyph />}
+                  isCollapsed={isCollapsed("results")}
+                  onToggle={() => toggleSection("results")}
+                  isStretched
+                  isFlush
+                >
+                  {state.model.tuning.is_minimum_confidence_shown &&
+                    reviewFilter !== null && (
+                      <>
+                        <div
+                          className="review-area"
+                          style={
+                            isCollapsed("review")
+                              ? undefined
+                              : { height: layout.reviewHeight }
                           }
-                          standardMinimum={state.standard_minimum}
-                          standardOverlap={state.standard_overlap_threshold}
-                          isOverlapAvailable={!taskView.isScoreBased}
-                          isCollapsed={isCollapsed("review")}
-                          onToggleCollapsed={() => toggleSection("review")}
-                          onThresholdsChange={draftThresholds.change}
-                          onSuppressionChange={draftSuppression.change}
-                        />
-                      </div>
-                      {!isCollapsed("review") && (
-                        <Splitter
-                          isHorizontal
-                          onResize={(delta) =>
-                            setLayout((currentLayout) => ({
-                              ...currentLayout,
-                              reviewHeight: Math.max(
-                                90,
-                                Math.min(
-                                  800,
-                                  currentLayout.reviewHeight + delta,
+                        >
+                          <ReviewPanel
+                            classes={state.classes}
+                            results={markedResults}
+                            reviewFilter={reviewFilter}
+                            thresholds={
+                              draftThresholds.value ?? state.thresholds
+                            }
+                            suppression={
+                              draftSuppression.value ?? state.suppression
+                            }
+                            standardMinimum={state.standard_minimum}
+                            standardOverlap={state.standard_overlap_threshold}
+                            isOverlapAvailable={!taskView.isScoreBased}
+                            isCollapsed={isCollapsed("review")}
+                            onToggleCollapsed={() => toggleSection("review")}
+                            onThresholdsChange={draftThresholds.change}
+                            onSuppressionChange={draftSuppression.change}
+                          />
+                        </div>
+                        {!isCollapsed("review") && (
+                          <Splitter
+                            isHorizontal
+                            onResize={(delta) =>
+                              setLayout((currentLayout) => ({
+                                ...currentLayout,
+                                reviewHeight: Math.max(
+                                  90,
+                                  Math.min(
+                                    800,
+                                    currentLayout.reviewHeight + delta,
+                                  ),
                                 ),
-                              ),
-                            }))
-                          }
-                        />
-                      )}
-                    </>
-                  )}
-                {isImageResultsShown && (
-                  <div
-                    className={`results-area${isCollapsed("image-results") ? " collapsed" : ""}`}
-                  >
-                    <ResultTable
-                      task={task}
-                      scope="images"
-                      title="Images"
-                      emptyText="Open images; their results are listed here as inference completes."
-                      isCollapsed={isCollapsed("image-results")}
-                      onToggleCollapsed={() => toggleSection("image-results")}
-                      rows={imageRows}
-                      allRows={imageScopedRows}
-                      filter={filter}
-                      onFilterChange={setFilter}
-                      order={order}
-                      onOrderChange={setOrder}
-                      currentPictureKey={resultPictureKey}
-                      selectedKey={selectedRowKey}
-                      onSelectRow={selectRow}
-                      onSetAccepted={setAccepted}
-                      classColors={classColors}
-                    />
-                  </div>
-                )}
-                {isImageResultsShown &&
-                  hasVideos &&
-                  !isCollapsed("image-results") &&
-                  !isCollapsed("video-results") && (
-                    <Splitter
-                      isHorizontal
-                      onResize={(delta) =>
-                        setLayout((currentLayout) => ({
-                          ...currentLayout,
-                          videoResultsHeight: Math.max(
-                            120,
-                            Math.min(
-                              900,
-                              currentLayout.videoResultsHeight - delta,
-                            ),
-                          ),
-                        }))
-                      }
-                    />
-                  )}
-                {hasVideos && (
-                  <div
-                    className={`results-area${isCollapsed("video-results") ? " collapsed" : ""}`}
-                    style={
-                      isImageResultsShown &&
-                      !isCollapsed("image-results") &&
-                      !isCollapsed("video-results")
-                        ? { flex: `0 1 ${layout.videoResultsHeight}px` }
-                        : undefined
-                    }
-                  >
-                    {chartedVideo !== null && (
-                      <VideoFindingsPanel
-                        video={chartedVideo}
-                        current={isChartedVideoCurrent ? current : null}
-                        results={chartedVideoResults}
-                        position={playbackPosition}
-                        isFollowingPlayer={isVideoPlayerUsed}
+                              }))
+                            }
+                          />
+                        )}
+                      </>
+                    )}
+                  {isImageResultsShown && (
+                    <div
+                      className={`results-area${isCollapsed("image-results") ? " collapsed" : ""}`}
+                    >
+                      <ResultTable
+                        task={task}
+                        scope="images"
+                        title="Images"
+                        emptyText="Open images; their results are listed here as inference completes."
+                        isCollapsed={isCollapsed("image-results")}
+                        onToggleCollapsed={() => toggleSection("image-results")}
+                        rows={imageRows}
+                        allRows={imageScopedRows}
+                        filter={filter}
+                        onFilterChange={setFilter}
+                        order={order}
+                        onOrderChange={setOrder}
+                        currentPictureKey={resultPictureKey}
+                        selectedKey={selectedRowKey}
+                        onSelectRow={selectRow}
+                        onSetAccepted={setAccepted}
                         classColors={classColors}
-                        isCollapsed={isCollapsed("video-results")}
-                        onToggleCollapsed={() => toggleSection("video-results")}
-                        onSeek={
-                          isChartedVideoCurrent
-                            ? seek
-                            : (frame) => show(chartedVideo.path, frame)
+                      />
+                    </div>
+                  )}
+                  {isImageResultsShown &&
+                    hasVideos &&
+                    !isCollapsed("image-results") &&
+                    !isCollapsed("video-results") && (
+                      <Splitter
+                        isHorizontal
+                        onResize={(delta) =>
+                          setLayout((currentLayout) => ({
+                            ...currentLayout,
+                            videoResultsHeight: Math.max(
+                              120,
+                              Math.min(
+                                900,
+                                currentLayout.videoResultsHeight - delta,
+                              ),
+                            ),
+                          }))
                         }
                       />
                     )}
-                  </div>
-                )}
+                  {hasVideos && (
+                    <div
+                      className={`results-area${isCollapsed("video-results") ? " collapsed" : ""}`}
+                      style={
+                        isImageResultsShown &&
+                        !isCollapsed("image-results") &&
+                        !isCollapsed("video-results")
+                          ? { flex: `0 1 ${layout.videoResultsHeight}px` }
+                          : undefined
+                      }
+                    >
+                      {chartedVideo !== null && (
+                        <VideoFindingsPanel
+                          video={chartedVideo}
+                          current={isChartedVideoCurrent ? current : null}
+                          results={chartedVideoResults}
+                          position={playbackPosition}
+                          isFollowingPlayer={isVideoPlayerUsed}
+                          classColors={classColors}
+                          isCollapsed={isCollapsed("video-results")}
+                          onToggleCollapsed={() =>
+                            toggleSection("video-results")
+                          }
+                          onSeek={
+                            isChartedVideoCurrent
+                              ? seek
+                              : (frame) => show(chartedVideo.path, frame)
+                          }
+                        />
+                      )}
+                    </div>
+                  )}
+                </Section>
               </div>
             </div>
           </div>

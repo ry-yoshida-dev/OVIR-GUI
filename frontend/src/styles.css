@@ -1,68 +1,76 @@
 :root {
-  --bg: oklch(0.972 0.003 85);
-  --panel: oklch(0.995 0.0015 85);
-  --panel-alt: oklch(0.982 0.003 85);
-  --border: oklch(0.915 0.004 85);
-  --border-strong: oklch(0.865 0.005 85);
-  --text: oklch(0.255 0.012 265);
-  --text-muted: oklch(0.5 0.012 265);
-  --text-faint: oklch(0.67 0.008 265);
-  --accent: oklch(0.5 0.135 266);
-  --accent-soft: oklch(0.5 0.135 266 / 0.1);
-  --accent-text: oklch(0.99 0.004 266);
-  --danger: oklch(0.56 0.16 25);
-  --danger-soft: oklch(0.56 0.16 25 / 0.1);
-  --warning: oklch(0.68 0.13 70);
-  --warning-soft: oklch(0.68 0.13 70 / 0.14);
-  --success: oklch(0.58 0.11 155);
-  --row-hover: oklch(0.4 0.01 265 / 0.04);
-  --row-current: oklch(0.5 0.135 266 / 0.06);
-  --row-selected: oklch(0.5 0.135 266 / 0.12);
-  --well: oklch(0.974 0.003 85);
-  --hairline: oklch(0.3 0.01 265 / 0.07);
-  --canvas: oklch(0.958 0.004 85);
-  --timeline-bg: oklch(0.935 0.004 85);
-  --timeline-mark: oklch(0.67 0.008 265);
-  --timeline-cursor: oklch(0.56 0.16 25);
-  --shadow: 0 1px 2px oklch(0.3 0.02 265 / 0.06), 0 12px 32px oklch(0.3 0.02 265 / 0.12);
+  --bg: oklch(0.982 0.002 260);
+  --panel: oklch(1 0 0);
+  --panel-alt: oklch(0.985 0.002 260);
+  --border: oklch(0.925 0.003 260);
+  --border-strong: oklch(0.87 0.004 260);
+  --text: oklch(0.23 0.02 260);
+  --text-muted: oklch(0.47 0.018 260);
+  --text-faint: oklch(0.58 0.014 260);
+  --accent: oklch(0.63 0.19 42);
+  --accent-soft: oklch(0.63 0.19 42 / 0.14);
+  --accent-text: oklch(1 0 0);
+  --action-fill: oklch(0.46 0.012 260);
+  --action-soft: oklch(0.46 0.012 260 / 0.12);
+  --danger: oklch(0.57 0.19 22);
+  --danger-soft: oklch(0.57 0.19 22 / 0.1);
+  --warning: oklch(0.72 0.15 65);
+  --warning-soft: oklch(0.72 0.15 65 / 0.16);
+  --success: oklch(0.6 0.13 160);
+  --row-hover: oklch(0.4 0.02 260 / 0.045);
+  --row-current: oklch(0.955 0.04 50);
+  --row-selected: oklch(0.9 0.075 50);
+  --well: oklch(0.982 0.002 260);
+  --hairline: oklch(0.3 0.02 260 / 0.08);
+  --canvas: oklch(0.97 0.002 260);
+  --timeline-bg: oklch(0.945 0.003 260);
+  --timeline-mark: oklch(0.6 0.014 260);
+  --timeline-cursor: oklch(0.57 0.19 22);
+  --shadow: 0 1px 2px oklch(0.3 0.03 260 / 0.07), 0 12px 32px oklch(0.3 0.03 260 / 0.13);
   --radius: 6px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --binder-bg: oklch(0.93 0.005 85);
-  --canvas-bar: oklch(0.995 0.0015 85);
-  --canvas-raised: oklch(0.925 0.004 85);
-  --canvas-line: oklch(0.3 0.01 265 / 0.08);
-  --canvas-text: oklch(0.255 0.012 265);
-  --canvas-text-muted: oklch(0.5 0.012 265);
-  --overlay-bg: oklch(0.995 0.0015 85 / 0.9);
-  --overlay-text: oklch(0.255 0.012 265);
-  --overlay-muted: oklch(0.47 0.012 265);
-  --overlay-track: oklch(0.3 0.01 265 / 0.12);
-  --scrim: oklch(0.2 0.015 265 / 0.32);
-  --drop-zone-line: oklch(0.3 0.01 265 / 0.16);
-  --drop-zone-text: oklch(0.5 0.012 265);
-  --drop-zone-headline: oklch(0.32 0.012 265);
-  --sheet-classification: oklch(0.968 0.012 75);
-  --sheet-detection: oklch(0.968 0.012 255);
-  --sheet-segmentation: oklch(0.968 0.012 170);
-  --back-classification: oklch(0.912 0.012 75);
-  --back-detection: oklch(0.912 0.012 255);
-  --back-segmentation: oklch(0.912 0.012 170);
-  --pane-heading-lightness: 0.995;
-  --pane-heading-chroma: 0.0015;
-  --pane-heading-text: oklch(0.255 0.012 265);
-  --pane-heading-text-muted: oklch(0.5 0.012 265);
-  --pane-heading-hover: oklch(0.4 0.01 265 / 0.06);
-  --pane-heading-line: oklch(0.3 0.01 265 / 0.08);
-  --section-heading-lightness: 0.978;
-  --section-heading-chroma: 0.006;
-  --section-heading-text-lightness: 0.42;
-  --section-heading-muted-lightness: 0.6;
-  --section-heading-hover: oklch(0.4 0.01 265 / 0.04);
-  --sheet-edge: oklch(0.3 0.01 265 / 0.08);
-  --sheet-shadow: drop-shadow(0 1px 1px oklch(0.3 0.02 265 / 0.06)) drop-shadow(0 8px 22px oklch(0.3 0.02 265 / 0.08));
-  --band-hover: oklch(0.4 0.01 265 / 0.07);
-  --chip-bg: oklch(0.4 0.01 265 / 0.07);
+  --binder-bg: oklch(0.972 0.002 260);
+  --canvas-bar: oklch(1 0 0);
+  --canvas-raised: oklch(0.94 0.003 260);
+  --canvas-line: oklch(0.3 0.02 260 / 0.09);
+  --canvas-text: oklch(0.23 0.02 260);
+  --canvas-text-muted: oklch(0.47 0.018 260);
+  --overlay-bg: oklch(1 0 0 / 0.9);
+  --overlay-text: oklch(0.23 0.02 260);
+  --overlay-muted: oklch(0.45 0.018 260);
+  --overlay-track: oklch(0.3 0.02 260 / 0.13);
+  --scrim: oklch(0.2 0.02 260 / 0.32);
+  --drop-zone-line: oklch(0.3 0.02 260 / 0.18);
+  --drop-zone-text: oklch(0.47 0.018 260);
+  --drop-zone-headline: oklch(0.3 0.02 260);
+  --sheet-classification: oklch(0.995 0.001 260);
+  --sheet-detection: oklch(0.995 0.001 260);
+  --sheet-segmentation: oklch(0.995 0.001 260);
+  --back-classification: oklch(0.945 0.003 260);
+  --back-detection: oklch(0.945 0.003 260);
+  --back-segmentation: oklch(0.945 0.003 260);
+  --pane-heading-lightness: 0.92;
+  --pane-heading-chroma: 0.003;
+  --pane-heading-text: oklch(0.23 0.02 260);
+  --pane-heading-text-muted: oklch(0.45 0.018 260);
+  --pane-heading-hover: oklch(0.3 0.02 260 / 0.07);
+  --pane-heading-line: oklch(0.3 0.02 260 / 0.1);
+  --section-heading-lightness: 0.965;
+  --section-heading-chroma: 0.003;
+  --section-heading-text-lightness: 0.28;
+  --section-heading-muted-lightness: 0.5;
+  --section-heading-hover: oklch(0.3 0.02 260 / 0.05);
+  --sheet-edge: oklch(0.3 0.02 260 / 0.09);
+  --sheet-shadow: drop-shadow(0 1px 1px oklch(0.3 0.03 260 / 0.07)) drop-shadow(0 8px 22px oklch(0.3 0.03 260 / 0.09));
+  --band-hover: oklch(0.4 0.02 260 / 0.07);
+  --neutral-hue: 260;
+  --section-heading-text-chroma: 0.014;
+  --section-heading-muted-chroma: 0.012;
+  --pane-heading-active: var(--accent);
+  --pane-heading-active-text: oklch(1 0 0);
+  --overall-series: oklch(0.8 0.165 85);
+  --chip-bg: oklch(0.4 0.02 260 / 0.07);
   color-scheme: light;
 }
 
@@ -79,6 +87,13 @@
     --accent: oklch(0.72 0.11 266);
     --accent-soft: oklch(0.72 0.11 266 / 0.15);
     --accent-text: oklch(0.2 0.03 266);
+    --action-fill: var(--accent);
+    --action-soft: var(--accent-soft);
+    --neutral-hue: initial;
+    --pane-heading-active: var(--accent);
+    --pane-heading-active-text: var(--accent-text);
+    --section-heading-text-chroma: 0.03;
+    --section-heading-muted-chroma: 0.025;
     --danger: oklch(0.7 0.14 25);
     --danger-soft: oklch(0.7 0.14 25 / 0.15);
     --warning: oklch(0.78 0.12 75);
@@ -147,6 +162,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
+  accent-color: var(--accent);
   font: 13px/1.4 var(--font);
   overflow: hidden;
 }
@@ -178,7 +194,7 @@ button:disabled {
 }
 
 button.primary {
-  background: var(--accent);
+  background: var(--action-fill);
   border-color: var(--accent);
   color: var(--accent-text);
 }
@@ -245,14 +261,15 @@ label {
 .binder {
   --band: 40px;
   --task-hue: 250;
-  --pane-heading: oklch(var(--pane-heading-lightness) var(--pane-heading-chroma) var(--task-hue));
-  --section-heading: oklch(var(--section-heading-lightness) var(--section-heading-chroma) var(--task-hue));
-  --section-heading-text: oklch(var(--section-heading-text-lightness) 0.03 var(--task-hue));
-  --section-heading-text-muted: oklch(var(--section-heading-muted-lightness) 0.025 var(--task-hue));
+  --heading-hue: var(--neutral-hue, var(--task-hue));
+  --pane-heading: oklch(var(--pane-heading-lightness) var(--pane-heading-chroma) var(--heading-hue));
+  --section-heading: oklch(var(--section-heading-lightness) var(--section-heading-chroma) var(--heading-hue));
+  --section-heading-text: oklch(var(--section-heading-text-lightness) var(--section-heading-text-chroma) var(--heading-hue));
+  --section-heading-text-muted: oklch(var(--section-heading-muted-lightness) var(--section-heading-muted-chroma) var(--heading-hue));
   position: relative;
   min-height: 0;
   min-width: 0;
-  margin: 8px 12px 12px;
+  margin: 0;
 }
 
 .binder[data-task="classification"] {
@@ -303,11 +320,6 @@ label {
   right: 0;
   top: var(--band);
   bottom: 0;
-  border-radius: 14px;
-}
-
-.binder-front-sheet.is-tab-at-edge {
-  border-top-left-radius: 0;
 }
 
 .binder-band {
@@ -450,7 +462,7 @@ label {
   height: 36px;
   border: 0;
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--action-fill);
   color: var(--accent-text);
   display: inline-flex;
   align-items: center;
@@ -480,8 +492,8 @@ label {
 }
 
 .infer-control .infer-settings {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--action-soft);
+  color: var(--action-fill);
 }
 
 .infer-settings {
@@ -566,6 +578,11 @@ label {
   color: var(--accent-text);
 }
 
+.pane-canvas > .pane-header .segmented button.active {
+  background: var(--pane-heading-active);
+  color: var(--pane-heading-active-text);
+}
+
 .center-stage {
   flex: 1;
   min-height: 0;
@@ -609,13 +626,31 @@ label {
 .pane-title {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.media-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.media-stepper > button {
+  flex: none;
+  font-size: 17px;
+  line-height: 1;
+  color: inherit;
+}
+
+.media-stepper > button:disabled {
+  opacity: 0.3;
 }
 
 .pane > .pane-header {
@@ -705,7 +740,7 @@ label {
 }
 
 .section + .section {
-  margin-top: 6px;
+  border-top: 1px solid var(--border);
 }
 
 .section.stretched {
@@ -717,11 +752,11 @@ label {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 6px 0 12px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  height: 36px;
+  padding: 0 6px 0 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   background: var(--section-heading);
   color: var(--section-heading-text);
@@ -1309,14 +1344,23 @@ table.grid tr.status td {
 }
 
 .statusbar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 4px 10px;
-  background: var(--panel);
-  border-top: 1px solid var(--border);
+  background: var(--sheet-detection);
   font-size: 12px;
   min-height: 28px;
+}
+
+.app:has(.binder[data-task="classification"]) .statusbar {
+  background: var(--sheet-classification);
+}
+
+.app:has(.binder[data-task="segmentation"]) .statusbar {
+  background: var(--sheet-segmentation);
 }
 
 .statusbar .message {
@@ -2456,6 +2500,11 @@ td.ellipsis {
 .review-tabs button {
   padding: 1px 8px;
   font-size: 11px;
+}
+
+.review-tabs button.active {
+  background: var(--text);
+  color: var(--panel);
 }
 
 .review-switch {
