@@ -3,30 +3,45 @@ import { api, errorMessage } from "./api/client";
 import type {
   ActionReply,
   CurrentPicture,
+  DuplicateSuppression,
   FramePayload,
+  MediaEntry,
   ModelSelection,
   PictureFindings,
   TaskValue,
   TimelinePayload,
+  Thresholds,
 } from "./api/types";
 import { AddMediaMenu } from "./components/AddMediaMenu";
-import { BackgroundControl } from "./components/BackgroundControl";
 import { BinderShape } from "./components/BinderShape";
 import { BinderTabs } from "./components/BinderTabs";
-import { type CenterMode, CenterModeToggle } from "./components/CenterModeToggle";
+import {
+  type CenterMode,
+  CenterModeToggle,
+} from "./components/CenterModeToggle";
 import { ClassEditor } from "./components/ClassEditor";
+import { ClassesGlyph } from "./components/ClassesGlyph";
 import { ClassificationGallery } from "./components/ClassificationGallery";
 import { ClassSetDialog } from "./components/ClassSetDialog";
 import { ClassTextDialog } from "./components/ClassTextDialog";
 import { ConnectionIndicator } from "./components/ConnectionIndicator";
 import { useDialogs } from "./components/DialogHost";
 import { type ExportChoice, ExportDialog } from "./components/ExportDialog";
-import { FileNavigator } from "./components/FileNavigator";
+import { ExportGlyph } from "./components/ExportGlyph";
+import { FindingsGlyph } from "./components/FindingsGlyph";
+import { GearGlyph } from "./components/GearGlyph";
+import { InferenceSettings } from "./components/InferenceSettings";
+import { InfoTip } from "./components/InfoTip";
+import { MediaGlyph } from "./components/MediaGlyph";
 import { MediaKindBadges } from "./components/MediaKindBadges";
 import { MediaList } from "./components/MediaList";
 import { type MenuEntry, useMenu } from "./components/Menu";
+import { ModelGlyph } from "./components/ModelGlyph";
 import { ModelPanel } from "./components/ModelPanel";
+import { PaneHeader } from "./components/PaneHeader";
+import { PopoverButton } from "./components/PopoverButton";
 import { ProfileTable } from "./components/ProfileTable";
+import { ReviewPanel } from "./components/ReviewPanel";
 import { PromptToolbar } from "./components/PromptToolbar";
 import { ReferenceDialog } from "./components/ReferenceDialog";
 import { ResultTable } from "./components/ResultTable";
@@ -34,17 +49,30 @@ import { ResultViewer } from "./components/ResultViewer";
 import { RunButton } from "./components/RunButton";
 import { Section } from "./components/Section";
 import { ServerBrowserDialog } from "./components/ServerBrowserDialog";
+import { SlidersGlyph } from "./components/SlidersGlyph";
 import { Splitter } from "./components/Splitter";
+import { StatisticsGlyph } from "./components/StatisticsGlyph";
 import { StatisticsPanel } from "./components/StatisticsPanel";
 import { StatusBar } from "./components/StatusBar";
 import { VideoControls } from "./components/VideoControls";
 import { VideoFindingsPanel } from "./components/VideoFindingsPanel";
+import { ViewSettings } from "./components/ViewSettings";
+import { useDraftValue } from "./hooks/useDraftValue";
 import { useEmbedBridge } from "./hooks/useEmbedBridge";
 import { usePicturePromptEditor } from "./hooks/usePicturePromptEditor";
 import { useStoredState } from "./hooks/useStoredState";
 import { useWorkspace } from "./hooks/useWorkspace";
-import { DEFAULT_DISPLAY_OPTIONS, type DisplayOptions } from "./lib/displayOptions";
-import { type DroppedFile, hasFiles, mediaFilesOf, mediaFilesOfList } from "./lib/droppedFiles";
+import {
+  DEFAULT_DISPLAY_OPTIONS,
+  type DisplayOptions,
+} from "./lib/displayOptions";
+import {
+  type DroppedFile,
+  hasFiles,
+  mediaFilesOf,
+  mediaFilesOfList,
+} from "./lib/droppedFiles";
+import { ReviewFilter } from "./lib/reviewFilter";
 import { FrameResultIndex } from "./lib/frameResultIndex";
 import { orderMedia } from "./lib/mediaGroups";
 import { PlaybackPosition } from "./lib/playbackPosition";
@@ -56,7 +84,6 @@ import {
   isRowInScope,
   listedIndices,
   pictureKeyOf,
-  type ResultScope,
   rowKeyOf,
   type SortOrder,
   sortRows,
@@ -69,6 +96,8 @@ interface Layout {
   sidebarWidth: number;
   rightWidth: number;
   profileHeight: number;
+  reviewHeight: number;
+  videoResultsHeight: number;
   collapsedSections: string[];
 }
 
@@ -81,10 +110,15 @@ interface FrameRequest {
   frame: number;
 }
 
-const DEFAULT_LAYOUT: Layout = { sidebarWidth: 330, rightWidth: 560, profileHeight: 160, collapsedSections: [] };
+const DEFAULT_LAYOUT: Layout = {
+  sidebarWidth: 330,
+  rightWidth: 560,
+  profileHeight: 160,
+  reviewHeight: 230,
+  videoResultsHeight: 300,
+  collapsedSections: [],
+};
 const DEFAULT_CENTER_LAYOUT: CenterLayout = { mode: "gallery" };
-const LINE_WIDTHS = [1, 2, 3, 4];
-const MASK_OPACITIES = [0.25, 0.45, 0.65];
 const UPLOAD_CHUNK_SIZE = 8;
 const LOCAL_MESSAGE_MILLISECONDS = 7000;
 const SHOW_THROTTLE_MILLISECONDS = 150;
@@ -102,7 +136,9 @@ type OpenDialog =
 
 function isTyping(target: EventTarget | null): boolean {
   return (
-    target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
   );
 }
 
@@ -117,27 +153,48 @@ export function App() {
   const { state, results, resultsVersion } = workspace;
   const dialogs = useDialogs();
   const menu = useMenu();
-  const [layout, setLayout] = useStoredState<Layout>("ovir-gui.layout", DEFAULT_LAYOUT);
-  const [display, setDisplay] = useStoredState<DisplayOptions>("ovir-gui.display", DEFAULT_DISPLAY_OPTIONS);
-  const [centerLayout, setCenterLayout] = useStoredState<CenterLayout>("ovir-gui.center", DEFAULT_CENTER_LAYOUT);
+  const [layout, setLayout] = useStoredState<Layout>(
+    "ovir-gui.layout",
+    DEFAULT_LAYOUT,
+  );
+  const [display, setDisplay] = useStoredState<DisplayOptions>(
+    "ovir-gui.display",
+    DEFAULT_DISPLAY_OPTIONS,
+  );
+  const [centerLayout, setCenterLayout] = useStoredState<CenterLayout>(
+    "ovir-gui.center",
+    DEFAULT_CENTER_LAYOUT,
+  );
   const [filter, setFilter] = useState<TableFilter>({});
   const [order, setOrder] = useState<SortOrder | null>(null);
-  const [isShownMediaOnly, setIsShownMediaOnly] = useState(false);
-  const [chosenResultScope, setChosenResultScope] = useState<ResultScope>("images");
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
   const [isStatisticsOpen, setIsStatisticsOpen] = useState(false);
-  const [localMessage, setLocalMessage] = useState<{ text: string; serial: number } | null>(null);
-  const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
+  const [localMessage, setLocalMessage] = useState<{
+    text: string;
+    serial: number;
+  } | null>(null);
+  const [upload, setUpload] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [isDragOver, setIsDragOver] = useState(false);
   const [pendingFrame, setPendingFrame] = useState<FrameRequest | null>(null);
   const [framePayload, setFramePayload] = useState<FramePayload | null>(null);
   const [timeline, setTimeline] = useState<TimelinePayload | null>(null);
-  const [videoResults, setVideoResults] = useState<{ path: string; index: FrameResultIndex } | null>(null);
-  const [liveRequest, setLiveRequest] = useState<{ path: string; serial: number; isBusySeen: boolean } | null>(null);
+  const [videoResults, setVideoResults] = useState<{
+    path: string;
+    index: FrameResultIndex;
+  } | null>(null);
+  const [liveRequest, setLiveRequest] = useState<{
+    path: string;
+    serial: number;
+    isBusySeen: boolean;
+  } | null>(null);
   const videoResultsRef = useRef(videoResults);
   videoResultsRef.current = videoResults;
-  const [unplayableSources, setUnplayableSources] = useState<ReadonlySet<string>>(new Set());
+  const [unplayableSources, setUnplayableSources] = useState<
+    ReadonlySet<string>
+  >(new Set());
   const dragDepth = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
@@ -150,7 +207,10 @@ export function App() {
     const serial = messageSerial.current;
     setLocalMessage({ text, serial });
     window.setTimeout(
-      () => setLocalMessage((current) => (current?.serial === serial ? null : current)),
+      () =>
+        setLocalMessage((current) =>
+          current?.serial === serial ? null : current,
+        ),
       LOCAL_MESSAGE_MILLISECONDS,
     );
   }, []);
@@ -168,16 +228,58 @@ export function App() {
     [report],
   );
   const promptEditor = usePicturePromptEditor({ state, call, report });
+  const commitThresholds = useCallback(
+    (thresholds: Thresholds) => call(() => api.setThresholds(thresholds)),
+    [call],
+  );
+  const commitSuppression = useCallback(
+    (suppression: DuplicateSuppression) =>
+      call(() => api.setSuppression(suppression)),
+    [call],
+  );
+  const draftThresholds = useDraftValue(
+    state?.thresholds ?? null,
+    commitThresholds,
+  );
+  const draftSuppression = useDraftValue(
+    state?.suppression ?? null,
+    commitSuppression,
+  );
+  const reviewFilter = useMemo(
+    () =>
+      draftThresholds.value === null || draftSuppression.value === null
+        ? null
+        : new ReviewFilter(draftThresholds.value, draftSuppression.value),
+    [draftThresholds.value, draftSuppression.value],
+  );
+  const draftFilter =
+    draftThresholds.isDraft || draftSuppression.isDraft ? reviewFilter : null;
+  const markedResults = useMemo(
+    () =>
+      draftFilter === null || results === null
+        ? results
+        : draftFilter.markedResults(results),
+    [draftFilter, results],
+  );
+  const markedFramePayload = useMemo(
+    () =>
+      draftFilter === null || framePayload === null
+        ? framePayload
+        : draftFilter.markedFrame(framePayload),
+    [draftFilter, framePayload],
+  );
 
   const runAction = useCallback(
-    async (action: (isSkippingApproved: boolean) => Promise<ActionReply>): Promise<boolean> => {
+    async (
+      action: (isSkippingApproved: boolean) => Promise<ActionReply>,
+    ): Promise<boolean> => {
       try {
         let reply = await action(false);
         if (reply.status === "needs_approval") {
           const isApproved = await dialogs.confirm({
             title: "Skip reference-only classes?",
             message: reply.message,
-            confirmLabel: "Recognize Without Them",
+            confirmLabel: "Infer Without Them",
           });
           if (!isApproved) return false;
           reply = await action(true);
@@ -198,7 +300,11 @@ export function App() {
   const serverCurrent = state?.current ?? null;
   const current: CurrentPicture | null = useMemo(() => {
     if (serverCurrent === null) return null;
-    if (pendingFrame === null || pendingFrame.path !== serverCurrent.path || serverCurrent.kind !== "video") {
+    if (
+      pendingFrame === null ||
+      pendingFrame.path !== serverCurrent.path ||
+      serverCurrent.kind !== "video"
+    ) {
       return serverCurrent;
     }
     const frameStep = state?.sampling.frame_step ?? 1;
@@ -212,11 +318,27 @@ export function App() {
   const currentPath = current?.path ?? null;
   const currentFrame = current?.frame ?? null;
   const isVideo = current?.kind === "video";
+  const [lastVideoPath, setLastVideoPath] = useState<string | null>(null);
+  useEffect(() => {
+    if (isVideo && currentPath !== null) setLastVideoPath(currentPath);
+  }, [isVideo, currentPath]);
+  const chartedVideo: MediaEntry | null = useMemo(() => {
+    const videos = state?.media.filter((entry) => entry.kind === "video") ?? [];
+    const preferredPath = isVideo ? currentPath : lastVideoPath;
+    return (
+      videos.find((entry) => entry.path === preferredPath) ?? videos[0] ?? null
+    );
+  }, [state?.media, isVideo, currentPath, lastVideoPath]);
+  const chartedVideoPath = chartedVideo?.path ?? null;
   const task: TaskValue = state?.task.value ?? "detection";
 
   useEffect(() => {
     if (pendingFrame === null || serverCurrent === null) return;
-    if (serverCurrent.path !== pendingFrame.path || serverCurrent.frame === pendingFrame.frame) setPendingFrame(null);
+    if (
+      serverCurrent.path !== pendingFrame.path ||
+      serverCurrent.frame === pendingFrame.frame
+    )
+      setPendingFrame(null);
   }, [serverCurrent, pendingFrame]);
 
   const frameRefreshToken = `${state?.shown_profile_key}:${state?.compared_profile_key}:${JSON.stringify(state?.thresholds)}:${resultsVersion}:${state?.status.serial}`;
@@ -270,7 +392,9 @@ export function App() {
   const isRecognitionRunning = state?.is_busy ?? false;
   const frameStep = state?.sampling.frame_step ?? 1;
   const isLiveRunning =
-    liveRequest !== null && liveRequest.path === currentPath && (isRecognitionRunning || !liveRequest.isBusySeen);
+    liveRequest !== null &&
+    liveRequest.path === currentPath &&
+    (isRecognitionRunning || !liveRequest.isBusySeen);
   const live = useMemo(
     () =>
       liveRequest === null || liveRequest.path !== currentPath
@@ -282,57 +406,87 @@ export function App() {
   useEffect(() => {
     setLiveRequest((request) => {
       if (request === null) return null;
-      if (isRecognitionRunning) return request.isBusySeen ? request : { ...request, isBusySeen: true };
+      if (isRecognitionRunning)
+        return request.isBusySeen ? request : { ...request, isBusySeen: true };
       return request.isBusySeen ? null : request;
     });
   }, [isRecognitionRunning, liveRequest?.serial]);
 
   useEffect(() => {
-    setLiveRequest((request) => (request !== null && request.path !== currentPath ? null : request));
+    setLiveRequest((request) =>
+      request !== null && request.path !== currentPath ? null : request,
+    );
   }, [currentPath]);
 
   useEffect(() => {
-    if (currentPath === null || !isVideo) {
+    if (chartedVideoPath === null) {
       setVideoResults(null);
       return;
     }
+    const path = chartedVideoPath;
     const known = videoResultsRef.current;
-    const isIncremental = isLiveRunning && known !== null && known.path === currentPath;
+    const isIncremental =
+      isLiveRunning &&
+      path === currentPath &&
+      known !== null &&
+      known.path === path;
     const range = (() => {
       if (!isIncremental) return null;
       const position = playbackPosition.current() ?? 0;
-      const afterFrame = known.index.coveredUntil(position, frameStep) ?? position - 1;
-      return { afterFrame, untilFrame: afterFrame + frameStep * LIVE_FETCH_SAMPLES };
+      const afterFrame =
+        known.index.coveredUntil(position, frameStep) ?? position - 1;
+      return {
+        afterFrame,
+        untilFrame: afterFrame + frameStep * LIVE_FETCH_SAMPLES,
+      };
     })();
     let isCurrent = true;
     const timer = window.setTimeout(
       () => {
         api
-          .videoFrames(currentPath, range)
+          .videoFrames(path, range)
           .then((loaded) => {
             if (!isCurrent) return;
             setVideoResults((previous) =>
-              range !== null && previous !== null && previous.path === loaded.path
+              range !== null &&
+              previous !== null &&
+              previous.path === loaded.path
                 ? { path: loaded.path, index: previous.index.merged(loaded) }
                 : { path: loaded.path, index: new FrameResultIndex(loaded) },
             );
           })
           .catch(() => undefined);
       },
-      isIncremental ? LIVE_RESULTS_DEBOUNCE_MILLISECONDS : VIDEO_RESULTS_DEBOUNCE_MILLISECONDS,
+      isIncremental
+        ? LIVE_RESULTS_DEBOUNCE_MILLISECONDS
+        : VIDEO_RESULTS_DEBOUNCE_MILLISECONDS,
     );
     return () => {
       isCurrent = false;
       window.clearTimeout(timer);
     };
-  }, [currentPath, isVideo, frameRefreshToken, isLiveRunning, frameStep, playbackPosition]);
+  }, [
+    chartedVideoPath,
+    currentPath,
+    frameRefreshToken,
+    isLiveRunning,
+    frameStep,
+    playbackPosition,
+  ]);
 
   const runLive = useCallback(async () => {
     if (currentPath === null) return;
     const path = currentPath;
     const startFrame = playbackPosition.current() ?? current?.frame ?? 0;
-    const isStarted = await runAction((isSkippingApproved) => api.runMedia(isSkippingApproved, startFrame));
-    if (isStarted) setLiveRequest((request) => ({ path, serial: (request?.serial ?? 0) + 1, isBusySeen: false }));
+    const isStarted = await runAction((isSkippingApproved) =>
+      api.runMedia(isSkippingApproved, startFrame),
+    );
+    if (isStarted)
+      setLiveRequest((request) => ({
+        path,
+        serial: (request?.serial ?? 0) + 1,
+        isBusySeen: false,
+      }));
   }, [currentPath, current?.frame, playbackPosition, runAction]);
 
   const show = useCallback(
@@ -364,32 +518,73 @@ export function App() {
     [currentPath, call],
   );
 
-  useEffect(() => {
-    if (current !== null) setChosenResultScope(current.kind === "video" ? "videos" : "images");
-  }, [currentPath, current?.kind]);
-  const hasImages = state?.media.some((entry) => entry.kind === "image") ?? false;
-  const hasVideos = state?.media.some((entry) => entry.kind === "video") ?? false;
-  const isResultScopeSelectable = hasImages && hasVideos;
-  const resultScope: ResultScope = isResultScopeSelectable ? chosenResultScope : hasVideos ? "videos" : "images";
+  const hasImages =
+    state?.media.some((entry) => entry.kind === "image") ?? false;
+  const hasVideos =
+    state?.media.some((entry) => entry.kind === "video") ?? false;
+  const isImageResultsShown = hasImages || !hasVideos;
 
-  const currentVideoResults = videoResults !== null && videoResults.path === currentPath ? videoResults.index : null;
+  const chartedVideoResults = useMemo(() => {
+    if (videoResults === null || videoResults.path !== chartedVideoPath)
+      return null;
+    return draftFilter === null
+      ? videoResults.index
+      : draftFilter.markedVideo(videoResults.index);
+  }, [videoResults, chartedVideoPath, draftFilter]);
+  const isChartedVideoCurrent =
+    chartedVideoPath !== null && chartedVideoPath === currentPath;
+  const currentVideoResults = isChartedVideoCurrent
+    ? chartedVideoResults
+    : null;
 
-  const allRows = useMemo(() => buildRows(results), [results]);
-  const scopedRows = useMemo(
-    () => (isShownMediaOnly && currentPath !== null ? allRows.filter((row) => row.path === currentPath) : allRows),
-    [allRows, isShownMediaOnly, currentPath],
+  const allRows = useMemo(
+    () => buildRows(markedResults, display.belowMinimum),
+    [markedResults, display.belowMinimum],
   );
-  const filteredRows = useMemo(() => filterRows(scopedRows, filter), [scopedRows, filter]);
-  const rows = useMemo(() => sortRows(filteredRows, order), [filteredRows, order]);
-  const tableScopedRows = useMemo(
-    () => scopedRows.filter((row) => isRowInScope(row, resultScope)),
-    [scopedRows, resultScope],
+  const filteredRows = useMemo(
+    () => filterRows(allRows, filter),
+    [allRows, filter],
   );
-  const tableRows = useMemo(
-    () => sortRows(filterRows(tableScopedRows, filterOfScope(filter, resultScope)), order),
-    [tableScopedRows, filter, resultScope, order],
+  const rows = useMemo(
+    () => sortRows(filteredRows, order),
+    [filteredRows, order],
   );
-  const listed = useMemo(() => listedIndices(filterRows(allRows, filter)), [allRows, filter]);
+  const imageScopedRows = useMemo(
+    () => allRows.filter((row) => isRowInScope(row, "images")),
+    [allRows],
+  );
+  const imageRows = useMemo(
+    () =>
+      sortRows(
+        filterRows(imageScopedRows, filterOfScope(filter, "images")),
+        order,
+      ),
+    [imageScopedRows, filter, order],
+  );
+  const videoScopedRows = useMemo(
+    () => allRows.filter((row) => isRowInScope(row, "videos")),
+    [allRows],
+  );
+  const videoRows = useMemo(
+    () =>
+      sortRows(
+        filterRows(videoScopedRows, filterOfScope(filter, "videos")),
+        order,
+      ),
+    [videoScopedRows, filter, order],
+  );
+  const listedFindingRows = useMemo(
+    () =>
+      [
+        ...(isImageResultsShown ? imageRows : []),
+        ...(hasVideos ? videoRows : []),
+      ].filter((row) => row.kind === "finding" && row.finding.is_passing),
+    [isImageResultsShown, imageRows, hasVideos, videoRows],
+  );
+  const listed = useMemo(
+    () => listedIndices(filterRows(allRows, filter)),
+    [allRows, filter],
+  );
   const isFiltered = Object.keys(filter).length > 0;
 
   const resultPictureKey =
@@ -397,23 +592,37 @@ export function App() {
       ? null
       : pictureKeyOf(framePayload.path, framePayload.result_frame);
   const selectedRow =
-    tableRows.find((row) => row.key === selectedRowKey) ?? rows.find((row) => row.key === selectedRowKey) ?? null;
+    imageRows.find((row) => row.key === selectedRowKey) ??
+    videoRows.find((row) => row.key === selectedRowKey) ??
+    rows.find((row) => row.key === selectedRowKey) ??
+    null;
   const highlightedIndex =
-    selectedRow?.kind === "finding" && pictureKeyOf(selectedRow.path, selectedRow.frame) === resultPictureKey
+    selectedRow?.kind === "finding" &&
+    pictureKeyOf(selectedRow.path, selectedRow.frame) === resultPictureKey
       ? selectedRow.finding.index
       : null;
-  const outdatedCount = results?.pictures.filter((picture) => picture.outdated !== null).length ?? 0;
   const classColors = useMemo(
-    () => Object.fromEntries((state?.classes ?? []).map((entry) => [entry.name, entry.color])),
+    () =>
+      Object.fromEntries(
+        (state?.classes ?? []).map((entry) => [entry.name, entry.color]),
+      ),
     [state?.classes],
   );
 
-  const orderedMedia = useMemo(() => orderMedia(state?.media ?? []), [state?.media]);
+  const orderedMedia = useMemo(
+    () => orderMedia(state?.media ?? []),
+    [state?.media],
+  );
 
   const navigate = useCallback(
     (step: number) => {
-      const index = orderedMedia.findIndex((entry) => entry.path === currentPath);
-      const next = orderedMedia[Math.min(orderedMedia.length - 1, Math.max(0, index + step))];
+      const index = orderedMedia.findIndex(
+        (entry) => entry.path === currentPath,
+      );
+      const next =
+        orderedMedia[
+          Math.min(orderedMedia.length - 1, Math.max(0, index + step))
+        ];
       if (next !== undefined && next.path !== currentPath) {
         setSelectedRowKey(null);
         show(next.path, null);
@@ -424,15 +633,27 @@ export function App() {
 
   const stepFrame = useCallback(
     (step: number) => {
-      if (current === null || current.frame === null || current.frame_count === null) return;
-      seek(Math.min(current.frame_count - 1, Math.max(0, current.frame + step)), true);
+      if (
+        current === null ||
+        current.frame === null ||
+        current.frame_count === null
+      )
+        return;
+      seek(
+        Math.min(current.frame_count - 1, Math.max(0, current.frame + step)),
+        true,
+      );
     },
     [current, seek],
   );
 
   const selectRow = (row: TableRow) => {
     setSelectedRowKey(row.key);
-    if (row.path !== currentPath || (row.frame !== null && row.frame !== currentFrame)) show(row.path, row.frame);
+    if (
+      row.path !== currentPath ||
+      (row.frame !== null && row.frame !== currentFrame)
+    )
+      show(row.path, row.frame);
   };
 
   const setAccepted = (targets: TableRow[], isAccepted: boolean) => {
@@ -451,9 +672,16 @@ export function App() {
         while (start < files.length) {
           const chunk: DroppedFile[] = [];
           let size = 0;
-          while (start + chunk.length < files.length && chunk.length < UPLOAD_CHUNK_SIZE) {
+          while (
+            start + chunk.length < files.length &&
+            chunk.length < UPLOAD_CHUNK_SIZE
+          ) {
             const next = files[start + chunk.length];
-            if (next === undefined || (chunk.length > 0 && size + next.file.size > 256 * 1024 * 1024)) break;
+            if (
+              next === undefined ||
+              (chunk.length > 0 && size + next.file.size > 256 * 1024 * 1024)
+            )
+              break;
             chunk.push(next);
             size += next.file.size;
           }
@@ -485,7 +713,9 @@ export function App() {
 
   const exportResults = async (choice: ExportChoice): Promise<boolean> => {
     const listedPayload: PictureFindings[] | null =
-      choice.scope === "listed" && isFiltered ? groupFindings(filterRows(allRows, filter)) : null;
+      choice.scope === "listed" && isFiltered
+        ? groupFindings(filterRows(allRows, filter))
+        : null;
     return runAction((isSkippingApproved) =>
       api.exportResults({
         ...choice,
@@ -496,11 +726,13 @@ export function App() {
     );
   };
 
-  const saveCsv = async () => {
+  const saveCsv = async (listedRows: TableRow[]) => {
     try {
       const blob = await api.tableCsv(
-        tableRows.flatMap((row) =>
-          row.kind === "finding" ? [{ path: row.path, frame: row.frame, index: row.finding.index }] : [],
+        listedRows.flatMap((row) =>
+          row.kind === "finding"
+            ? [{ path: row.path, frame: row.frame, index: row.finding.index }]
+            : [],
         ),
       );
       const url = URL.createObjectURL(blob);
@@ -537,7 +769,12 @@ export function App() {
   const shownFrame = serverCurrent?.frame ?? null;
 
   useEffect(() => {
-    if (isEmbedded) notify({ type: "ovir-gui:current-changed", path: shownPath, frame: shownFrame });
+    if (isEmbedded)
+      notify({
+        type: "ovir-gui:current-changed",
+        path: shownPath,
+        frame: shownFrame,
+      });
   }, [isEmbedded, notify, shownPath, shownFrame]);
 
   useEffect(() => {
@@ -546,7 +783,12 @@ export function App() {
       if (!isCommand || document.querySelector(".overlay") !== null) return;
       const taskIndex = ["1", "2", "3"].indexOf(event.key);
       const shortcutTask = TASK_ORDER[taskIndex];
-      if (taskIndex >= 0 && shortcutTask !== undefined && !event.shiftKey && !event.altKey) {
+      if (
+        taskIndex >= 0 &&
+        shortcutTask !== undefined &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
         event.preventDefault();
         selectTask(shortcutTask);
       } else if (event.key === "Enter") {
@@ -570,7 +812,11 @@ export function App() {
 
   useEffect(() => {
     const onDragEnter = (event: DragEvent) => {
-      if (!hasFiles(event.dataTransfer) || document.querySelector(".overlay") !== null) return;
+      if (
+        !hasFiles(event.dataTransfer) ||
+        document.querySelector(".overlay") !== null
+      )
+        return;
       event.preventDefault();
       dragDepth.current += 1;
       setIsDragOver(true);
@@ -610,7 +856,11 @@ export function App() {
   }, [statusSerial]);
 
   useEffect(() => {
-    if (selectedRowKey !== null && !allRows.some((row) => row.key === selectedRowKey)) setSelectedRowKey(null);
+    if (
+      selectedRowKey !== null &&
+      !allRows.some((row) => row.key === selectedRowKey)
+    )
+      setSelectedRowKey(null);
   }, [allRows, selectedRowKey]);
 
   useEffect(() => {
@@ -620,8 +870,13 @@ export function App() {
 
   if (state === null) {
     return (
-      <div className="empty-center" style={{ background: "var(--bg)", color: "var(--text-muted)" }}>
-        {workspace.connection === "closed" ? "Cannot reach the OVIR GUI server; retrying…" : "Connecting…"}
+      <div
+        className="empty-center"
+        style={{ background: "var(--bg)", color: "var(--text-muted)" }}
+      >
+        {workspace.connection === "closed"
+          ? "Cannot reach the OVIR GUI server; retrying…"
+          : "Connecting…"}
       </div>
     );
   }
@@ -634,243 +889,367 @@ export function App() {
         : [...currentLayout.collapsedSections, name],
     }));
   const isCollapsed = (name: string) => layout.collapsedSections.includes(name);
-  const currentIndex = orderedMedia.findIndex((entry) => entry.path === currentPath);
-  const referenceClass = openDialog?.kind === "reference" ? state.classes[openDialog.classIndex] : undefined;
+  const referenceClass =
+    openDialog?.kind === "reference"
+      ? state.classes[openDialog.classIndex]
+      : undefined;
   const taskView = taskViewOf(task);
-  const isGalleryShown = taskView.isGalleryAvailable && centerLayout.mode === "gallery";
-  const centerModeToggle = <CenterModeToggle mode={centerLayout.mode} onChange={(mode) => setCenterLayout({ mode })} />;
-  const openMenuBelow = (target: HTMLElement, entries: MenuEntry[]) => menu.openBelow(target, entries);
-  const viewEntries = (): MenuEntry[] => {
-    const entries: MenuEntry[] = taskView.displayToggles.map((toggle) => ({
-      label: toggle.label,
-      isChecked: display[toggle.key],
-      isDisabled: toggle.key === "isComparedShown" && state.compared_profile_key === null,
-      onSelect: () => setDisplay((currentDisplay) => ({ ...currentDisplay, [toggle.key]: !currentDisplay[toggle.key] })),
-    }));
-    if (taskView.isLineWidthShown) {
-      entries.push(
-        { isSeparator: true, label: "" },
-        ...LINE_WIDTHS.map((width) => ({
-          label: `Line width ${width}`,
-          isChecked: display.lineWidth === width,
-          onSelect: () => setDisplay((currentDisplay) => ({ ...currentDisplay, lineWidth: width })),
-        })),
-      );
-    }
-    if (taskView.isMaskOpacityShown) {
-      entries.push(
-        { isSeparator: true, label: "" },
-        ...MASK_OPACITIES.map((opacity) => ({
-          label: `Mask opacity ${Math.round(opacity * 100)}%`,
-          isChecked: display.maskOpacity === opacity,
-          onSelect: () => setDisplay((currentDisplay) => ({ ...currentDisplay, maskOpacity: opacity })),
-        })),
-      );
-    }
-    return entries;
-  };
-  const tableKeyOf = (path: string, frame: number | null, index: number) => rowKeyOf(path, frame, index);
+  const isGalleryShown =
+    taskView.isGalleryAvailable && centerLayout.mode === "gallery";
+  const centerModeToggle = (
+    <CenterModeToggle
+      mode={centerLayout.mode}
+      onChange={(mode) => setCenterLayout({ mode })}
+    />
+  );
+  const openMenuBelow = (target: HTMLElement, entries: MenuEntry[]) =>
+    menu.openBelow(target, entries);
+  const tableKeyOf = (path: string, frame: number | null, index: number) =>
+    rowKeyOf(path, frame, index);
 
   return (
     <div className="app">
       <div className="binder">
         <BinderShape task={task} tasks={TASK_ORDER} />
         <div className="binder-band">
-          <BinderTabs task={task} tasks={TASK_ORDER} isDisabled={state.is_busy} onSelect={selectTask} />
+          <BinderTabs
+            task={task}
+            tasks={TASK_ORDER}
+            isDisabled={state.is_busy}
+            onSelect={selectTask}
+          />
           <div className="binder-controls">
-            <FileNavigator
-              name={current?.name ?? null}
-              index={currentIndex}
-              total={state.media.length}
-              onNavigate={navigate}
-            />
-            <span className="band-separator" />
-            <AddMediaMenu
-              onUploadFiles={() => fileInput.current?.click()}
-              onUploadFolder={() => folderInput.current?.click()}
-              onOpenFromServer={() => setOpenDialog({ kind: "browse" })}
-              onOpenMenu={openMenuBelow}
-            />
-            <button
-              className="band-button"
-              disabled={state.is_busy}
-              onClick={() => setOpenDialog({ kind: "export" })}
-              title="Export results (Ctrl+E)"
-            >
-              Export…
-            </button>
-            <button
-              className="band-button"
-              onClick={() => setIsStatisticsOpen((isOpen) => !isOpen)}
-              title="Statistics and class minimums (Ctrl+I)"
-            >
-              Statistics…
-            </button>
             <ConnectionIndicator connection={workspace.connection} />
           </div>
         </div>
 
-        <div className="binder-sheet" role="tabpanel" aria-label={taskView.label}>
-          <div className="sheet-bar">
-            <span className="grow" />
-            <button
-              className="sheet-button"
-              aria-haspopup="menu"
-              title="Display options"
-              onClick={(event) => openMenuBelow(event.currentTarget, viewEntries())}
-            >
-              View ▾
-            </button>
-            <BackgroundControl background={state.background} onChange={(scope) => void call(() => api.setBackground(scope))} />
-            <RunButton isDisabled={state.is_busy} onRun={run} onRunAll={runAll} onOpenMenu={openMenuBelow} />
-          </div>
-
+        <div
+          className="binder-sheet"
+          role="tabpanel"
+          aria-label={taskView.label}
+        >
           <div className="sheet-main">
-            <div className="sidebar sheet-panel" style={{ width: layout.sidebarWidth, flex: "none" }}>
-              <Section title="Model" isCollapsed={isCollapsed("model")} onToggle={() => toggleSection("model")}>
-                <ModelPanel
-                  model={state.model}
-                  task={task}
-                  isDisabled={state.is_busy}
-                  onSelectPreset={(backend, preset) => void call(() => api.selectPreset(backend, preset))}
-                  onChange={(selection: ModelSelection) => void call(() => api.selectModel(selection))}
-                />
-              </Section>
-              <Section
-                title={`Classes (${state.classes.length})`}
-                isCollapsed={isCollapsed("classes")}
-                onToggle={() => toggleSection("classes")}
-                isStretched
-              >
-                <ClassEditor
-                  classes={state.classes}
-                  classSet={state.class_set}
-                  isImagePromptSupported={state.model.is_image_prompt_supported}
-                  onReport={report}
-                  onAddImagePrompt={(classIndex) => setOpenDialog({ kind: "reference", classIndex })}
-                  onOpenLibrary={() => setOpenDialog({ kind: "class-sets" })}
-                  onEditAsText={() => setOpenDialog({ kind: "class-text" })}
-                />
-              </Section>
-              <Section
-                title={`Media (${state.media.length})`}
-                isCollapsed={isCollapsed("media")}
-                onToggle={() => toggleSection("media")}
-                isStretched
-              >
-                <MediaList
-                  media={orderedMedia}
-                  currentPath={currentPath}
-                  backgroundKey={state.background_key}
-                  onSelect={(path) => {
-                    setSelectedRowKey(null);
-                    show(path, null);
-                  }}
-                  onClose={(paths) => void call(() => api.closeMedia(paths))}
-                />
-              </Section>
-            </div>
-            <Splitter
-              onResize={(delta) =>
-                setLayout((currentLayout) => ({
-                  ...currentLayout,
-                  sidebarWidth: Math.max(240, Math.min(640, currentLayout.sidebarWidth + delta)),
-                }))
-              }
-            />
-            <div className="center sheet-panel">
-              {taskView.isGalleryAvailable && !isGalleryShown && <div className="canvas-bar">{centerModeToggle}</div>}
-              {isGalleryShown ? (
-                <ClassificationGallery
-                  rows={rows}
-                  media={state.media}
-                  currentPictureKey={resultPictureKey}
-                  selectedKey={selectedRowKey}
-                  classColors={classColors}
-                  onSelectRow={selectRow}
-                  onSetAccepted={setAccepted}
-                  leading={centerModeToggle}
-                  onOpenPicture={(path, frame) => {
-                    setCenterLayout({ mode: "image" });
-                    show(path, frame);
-                  }}
-                />
-              ) : (
-                <div className="center-stage">
-                  <PromptToolbar editor={promptEditor} classes={state.classes} frameStep={state.sampling.frame_step} />
-                  <ResultViewer
-                    current={current}
-                    frame={framePayload}
-                    videoResults={currentVideoResults}
-                    listed={isFiltered ? listed : null}
-                    listedIndices={!isFiltered || resultPictureKey === null ? null : (listed.get(resultPictureKey) ?? new Set())}
-                    highlighted={
-                      selectedRow?.kind === "finding" && selectedRow.path === currentPath
-                        ? { frame: selectedRow.frame, index: selectedRow.finding.index }
-                        : null
+            <div
+              className="pane"
+              style={{ width: layout.sidebarWidth, flex: "none" }}
+            >
+              <PaneHeader title="Setup" />
+              <div className="pane-body">
+                <Section
+                  title="Model"
+                  icon={<ModelGlyph />}
+                  isCollapsed={isCollapsed("model")}
+                  onToggle={() => toggleSection("model")}
+                  actions={
+                    <>
+                      {state.model.description !== "" && (
+                        <InfoTip label="How this model is used">
+                          {state.model.description}
+                        </InfoTip>
+                      )}
+                      <PopoverButton
+                        className="section-action runtime-button"
+                        label="Runtime settings"
+                        title={
+                          state.background.is_paused
+                            ? "Background inference paused after an error; any action resumes it."
+                            : "Runtime settings: automatic runs, device, precision"
+                        }
+                        trigger={
+                          <>
+                            <GearGlyph />
+                            {state.background.is_paused && (
+                              <span className="attention-badge" />
+                            )}
+                          </>
+                        }
+                      >
+                        <div className="popover-title">Runtime</div>
+                        <InferenceSettings
+                          model={state.model}
+                          task={task}
+                          background={state.background}
+                          isDisabled={state.is_busy}
+                          onBackgroundChange={(scope) =>
+                            void call(() => api.setBackground(scope))
+                          }
+                          onChange={(selection: ModelSelection) =>
+                            void call(() => api.selectModel(selection))
+                          }
+                        />
+                      </PopoverButton>
+                    </>
+                  }
+                >
+                  <ModelPanel
+                    model={state.model}
+                    isDisabled={state.is_busy}
+                    onSelectPreset={(backend, preset) =>
+                      void call(() => api.selectPreset(backend, preset))
                     }
-                    highlightedIndex={highlightedIndex}
-                    options={display}
-                    classColors={classColors}
-                    position={playbackPosition}
-                    live={live}
-                    isMediaEmpty={state.media.length === 0}
-                    isVideoPlayerUsed={isVideoPlayerUsed}
-                    drawing={promptEditor.drawing}
-                    onSelectFinding={(resultFrame, index) => {
-                      if (currentPath !== null) setSelectedRowKey(tableKeyOf(currentPath, resultFrame, index));
-                    }}
-                    onClearSelection={() => setSelectedRowKey(null)}
-                    onNavigate={navigate}
-                    onSeek={seek}
-                    onStepFrame={stepFrame}
-                    onVideoPlayerFailed={(error) => {
-                      if (currentPath === null) return;
-                      const path = currentPath;
-                      setUnplayableSources((sources) => new Set([...sources, playedSource]));
-                      if (playback === "none") {
-                        void call(() => api.preparePlayback(path));
-                        return;
-                      }
-                      report(`The browser cannot play ${current?.name ?? path} (${error.message}); showing frames decoded by the server.`);
-                    }}
-                    onUploadRequested={() => fileInput.current?.click()}
-                    onBrowseRequested={() => setOpenDialog({ kind: "browse" })}
+                    onSelectionChange={(selection) =>
+                      void call(() => api.selectModel(selection))
+                    }
                   />
-                  {current !== null && isVideo && current.frame !== null && (
-                    <VideoControls
-                      current={current}
-                      frame={current.frame}
-                      timeline={timeline !== null && timeline.path === current.path ? timeline : null}
-                      frameStep={state.sampling.frame_step}
-                      isClassification={task === "classification"}
-                      isBusy={state.is_busy}
-                      isPlaybackShown={!isVideoPlayerUsed}
-                      onSeek={seek}
-                      onFrameStepChange={(frameStep) => void call(() => api.setSampling(frameStep))}
-                      onRunVideo={() => void runAction(api.runMedia)}
-                      onRunLive={isVideoPlayerUsed ? () => void runLive() : null}
+                </Section>
+                <Section
+                  title="Classes"
+                  icon={<ClassesGlyph />}
+                  actions={
+                    <InfoTip label="Editing classes">
+                      Double-click to rename or add a class. Write{" "}
+                      <span className="mono">car: car, suv</span> to query a
+                      class by several phrases; drag phrases between classes.
+                    </InfoTip>
+                  }
+                  count={state.classes.length}
+                  isCollapsed={isCollapsed("classes")}
+                  onToggle={() => toggleSection("classes")}
+                  isStretched
+                >
+                  <ClassEditor
+                    classes={state.classes}
+                    classSet={state.class_set}
+                    isImagePromptSupported={
+                      state.model.is_image_prompt_supported
+                    }
+                    onReport={report}
+                    onAddImagePrompt={(classIndex) =>
+                      setOpenDialog({ kind: "reference", classIndex })
+                    }
+                    onOpenLibrary={() => setOpenDialog({ kind: "class-sets" })}
+                    onEditAsText={() => setOpenDialog({ kind: "class-text" })}
+                  />
+                </Section>
+                <Section
+                  title="Media"
+                  icon={<MediaGlyph />}
+                  count={state.media.length}
+                  isCollapsed={isCollapsed("media")}
+                  onToggle={() => toggleSection("media")}
+                  isStretched
+                  actions={
+                    <AddMediaMenu
+                      onUploadFiles={() => fileInput.current?.click()}
+                      onUploadFolder={() => folderInput.current?.click()}
+                      onOpenFromServer={() => setOpenDialog({ kind: "browse" })}
+                      onOpenMenu={openMenuBelow}
                     />
-                  )}
-                </div>
-              )}
+                  }
+                >
+                  <MediaList
+                    media={orderedMedia}
+                    currentPath={currentPath}
+                    backgroundKey={state.background_key}
+                    onSelect={(path) => {
+                      setSelectedRowKey(null);
+                      show(path, null);
+                    }}
+                    onClose={(paths) => void call(() => api.closeMedia(paths))}
+                  />
+                </Section>
+              </div>
+              <div className="pane-footer">
+                <RunButton
+                  isDisabled={state.is_busy}
+                  onRun={run}
+                  onRunAll={runAll}
+                  onOpenMenu={openMenuBelow}
+                />
+              </div>
             </div>
             <Splitter
               onResize={(delta) =>
                 setLayout((currentLayout) => ({
                   ...currentLayout,
-                  rightWidth: Math.max(340, Math.min(1100, currentLayout.rightWidth - delta)),
+                  sidebarWidth: Math.max(
+                    240,
+                    Math.min(640, currentLayout.sidebarWidth + delta),
+                  ),
                 }))
               }
             />
-            <div className="right-panel" style={{ width: layout.rightWidth, flex: "none" }}>
-              <div className="sheet-panel" style={{ height: layout.profileHeight, flex: "none", minHeight: 0 }}>
+            <div className="pane pane-canvas">
+              <PaneHeader
+                title={
+                  isGalleryShown
+                    ? "All pictures"
+                    : (current?.name ?? "No picture")
+                }
+                leading={
+                  taskView.isGalleryAvailable ? centerModeToggle : undefined
+                }
+              >
+                <PopoverButton
+                  className="sheet-button"
+                  label="View settings"
+                  title="How findings are drawn on the pictures"
+                  trigger={
+                    <>
+                      <SlidersGlyph />
+                      View
+                    </>
+                  }
+                >
+                  <ViewSettings
+                    taskView={taskView}
+                    display={display}
+                    isComparisonAvailable={state.compared_profile_key !== null}
+                    onChange={setDisplay}
+                  />
+                </PopoverButton>
+              </PaneHeader>
+              <div className="center">
+                {isGalleryShown ? (
+                  <ClassificationGallery
+                    rows={rows}
+                    media={state.media}
+                    currentPictureKey={resultPictureKey}
+                    selectedKey={selectedRowKey}
+                    classColors={classColors}
+                    onSelectRow={selectRow}
+                    onSetAccepted={setAccepted}
+                    onOpenPicture={(path, frame) => {
+                      setCenterLayout({ mode: "image" });
+                      show(path, frame);
+                    }}
+                  />
+                ) : (
+                  <div className="center-stage">
+                    <PromptToolbar
+                      editor={promptEditor}
+                      classes={state.classes}
+                      frameStep={state.sampling.frame_step}
+                    />
+                    <ResultViewer
+                      current={current}
+                      frame={markedFramePayload}
+                      videoResults={currentVideoResults}
+                      listed={isFiltered ? listed : null}
+                      listedIndices={
+                        !isFiltered || resultPictureKey === null
+                          ? null
+                          : (listed.get(resultPictureKey) ?? new Set())
+                      }
+                      highlighted={
+                        selectedRow?.kind === "finding" &&
+                        selectedRow.path === currentPath
+                          ? {
+                              frame: selectedRow.frame,
+                              index: selectedRow.finding.index,
+                            }
+                          : null
+                      }
+                      highlightedIndex={highlightedIndex}
+                      options={display}
+                      classColors={classColors}
+                      position={playbackPosition}
+                      live={live}
+                      isMediaEmpty={state.media.length === 0}
+                      isVideoPlayerUsed={isVideoPlayerUsed}
+                      drawing={promptEditor.drawing}
+                      onSelectFinding={(resultFrame, index) => {
+                        if (currentPath !== null)
+                          setSelectedRowKey(
+                            tableKeyOf(currentPath, resultFrame, index),
+                          );
+                      }}
+                      onClearSelection={() => setSelectedRowKey(null)}
+                      onNavigate={navigate}
+                      onSeek={seek}
+                      onStepFrame={stepFrame}
+                      onVideoPlayerFailed={(error) => {
+                        if (currentPath === null) return;
+                        const path = currentPath;
+                        setUnplayableSources(
+                          (sources) => new Set([...sources, playedSource]),
+                        );
+                        if (playback === "none") {
+                          void call(() => api.preparePlayback(path));
+                          return;
+                        }
+                        report(
+                          `The browser cannot play ${current?.name ?? path} (${error.message}); showing frames decoded by the server.`,
+                        );
+                      }}
+                      onUploadRequested={() => fileInput.current?.click()}
+                      onBrowseRequested={() =>
+                        setOpenDialog({ kind: "browse" })
+                      }
+                    />
+                    {current !== null && isVideo && current.frame !== null && (
+                      <VideoControls
+                        current={current}
+                        frame={current.frame}
+                        timeline={
+                          timeline !== null && timeline.path === current.path
+                            ? timeline
+                            : null
+                        }
+                        frameStep={state.sampling.frame_step}
+                        isClassification={task === "classification"}
+                        isBusy={state.is_busy}
+                        isPlaybackShown={!isVideoPlayerUsed}
+                        onSeek={seek}
+                        onFrameStepChange={(frameStep) =>
+                          void call(() => api.setSampling(frameStep))
+                        }
+                        onRunVideo={() => void runAction(api.runMedia)}
+                        onRunLive={
+                          isVideoPlayerUsed ? () => void runLive() : null
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Splitter
+              onResize={(delta) =>
+                setLayout((currentLayout) => ({
+                  ...currentLayout,
+                  rightWidth: Math.max(
+                    340,
+                    Math.min(1100, currentLayout.rightWidth - delta),
+                  ),
+                }))
+              }
+            />
+            <div
+              className="pane"
+              style={{ width: layout.rightWidth, flex: "none" }}
+            >
+              <PaneHeader title="Results">
+                <button
+                  className="sheet-button"
+                  onClick={() => setIsStatisticsOpen((isOpen) => !isOpen)}
+                  title="Statistics and class minimums (Ctrl+I)"
+                >
+                  <StatisticsGlyph />
+                  Statistics
+                </button>
+                <button
+                  className="sheet-button"
+                  disabled={state.is_busy}
+                  onClick={() => setOpenDialog({ kind: "export" })}
+                  title="Export results or download the listed findings as CSV (Ctrl+E)"
+                >
+                  <ExportGlyph />
+                  Export
+                </button>
+              </PaneHeader>
+              <div
+                className="pane-region"
+                style={{ height: layout.profileHeight, flex: "none" }}
+              >
                 <ProfileTable
                   profiles={state.profiles}
                   shownKey={state.shown_profile_key}
                   comparedKey={state.compared_profile_key}
                   onSelect={(key) => void call(() => api.selectProfile(key))}
                   onRemove={(keys) => void call(() => api.removeProfiles(keys))}
+                  isBusy={state.is_busy}
+                  onUpdateOutdated={() => void runAction(api.updateOutdated)}
                 />
               </div>
               <Splitter
@@ -878,49 +1257,145 @@ export function App() {
                 onResize={(delta) =>
                   setLayout((currentLayout) => ({
                     ...currentLayout,
-                    profileHeight: Math.max(90, Math.min(600, currentLayout.profileHeight + delta)),
+                    profileHeight: Math.max(
+                      90,
+                      Math.min(600, currentLayout.profileHeight + delta),
+                    ),
                   }))
                 }
               />
-              <div className="sheet-panel" style={{ flex: 1, minHeight: 0 }}>
-                {resultScope === "videos" && current !== null && current.kind === "video" ? (
-                <VideoFindingsPanel
-                  task={task}
-                  current={current}
-                  results={currentVideoResults}
-                  position={playbackPosition}
-                  isFollowingPlayer={isVideoPlayerUsed}
-                  classColors={classColors}
-                  scope={resultScope}
-                  isScopeSelectable={isResultScopeSelectable}
-                  onScopeChange={setChosenResultScope}
-                  onSeek={seek}
-                />
-                ) : (
-                <ResultTable
-                  task={task}
-                  scope={resultScope}
-                  isScopeSelectable={isResultScopeSelectable}
-                  onScopeChange={setChosenResultScope}
-                  rows={tableRows}
-                  allRows={tableScopedRows}
-                  filter={filter}
-                  onFilterChange={setFilter}
-                  order={order}
-                  onOrderChange={setOrder}
-                  currentPictureKey={resultPictureKey}
-                  selectedKey={selectedRowKey}
-                  isShownMediaOnly={isShownMediaOnly}
-                  onShownMediaOnlyChange={setIsShownMediaOnly}
-                  onSelectRow={selectRow}
-                  onSetAccepted={setAccepted}
-                  onSaveCsv={() => void saveCsv()}
-                  onUpdateOutdated={() => void runAction(api.updateOutdated)}
-                  onClearResults={() => void call(api.clearResults)}
-                  outdatedCount={outdatedCount}
-                  hasResults={state.profiles.length > 0}
-                  classColors={classColors}
-                />
+              <div className="pane-region results-panel">
+                <div className="section-header">
+                  <span className="section-icon">
+                    <FindingsGlyph />
+                  </span>
+                  <span className="section-title">{taskView.resultTitle}</span>
+                </div>
+                {state.model.tuning.is_minimum_confidence_shown &&
+                  reviewFilter !== null && (
+                    <>
+                      <div
+                        className="review-area"
+                        style={
+                          isCollapsed("review")
+                            ? undefined
+                            : { height: layout.reviewHeight }
+                        }
+                      >
+                        <ReviewPanel
+                          classes={state.classes}
+                          results={markedResults}
+                          reviewFilter={reviewFilter}
+                          thresholds={draftThresholds.value ?? state.thresholds}
+                          suppression={
+                            draftSuppression.value ?? state.suppression
+                          }
+                          standardMinimum={state.standard_minimum}
+                          standardOverlap={state.standard_overlap_threshold}
+                          isOverlapAvailable={!taskView.isScoreBased}
+                          belowMinimum={display.belowMinimum}
+                          isCollapsed={isCollapsed("review")}
+                          onToggleCollapsed={() => toggleSection("review")}
+                          onThresholdsChange={draftThresholds.change}
+                          onSuppressionChange={draftSuppression.change}
+                          onBelowMinimumChange={(belowMinimum) =>
+                            setDisplay({ ...display, belowMinimum })
+                          }
+                        />
+                      </div>
+                      {!isCollapsed("review") && (
+                        <Splitter
+                          isHorizontal
+                          onResize={(delta) =>
+                            setLayout((currentLayout) => ({
+                              ...currentLayout,
+                              reviewHeight: Math.max(
+                                90,
+                                Math.min(
+                                  800,
+                                  currentLayout.reviewHeight + delta,
+                                ),
+                              ),
+                            }))
+                          }
+                        />
+                      )}
+                    </>
+                  )}
+                {isImageResultsShown && (
+                  <div
+                    className={`results-area${isCollapsed("image-results") ? " collapsed" : ""}`}
+                  >
+                    <ResultTable
+                      task={task}
+                      scope="images"
+                      title="Images"
+                      emptyText="Open images; their results are listed here as inference completes."
+                      isCollapsed={isCollapsed("image-results")}
+                      onToggleCollapsed={() => toggleSection("image-results")}
+                      rows={imageRows}
+                      allRows={imageScopedRows}
+                      filter={filter}
+                      onFilterChange={setFilter}
+                      order={order}
+                      onOrderChange={setOrder}
+                      currentPictureKey={resultPictureKey}
+                      selectedKey={selectedRowKey}
+                      onSelectRow={selectRow}
+                      onSetAccepted={setAccepted}
+                      classColors={classColors}
+                    />
+                  </div>
+                )}
+                {isImageResultsShown &&
+                  hasVideos &&
+                  !isCollapsed("image-results") &&
+                  !isCollapsed("video-results") && (
+                    <Splitter
+                      isHorizontal
+                      onResize={(delta) =>
+                        setLayout((currentLayout) => ({
+                          ...currentLayout,
+                          videoResultsHeight: Math.max(
+                            120,
+                            Math.min(
+                              900,
+                              currentLayout.videoResultsHeight - delta,
+                            ),
+                          ),
+                        }))
+                      }
+                    />
+                  )}
+                {hasVideos && (
+                  <div
+                    className={`results-area${isCollapsed("video-results") ? " collapsed" : ""}`}
+                    style={
+                      isImageResultsShown &&
+                      !isCollapsed("image-results") &&
+                      !isCollapsed("video-results")
+                        ? { flex: `0 1 ${layout.videoResultsHeight}px` }
+                        : undefined
+                    }
+                  >
+                    {chartedVideo !== null && (
+                      <VideoFindingsPanel
+                        video={chartedVideo}
+                        current={isChartedVideoCurrent ? current : null}
+                        results={chartedVideoResults}
+                        position={playbackPosition}
+                        isFollowingPlayer={isVideoPlayerUsed}
+                        classColors={classColors}
+                        isCollapsed={isCollapsed("video-results")}
+                        onToggleCollapsed={() => toggleSection("video-results")}
+                        onSeek={
+                          isChartedVideoCurrent
+                            ? seek
+                            : (frame) => show(chartedVideo.path, frame)
+                        }
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -943,7 +1418,10 @@ export function App() {
                 <div className="title">{notice.title}</div>
                 {notice.message}
               </div>
-              <button className="ghost icon" onClick={() => workspace.dismissNotice(notice.id)}>
+              <button
+                className="ghost icon"
+                onClick={() => workspace.dismissNotice(notice.id)}
+              >
                 ✕
               </button>
             </div>
@@ -955,8 +1433,12 @@ export function App() {
         <div className="drop-overlay">
           <div className="card">
             <MediaKindBadges />
-            <div style={{ fontWeight: 600 }}>Drop images, videos or folders to upload and open them</div>
-            <div className="hint">They are stored on the server in {state.upload_directory}</div>
+            <div style={{ fontWeight: 600 }}>
+              Drop images, videos or folders to upload and open them
+            </div>
+            <div className="hint">
+              They are stored on the server in {state.upload_directory}
+            </div>
           </div>
         </div>
       )}
@@ -964,12 +1446,12 @@ export function App() {
       {isStatisticsOpen && (
         <StatisticsPanel
           refreshToken={`${state.status.serial}:${state.shown_profile_key}:${state.compared_profile_key}:${JSON.stringify(state.thresholds)}:${resultsVersion}`}
-          thresholds={state.thresholds}
+          thresholds={draftThresholds.value ?? state.thresholds}
           classColors={classColors}
           profiles={state.profiles}
           shownKey={state.shown_profile_key}
           comparedKey={state.compared_profile_key}
-          onThresholdsChange={(next) => void call(() => api.setThresholds(next.default_minimum, next.class_minimums))}
+          onThresholdsChange={draftThresholds.change}
           onCompare={(key) => void call(() => api.compare(key))}
           onClose={() => setIsStatisticsOpen(false)}
         />
@@ -987,7 +1469,13 @@ export function App() {
         />
       )}
       {openDialog?.kind === "export" && (
-        <ExportDialog hasVideos={hasVideos} onExport={exportResults} onClose={() => setOpenDialog(null)} />
+        <ExportDialog
+          hasVideos={hasVideos}
+          listedFindingCount={listedFindingRows.length}
+          onExport={exportResults}
+          onDownloadCsv={() => void saveCsv(listedFindingRows)}
+          onClose={() => setOpenDialog(null)}
+        />
       )}
       {openDialog?.kind === "class-sets" && (
         <ClassSetDialog
@@ -998,7 +1486,10 @@ export function App() {
         />
       )}
       {openDialog?.kind === "class-text" && (
-        <ClassTextDialog classes={state.classes} onClose={() => setOpenDialog(null)} />
+        <ClassTextDialog
+          classes={state.classes}
+          onClose={() => setOpenDialog(null)}
+        />
       )}
       {openDialog?.kind === "reference" && referenceClass !== undefined && (
         <ReferenceDialog

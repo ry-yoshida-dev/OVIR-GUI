@@ -22,7 +22,11 @@ export class FindingInterpolator {
    * @returns The nearer sampled frame with each matched instance moved to ``frame``; its indices are kept so that
    *   selection and filtering still address the nearer sampled frame.
    */
-  static between(before: FramePayload, after: FramePayload, frame: number): FramePayload {
+  static between(
+    before: FramePayload,
+    after: FramePayload,
+    frame: number,
+  ): FramePayload {
     const beforeFrame = before.frame ?? frame;
     const afterFrame = after.frame ?? frame;
     const span = afterFrame - beforeFrame;
@@ -39,28 +43,54 @@ export class FindingInterpolator {
       const beforeBox = isBeforeNearer ? pair.shown.box : pair.other.box;
       const afterBox = isBeforeNearer ? pair.other.box : pair.shown.box;
       const box = FindingInterpolator.mix(beforeBox, afterBox, ratio);
-      return { ...finding, box, polygons: FindingInterpolator.moved(finding.polygons, finding.box, box) };
+      return {
+        ...finding,
+        box,
+        polygons: FindingInterpolator.moved(finding.polygons, finding.box, box),
+      };
     });
     return { ...shown, frame, is_exact: false, findings };
   }
 
-  private static pairsOf(shownFindings: Finding[], otherFindings: Finding[]): Map<number, InstancePair> {
+  private static pairsOf(
+    shownFindings: Finding[],
+    otherFindings: Finding[],
+  ): Map<number, InstancePair> {
     const shown = shownFindings.filter(isInstance);
     const other = otherFindings.filter(isInstance);
-    const candidates: { shown: FrameInstance; other: FrameInstance; score: number }[] = [];
+    const candidates: {
+      shown: FrameInstance;
+      other: FrameInstance;
+      score: number;
+    }[] = [];
     for (const shownInstance of shown) {
       for (const otherInstance of other) {
         if (shownInstance.class_name !== otherInstance.class_name) continue;
-        const score = FindingInterpolator.matchScore(shownInstance.box, otherInstance.box);
-        if (score >= FindingInterpolator.MINIMUM_MATCH_SCORE) candidates.push({ shown: shownInstance, other: otherInstance, score });
+        const score = FindingInterpolator.matchScore(
+          shownInstance.box,
+          otherInstance.box,
+        );
+        if (score >= FindingInterpolator.MINIMUM_MATCH_SCORE)
+          candidates.push({
+            shown: shownInstance,
+            other: otherInstance,
+            score,
+          });
       }
     }
     candidates.sort((left, right) => right.score - left.score);
     const pairs = new Map<number, InstancePair>();
     const usedOther = new Set<number>();
     for (const candidate of candidates) {
-      if (pairs.has(candidate.shown.index) || usedOther.has(candidate.other.index)) continue;
-      pairs.set(candidate.shown.index, { shown: candidate.shown, other: candidate.other });
+      if (
+        pairs.has(candidate.shown.index) ||
+        usedOther.has(candidate.other.index)
+      )
+        continue;
+      pairs.set(candidate.shown.index, {
+        shown: candidate.shown,
+        other: candidate.other,
+      });
       usedOther.add(candidate.other.index);
     }
     return pairs;
@@ -68,15 +98,29 @@ export class FindingInterpolator {
 
   private static matchScore(first: Box, second: Box): number {
     const intersection =
-      Math.max(0, Math.min(first[2], second[2]) - Math.max(first[0], second[0])) *
-      Math.max(0, Math.min(first[3], second[3]) - Math.max(first[1], second[1]));
-    const union = FindingInterpolator.areaOf(first) + FindingInterpolator.areaOf(second) - intersection;
+      Math.max(
+        0,
+        Math.min(first[2], second[2]) - Math.max(first[0], second[0]),
+      ) *
+      Math.max(
+        0,
+        Math.min(first[3], second[3]) - Math.max(first[1], second[1]),
+      );
+    const union =
+      FindingInterpolator.areaOf(first) +
+      FindingInterpolator.areaOf(second) -
+      intersection;
     if (intersection > 0 && union > 0) return 1 + intersection / union;
     const centerDistance = Math.hypot(
       (first[0] + first[2] - second[0] - second[2]) / 2,
       (first[1] + first[3] - second[1] - second[3]) / 2,
     );
-    const reach = Math.max(first[2] - first[0], first[3] - first[1], second[2] - second[0], second[3] - second[1]);
+    const reach = Math.max(
+      first[2] - first[0],
+      first[3] - first[1],
+      second[2] - second[0],
+      second[3] - second[1],
+    );
     return reach <= 0 ? 0 : Math.max(0, 1 - centerDistance / reach);
   }
 
@@ -101,7 +145,9 @@ export class FindingInterpolator {
     const scaleY = fromHeight > 0 ? (to[3] - to[1]) / fromHeight : 1;
     return polygons.map((polygon) =>
       polygon.map((value, position) =>
-        position % 2 === 0 ? to[0] + (value - from[0]) * scaleX : to[1] + (value - from[1]) * scaleY,
+        position % 2 === 0
+          ? to[0] + (value - from[0]) * scaleX
+          : to[1] + (value - from[1]) * scaleY,
       ),
     );
   }

@@ -8,7 +8,7 @@ In-memory store of the latest recognition results, kept per model profile. A `Re
 
 | Component | Description |
 | --- | --- |
-| [profile_summary.py](./profile_summary.py) | `ProfileSummary` counts the stored results of one profile over the open media. |
+| [profile_summary.py](./profile_summary.py) | `ProfileSummary` holds the progress and counts of one profile over the open media. |
 | [result_catalog.py](./result_catalog.py) | `ResultCatalog` holds the latest result of every recognized image and video frame of one model profile. |
 | [result_library.py](./result_library.py) | `ResultLibrary` keeps one `ResultCatalog` per model profile, in the order the profiles were added. |
 | [stored_result.py](./stored_result.py) | `StoredResult` is the latest result of one picture with what it was recognized with and the findings the user rejected. |

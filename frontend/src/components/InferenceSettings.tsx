@@ -1,0 +1,155 @@
+import type { BackgroundState, ModelSelection, ModelState, TaskValue } from "../api/types";
+import { taskViewOf } from "../lib/taskViews";
+import { NumberField } from "./NumberField";
+
+interface InferenceSettingsProps {
+  model: ModelState;
+  task: TaskValue;
+  background: BackgroundState;
+  isDisabled: boolean;
+  onBackgroundChange: (scope: string) => void;
+  onChange: (selection: ModelSelection) => void;
+}
+
+const TILING_CHOICES = [null, 2, 3, 4];
+
+export function InferenceSettings({
+  model,
+  task,
+  background,
+  isDisabled,
+  onBackgroundChange,
+  onChange,
+}: InferenceSettingsProps) {
+  const selection = model.selection;
+  const backend = model.backends.find((entry) => entry.value === selection.backend);
+  const change = (update: Partial<ModelSelection>) => onChange({ ...selection, ...update });
+  const taskView = taskViewOf(task);
+  const confidenceLabel = model.tuning.confidence_label;
+  return (
+    <div className="form-grid">
+      <span>Auto run</span>
+      <div className="row">
+        <select
+          className="grow"
+          value={background.scope}
+          title="Which images get inference automatically while you work; videos get it when you run them"
+          onChange={(event) => onBackgroundChange(event.target.value)}
+        >
+          {background.scopes.map((scope) => (
+            <option key={scope.value} value={scope.value}>
+              {scope.label}
+            </option>
+          ))}
+        </select>
+        {background.is_paused && (
+          <span className="paused-text" title="Background inference paused after an error; any action resumes it.">
+            paused
+          </span>
+        )}
+      </div>
+      <span>Device</span>
+      <select value={selection.device} disabled={isDisabled} onChange={(event) => change({ device: event.target.value })}>
+        {model.devices.map((entry) => (
+          <option key={entry.value} value={entry.value} disabled={!entry.is_available}>
+            {entry.value}
+            {entry.is_available ? "" : " (unavailable)"}
+          </option>
+        ))}
+      </select>
+      <span>Precision</span>
+      <select value={selection.precision} disabled={isDisabled} onChange={(event) => change({ precision: event.target.value })}>
+        {model.precisions.map((entry) => (
+          <option key={entry.value} value={entry.value} disabled={!entry.is_available}>
+            {entry.label}
+            {entry.is_available ? "" : " (unavailable)"}
+          </option>
+        ))}
+      </select>
+      {taskView.isEmbeddingTuningShown && (
+        <>
+          <span>Pooling</span>
+          <select
+            value={selection.image_pooling ?? ""}
+            disabled={isDisabled}
+            onChange={(event) => change({ image_pooling: event.target.value })}
+            title="How the image tokens are pooled into the embedding"
+          >
+            {(backend?.image_poolings ?? []).map((pooling) => (
+              <option key={pooling} value={pooling}>
+                {pooling}
+              </option>
+            ))}
+          </select>
+          <span>Tiling</span>
+          <select
+            value={selection.tiling_grid_size ?? ""}
+            disabled={isDisabled}
+            title="Also classify overlapping tiles of each picture, so small objects count"
+            onChange={(event) =>
+              change({ tiling_grid_size: event.target.value === "" ? null : Number(event.target.value) })
+            }
+          >
+            {TILING_CHOICES.map((choice) => (
+              <option key={choice ?? "off"} value={choice ?? ""}>
+                {choice === null ? "Off" : `${choice}×${choice} tiles + whole`}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+      {confidenceLabel !== null && (
+        <>
+          <span>{confidenceLabel}</span>
+          <NumberField
+            value={selection.confidence_threshold ?? 0}
+            isDisabled={isDisabled}
+            onCommit={(value) => change({ confidence_threshold: value })}
+          />
+        </>
+      )}
+      {model.tuning.is_nms_shown && (
+        <>
+          <span>NMS</span>
+          <div className="row">
+            <label>
+              <input
+                type="checkbox"
+                checked={selection.nms_iou_threshold !== null}
+                disabled={isDisabled}
+                onChange={(event) => change({ nms_iou_threshold: event.target.checked ? 0.5 : null })}
+              />
+              IoU
+            </label>
+            <div className="grow" style={{ display: "flex" }}>
+              <NumberField
+                value={selection.nms_iou_threshold ?? 0.5}
+                isDisabled={isDisabled || selection.nms_iou_threshold === null}
+                onCommit={(value) => change({ nms_iou_threshold: value })}
+                width={90}
+              />
+            </div>
+          </div>
+        </>
+      )}
+      {(backend?.is_box_prompted ?? false) && (
+        <>
+          <span>Boxes from</span>
+          <select
+            value={selection.box_detector_label ?? ""}
+            disabled={isDisabled}
+            title="Open-vocabulary detector finding the boxes the segmenter masks"
+            onChange={(event) => change({ box_detector_label: event.target.value === "" ? null : event.target.value })}
+          >
+            <option value="">Preset detector</option>
+            {model.box_detectors.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+    </div>
+  );
+}

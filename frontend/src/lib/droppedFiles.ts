@@ -1,4 +1,5 @@
-const MEDIA_PATTERN = /\.(jpe?g|png|bmp|webp|tiff?|mp4|mov|avi|mkv|webm|m4v|mpe?g|wmv)$/i;
+const MEDIA_PATTERN =
+  /\.(jpe?g|png|bmp|webp|tiff?|mp4|mov|avi|mkv|webm|m4v|mpe?g|wmv)$/i;
 const IMAGE_PATTERN = /\.(jpe?g|png|bmp|webp|tiff?)$/i;
 
 export interface DroppedFile {
@@ -6,7 +7,9 @@ export interface DroppedFile {
   name: string;
 }
 
-function readEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+function readEntries(
+  reader: FileSystemDirectoryReader,
+): Promise<FileSystemEntry[]> {
   return new Promise((resolve, reject) => reader.readEntries(resolve, reject));
 }
 
@@ -14,10 +17,18 @@ function fileOf(entry: FileSystemFileEntry): Promise<File> {
   return new Promise((resolve, reject) => entry.file(resolve, reject));
 }
 
-async function collect(entry: FileSystemEntry, prefix: string, pattern: RegExp, files: DroppedFile[]): Promise<void> {
+async function collect(
+  entry: FileSystemEntry,
+  prefix: string,
+  pattern: RegExp,
+  files: DroppedFile[],
+): Promise<void> {
   if (entry.isFile) {
     if (pattern.test(entry.name) && !entry.name.startsWith(".")) {
-      files.push({ file: await fileOf(entry as FileSystemFileEntry), name: `${prefix}${entry.name}` });
+      files.push({
+        file: await fileOf(entry as FileSystemFileEntry),
+        name: `${prefix}${entry.name}`,
+      });
     }
     return;
   }
@@ -32,13 +43,18 @@ async function collect(entry: FileSystemEntry, prefix: string, pattern: RegExp, 
   }
 }
 
-async function filesOf(transfer: DataTransfer, pattern: RegExp): Promise<DroppedFile[]> {
+async function filesOf(
+  transfer: DataTransfer,
+  pattern: RegExp,
+): Promise<DroppedFile[]> {
   const entries = [...transfer.items]
     .filter((item) => item.kind === "file")
     .map((item) => item.webkitGetAsEntry())
     .filter((entry): entry is FileSystemEntry => entry !== null);
   if (entries.length === 0) {
-    return [...transfer.files].filter((file) => pattern.test(file.name)).map((file) => ({ file, name: file.name }));
+    return [...transfer.files]
+      .filter((file) => pattern.test(file.name))
+      .map((file) => ({ file, name: file.name }));
   }
   const files: DroppedFile[] = [];
   for (const entry of entries) {

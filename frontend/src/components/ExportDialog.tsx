@@ -18,7 +18,9 @@ export interface ExportChoice {
 
 interface ExportDialogProps {
   hasVideos: boolean;
+  listedFindingCount: number;
   onExport: (choice: ExportChoice) => Promise<boolean>;
+  onDownloadCsv: () => void;
   onClose: () => void;
 }
 
@@ -32,7 +34,7 @@ interface StoredExportOptions {
   output_directory: string;
 }
 
-export function ExportDialog({ hasVideos, onExport, onClose }: ExportDialogProps) {
+export function ExportDialog({ hasVideos, listedFindingCount, onExport, onDownloadCsv, onClose }: ExportDialogProps) {
   const [plan, setPlan] = useState<ExportPlan | null>(null);
   const [error, setError] = useState("");
   const [isBrowsing, setIsBrowsing] = useState(false);
@@ -89,13 +91,21 @@ export function ExportDialog({ hasVideos, onExport, onClose }: ExportDialogProps
         width={560}
         footer={
           <>
+            <button
+              className="left"
+              disabled={listedFindingCount === 0}
+              onClick={onDownloadCsv}
+              title="Download the findings listed in the Images and Videos tables, as filtered and sorted there"
+            >
+              Download CSV ({listedFindingCount})
+            </button>
             <button onClick={onClose}>Cancel</button>
             <button
               className="primary"
               disabled={plan === null || plan.issue !== "" || outputDirectory.trim() === "" || isSubmitting}
               onClick={() => void submit()}
             >
-              {plan !== null && plan.pending_count > 0 ? `Recognize ${plan.pending_count} and Export` : "Export"}
+              {plan !== null && plan.pending_count > 0 ? `Infer ${plan.pending_count} and Export` : "Export"}
             </button>
           </>
         }
@@ -108,7 +118,7 @@ export function ExportDialog({ hasVideos, onExport, onClose }: ExportDialogProps
               {plan.picture_count} pictures of the open media.
               {plan.pending_count > 0 && (
                 <div className="hint">
-                  {plan.pending_count} sampled pictures have no up-to-date result and are recognized first.
+                  {plan.pending_count} sampled pictures have no up-to-date result; inference runs on them first.
                 </div>
               )}
             </div>

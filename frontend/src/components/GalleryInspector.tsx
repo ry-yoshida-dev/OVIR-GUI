@@ -14,7 +14,7 @@ function verdictOf(tile: GalleryTile): { text: string; tone: string } {
   const { finding } = tile;
   if (finding === null) return { text: tile.row.kind === "status" ? tile.row.text : "", tone: "muted" };
   if (!finding.is_accepted) return { text: "Rejected", tone: "danger" };
-  if (!finding.is_above_minimum) return { text: "Below minimum", tone: "muted" };
+  if (!finding.is_passing) return { text: "Low confidence", tone: "muted" };
   if (tile.isUncertain) return { text: "Uncertain", tone: "warning" };
   return { text: "Kept", tone: "success" };
 }

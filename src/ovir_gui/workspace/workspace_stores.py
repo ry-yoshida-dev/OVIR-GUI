@@ -2,7 +2,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from ..storage import ClassSetStore, ClassThresholdStore, PicturePromptStore, ResultsStore, SessionStore
+from ..storage import (
+    ClassSetStore,
+    ClassThresholdStore,
+    DuplicateSuppressionStore,
+    PicturePromptStore,
+    ResultsStore,
+    SessionStore,
+)
 from ..vocabulary import ClassListStore
 from .playback_store import PlaybackStore
 from .upload_store import UploadStore
@@ -18,7 +25,8 @@ class WorkspaceStores:
     ├── last_classes.txt        # classes of the last run
     ├── classes/<name>.ovirset  # saved class sets with their reference images
     ├── results.ovirresults     # results of every model profile
-    ├── class_thresholds.json   # minimum confidence per task and class
+    ├── class_thresholds.json   # minimum confidence per task, class and phrase
+    ├── duplicate_suppression.json  # review suppression of overlapping boxes per task
     ├── picture_prompts.json    # exemplar boxes and object marks drawn on pictures
     ├── session.json            # open media, shown picture, task, sampling, model choices
     ├── uploads/                # files uploaded from a browser
@@ -37,6 +45,8 @@ class WorkspaceStores:
         Results of every model.
     class_threshold_store : ClassThresholdStore
         Minimum confidence of each class per task.
+    duplicate_suppression_store : DuplicateSuppressionStore
+        Review suppression of overlapping boxes per task.
     picture_prompt_store : PicturePromptStore
         Exemplar boxes and object marks drawn on pictures.
     session_store : SessionStore
@@ -54,6 +64,7 @@ class WorkspaceStores:
     class_set_store: ClassSetStore
     results_store: ResultsStore
     class_threshold_store: ClassThresholdStore
+    duplicate_suppression_store: DuplicateSuppressionStore
     picture_prompt_store: PicturePromptStore
     session_store: SessionStore
     upload_store: UploadStore
@@ -80,6 +91,7 @@ class WorkspaceStores:
             class_set_store=ClassSetStore(root_directory),
             results_store=ResultsStore(root_directory),
             class_threshold_store=ClassThresholdStore(root_directory),
+            duplicate_suppression_store=DuplicateSuppressionStore(root_directory),
             picture_prompt_store=PicturePromptStore(root_directory),
             session_store=SessionStore(root_directory),
             upload_store=UploadStore(root_directory),

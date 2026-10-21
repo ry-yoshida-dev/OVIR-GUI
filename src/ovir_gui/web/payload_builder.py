@@ -28,8 +28,8 @@ from ..models import (
 from ..prompting import FramePrompt, ObjectMark, PicturePrompts, PromptChange, QueryKind, ReferenceBoard
 from ..recognition import Finding, FrameResult, RecognitionTask, RecognizedInstance
 from ..results import ProfileSummary, ResultCatalog, StoredResult
-from ..review import ClassThresholds
-from ..storage import ClassSet, ClassSetEntry
+from ..review import ClassThresholds, DuplicateSuppression, ReviewFilter
+from ..storage import ClassSet, ClassSetEntry, ClassThresholdStore
 from ..workspace import (
     ActionReply,
     BackgroundScope,
@@ -95,6 +95,9 @@ class PayloadBuilder:
             "classes": self._classes(workspace.workbench),
             "class_set": self._class_set_state(workspace.workbench),
             "thresholds": self._thresholds(workspace.class_thresholds),
+            "suppression": self._suppression(workspace.duplicate_suppression),
+            "standard_minimum": ClassThresholdStore.default_minimum_of(workspace.task),
+            "standard_overlap_threshold": DuplicateSuppression.DEFAULT_OVERLAP_THRESHOLD,
             "status": {"message": workspace.status_message, "serial": workspace.status_serial},
             "activity": workspace.activity_message,
             "summary": workspace.summary,
@@ -138,7 +141,7 @@ class PayloadBuilder:
         """
         item: MediaItem = workspace.media_item(path)
         frame_key: FrameKey = item.key_at(frame_index)
-        thresholds: ClassThresholds = workspace.class_thresholds
+        review_filter: ReviewFilter = workspace.review_filter
         shown_catalog: ResultCatalog | None = workspace.shown_catalog()
         displayed: FrameKey | None = None if shown_catalog is None else shown_catalog.displayed_key(frame_key)
         stored: StoredResult | None = None
@@ -159,7 +162,7 @@ class PayloadBuilder:
             "is_recognized": stored is not None,
             "is_exact": displayed == frame_key,
             "outdated": None if change is None or change.is_unchanged else change.description,
-            "findings": [] if stored is None else self._frame_findings(stored, thresholds),
+            "findings": [] if stored is None else self._frame_findings(stored, review_filter),
             "scores": []
             if stored is None
             else [
@@ -246,7 +249,7 @@ class PayloadBuilder:
         profile: ModelProfile | None = workspace.shown_profile
         if catalog is None or profile is None:
             return {"profile_key": None, "task": workspace.task.value, "pictures": []}
-        thresholds: ClassThresholds = workspace.class_thresholds
+        review_filter: ReviewFilter = workspace.review_filter
         outdated: dict[FrameKey, PromptChange] = workspace.library.outdated_keys(
             profile, workspace.signature_for(profile), workspace.recognized_keys(catalog)
         )
@@ -271,9 +274,7 @@ class PayloadBuilder:
                         for score in stored.result.ranked_scores[: self.LISTED_SCORE_COUNT]
                     ],
                     "class_count": len(stored.result.class_scores),
-                    "findings": [
-                        self._finding_entry(finding, stored, thresholds) for finding in stored.result.findings
-                    ],
+                    "findings": self._finding_entries(stored, review_filter),
                 }
             )
         return {"profile_key": profile.key, "task": profile.task.value, "pictures": pictures}
@@ -306,7 +307,7 @@ class PayloadBuilder:
         video = item.video_info
         catalog: ResultCatalog | None = workspace.shown_catalog()
         frame_indices: list[int] = [] if catalog is None else catalog.frame_indices_of(path)
-        thresholds: ClassThresholds = workspace.class_thresholds
+        review_filter: ReviewFilter = workspace.review_filter
         colors: dict[str, str] = workspace.class_colors()
         names: list[str] = list(workspace.workbench.class_names)
         values: dict[str, list[float]] = {name: [0.0] * len(frame_indices) for name in names}
@@ -321,16 +322,17 @@ class PayloadBuilder:
                 if name not in values:
                     names.append(name)
                     values[name] = [0.0] * len(frame_indices)
+            passing: frozenset[int] = review_filter.passing_indices(result.findings)
             if result.class_scores:
                 for score in result.class_scores:
                     values[score.class_name][position] = score.score
                 top: Finding = result.findings[0]
-                is_kept: bool = stored.is_accepted(0) and thresholds.accepts(top.class_name, top.confidence)
+                is_kept: bool = stored.is_accepted(0) and top.index in passing
                 top_classes.append(top.class_name if is_kept else None)
                 continue
             top_classes.append(None)
             for finding in result.findings:
-                if stored.is_accepted(finding.index) and thresholds.accepts(finding.class_name, finding.confidence):
+                if stored.is_accepted(finding.index) and finding.index in passing:
                     values[finding.class_name][position] += 1.0
         return {
             "path": str(path),
@@ -615,6 +617,7 @@ class PayloadBuilder:
             "selection": self._selection(selection),
             "is_image_prompt_supported": QueryKind.VISUAL in model.supported_query_kinds,
             "query_kinds": list[JsonValue](sorted(kind.value for kind in model.supported_query_kinds)),
+            "text_templates": list[JsonValue](model.text_templates) if isinstance(model, ClassificationModel) else None,
             "weights_path": model.weights_path,
             "description": self._model_description(model),
         }
@@ -622,9 +625,6 @@ class PayloadBuilder:
     @staticmethod
     def _model_description(model: RecognitionModel) -> str:
         match model:
-            case ClassificationModel():
-                templates: str = ", ".join(f"'{template}'" for template in model.text_templates)
-                return f"Templates: {templates}"
             case SegmentationModel():
                 if model.is_box_prompted:
                     return f"Boxes from {model.box_detector_description}"
@@ -653,11 +653,11 @@ class PayloadBuilder:
         is_nms_shown: bool
         match model:
             case DetectionModel():
-                confidence_label, is_nms_shown = "Confidence", True
+                confidence_label, is_nms_shown = None, True
             case SegmentationModel():
-                confidence_label, is_nms_shown = "Mask conf.", True
+                confidence_label, is_nms_shown = None, True
             case PromptableSegmentationModel():
-                confidence_label, is_nms_shown = "Min IoU", False
+                confidence_label, is_nms_shown = None, False
             case MaskGenerationModel():
                 confidence_label, is_nms_shown = "Min IoU", True
             case ObjectTrackingModel():
@@ -666,7 +666,13 @@ class PayloadBuilder:
                 confidence_label, is_nms_shown = "Conf.", False
             case _:
                 confidence_label, is_nms_shown = None, False
-        return {"confidence_label": confidence_label, "is_nms_shown": is_nms_shown}
+        return {
+            "confidence_label": confidence_label,
+            "is_nms_shown": is_nms_shown,
+            "is_minimum_confidence_shown": isinstance(
+                model, DetectionModel | SegmentationModel | PromptableSegmentationModel
+            ),
+        }
 
     @staticmethod
     def _picture_prompt(workspace: Workspace) -> JsonValue:
@@ -720,8 +726,8 @@ class PayloadBuilder:
             "nms_iou_threshold": selection.nms_iou_threshold,
             "image_pooling": selection.image_pooling,
             "box_detector_label": selection.box_detector_label,
-            "box_confidence_threshold": selection.box_confidence_threshold,
             "tiling_grid_size": selection.tiling_grid_size,
+            "text_templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
         }
 
     @staticmethod
@@ -737,29 +743,30 @@ class PayloadBuilder:
             "precision": profile.precision,
             "options": [{"name": option.name, "value": option.value} for option in profile.options],
             "options_text": profile.options_text,
-            "media_count": summary.media_count,
-            "frame_count": summary.frame_count,
+            "file_count": summary.file_count,
+            "done_file_count": summary.done_file_count,
+            "expected_frame_count": summary.expected_frame_count,
+            "recognized_frame_count": summary.recognized_frame_count,
             "outdated_count": summary.outdated_count,
             "finding_count": summary.finding_count,
         }
 
-    def _frame_findings(self, stored: StoredResult, thresholds: ClassThresholds) -> list[JsonValue]:
+    def _frame_findings(self, stored: StoredResult, review_filter: ReviewFilter) -> list[JsonValue]:
         if stored.result.class_scores:
-            return [self._finding_entry(finding, stored, thresholds) for finding in stored.result.findings]
+            return self._finding_entries(stored, review_filter)
+        passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
         return [
             self._instance_entry(
                 index,
                 instance,
                 stored.is_accepted(index),
-                thresholds.accepts(instance.class_name, instance.confidence),
+                index in passing,
             )
             for index, instance in enumerate(stored.result.instances)
         ]
 
     @staticmethod
-    def _instance_entry(
-        index: int, instance: RecognizedInstance, is_accepted: bool, is_above_minimum: bool
-    ) -> JsonObject:
+    def _instance_entry(index: int, instance: RecognizedInstance, is_accepted: bool, is_passing: bool) -> JsonObject:
         polygons: list[JsonValue] = (
             []
             if instance.mask is None
@@ -773,7 +780,7 @@ class PayloadBuilder:
             "box": list[JsonValue](instance.box.xyxy),
             "area": instance.area,
             "is_accepted": is_accepted,
-            "is_above_minimum": is_above_minimum,
+            "is_passing": is_passing,
             "polygons": polygons,
             "color": ClassColors.hex_of(index)
             if instance.class_name == MaskGenerationModel.REGION_CLASS_NAME
@@ -781,8 +788,14 @@ class PayloadBuilder:
             else None,
         }
 
+    @classmethod
+    def _finding_entries(cls, stored: StoredResult, review_filter: ReviewFilter) -> list[JsonValue]:
+        findings: tuple[Finding, ...] = stored.result.findings
+        passing: frozenset[int] = review_filter.passing_indices(findings)
+        return [cls._finding_entry(finding, stored, finding.index in passing) for finding in findings]
+
     @staticmethod
-    def _finding_entry(finding: Finding, stored: StoredResult, thresholds: ClassThresholds) -> JsonObject:
+    def _finding_entry(finding: Finding, stored: StoredResult, is_passing: bool) -> JsonObject:
         return {
             "index": finding.index,
             "class_name": finding.class_name,
@@ -791,7 +804,7 @@ class PayloadBuilder:
             "box": None if finding.box is None else list[JsonValue](finding.box.xyxy),
             "area": finding.area,
             "is_accepted": stored.is_accepted(finding.index),
-            "is_above_minimum": thresholds.accepts(finding.class_name, finding.confidence),
+            "is_passing": is_passing,
         }
 
     def _classes(self, workbench: ClassWorkbench) -> list[JsonValue]:
@@ -836,7 +849,23 @@ class PayloadBuilder:
     @staticmethod
     def _thresholds(thresholds: ClassThresholds) -> JsonObject:
         class_minimums: JsonObject = dict(thresholds.class_minimums)
-        return {"default_minimum": thresholds.default_minimum, "class_minimums": class_minimums}
+        phrase_minimums: JsonObject = {
+            class_name: dict[str, JsonValue](by_phrase) for class_name, by_phrase in thresholds.phrase_minimums.items()
+        }
+        return {
+            "default_minimum": thresholds.default_minimum,
+            "class_minimums": class_minimums,
+            "phrase_minimums": phrase_minimums,
+        }
+
+    @staticmethod
+    def _suppression(suppression: DuplicateSuppression) -> JsonObject:
+        class_overlaps: JsonObject = dict(suppression.class_overlap_thresholds)
+        return {
+            "is_enabled": suppression.is_enabled,
+            "overlap_threshold": suppression.overlap_threshold,
+            "class_overlap_thresholds": class_overlaps,
+        }
 
     @staticmethod
     def _progress(progress: RunProgress | None) -> JsonValue:

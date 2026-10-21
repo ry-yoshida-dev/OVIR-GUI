@@ -26,6 +26,7 @@ from .remove_classes_body import RemoveClassesBody
 from .run_media_body import RunMediaBody
 from .sampling_body import SamplingBody
 from .show_body import ShowBody
+from .suppression_body import SuppressionBody
 from .table_body import TableBody
 from .task_body import TaskBody
 from .text_body import TextBody
@@ -60,6 +61,7 @@ __all__ = [
     "RunMediaBody",
     "SamplingBody",
     "ShowBody",
+    "SuppressionBody",
     "TableBody",
     "TaskBody",
     "TextBody",

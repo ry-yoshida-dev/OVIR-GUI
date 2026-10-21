@@ -1,3 +1,7 @@
+export type BelowMinimumStyle = "dim" | "hide";
+
+export const BELOW_MINIMUM_OPACITY = 0.3;
+
 export interface DisplayOptions {
   isLabelShown: boolean;
   isConfidenceShown: boolean;
@@ -10,6 +14,7 @@ export interface DisplayOptions {
   maskOpacity: number;
   isScorePanelShown: boolean;
   isInterpolated: boolean;
+  belowMinimum: BelowMinimumStyle;
 }
 
 export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
@@ -24,10 +29,13 @@ export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   maskOpacity: 0.45,
   isScorePanelShown: true,
   isInterpolated: true,
+  belowMinimum: "dim",
 };
 
 export function colorOf(palette: string[], classId: number): string {
-  return palette.length === 0 ? "#e6194b" : (palette[classId % palette.length] ?? "#e6194b");
+  return palette.length === 0
+    ? "#e6194b"
+    : (palette[classId % palette.length] ?? "#e6194b");
 }
 
 export function textColorOn(background: string): string {
@@ -35,5 +43,7 @@ export function textColorOn(background: string): string {
   const red = (value >> 16) & 255;
   const green = (value >> 8) & 255;
   const blue = value & 255;
-  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255 > 0.6 ? "#000000" : "#ffffff";
+  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255 > 0.6
+    ? "#000000"
+    : "#ffffff";
 }

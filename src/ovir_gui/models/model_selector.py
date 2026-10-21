@@ -197,7 +197,7 @@ class ModelSelector:
 
     def validated(self, selection: ModelSelection) -> ModelSelection:
         """
-        Selection that can run on this machine, with missing box threshold filled in.
+        Selection that can run on this machine, with the options the model does not take cleared.
 
         Parameters
         ----------
@@ -207,8 +207,8 @@ class ModelSelector:
         Returns
         -------
         ModelSelection
-            ``selection`` with a precision the device or library cannot run replaced by float32, and the box threshold of the chosen
-            box detector when none is given.
+            ``selection`` with a precision the device or library cannot run replaced by float32, and the thresholds the
+            class minimums take over cleared.
 
         Raises
         ------
@@ -230,18 +230,22 @@ class ModelSelector:
                 poolings: tuple[str, ...] = ClassificationModel.image_poolings_of(selection.backend)
                 if selection.image_pooling is not None and selection.image_pooling not in poolings:
                     raise ValueError(f"{selection.backend} offers the poolings {', '.join(poolings)}.")
+            case DetectionModel():
+                validated = replace(validated, confidence_threshold=None)
             case SegmentationModel():
-                box_model: DetectionModel | None = self._box_model_of(selection.box_detector_label)
-                if not base.is_box_prompted:
-                    validated = replace(validated, box_detector_label=None, box_confidence_threshold=None)
-                elif selection.box_confidence_threshold is None:
-                    validated = replace(validated, box_confidence_threshold=base.default_box_confidence(box_model))
-            case PromptableSegmentationModel() | ObjectTrackingModel() | ConceptTrackingModel():
                 validated = replace(
-                    validated, nms_iou_threshold=None, box_detector_label=None, box_confidence_threshold=None
+                    validated,
+                    confidence_threshold=None,
+                    box_detector_label=selection.box_detector_label if base.is_box_prompted else None,
                 )
+            case PromptableSegmentationModel():
+                validated = replace(
+                    validated, confidence_threshold=None, nms_iou_threshold=None, box_detector_label=None
+                )
+            case ObjectTrackingModel() | ConceptTrackingModel():
+                validated = replace(validated, nms_iou_threshold=None, box_detector_label=None)
             case MaskGenerationModel():
-                validated = replace(validated, box_detector_label=None, box_confidence_threshold=None)
+                validated = replace(validated, box_detector_label=None)
             case _:
                 pass
         return validated

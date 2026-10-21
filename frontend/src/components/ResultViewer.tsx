@@ -1,7 +1,7 @@
 import { api } from "../api/client";
 import type { CurrentPicture, FrameInstance, FramePayload } from "../api/types";
 import { usePreloadedSource } from "../hooks/usePreloadedSource";
-import type { DisplayOptions } from "../lib/displayOptions";
+import { BELOW_MINIMUM_OPACITY, type DisplayOptions } from "../lib/displayOptions";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
 import type { PlaybackPosition } from "../lib/playbackPosition";
 import type { ViewerDrawing } from "../lib/viewerDrawing";
@@ -131,7 +131,7 @@ export function ResultViewer({
   const resultNote = !isFrameOfCurrent
     ? ""
     : !frame.is_recognized
-      ? " · not recognized"
+      ? " · not inferred"
       : frame.is_exact || frame.result_frame === null
         ? ""
         : ` · result of #${frame.result_frame}`;
@@ -146,7 +146,7 @@ export function ResultViewer({
     const isRejected = !finding.is_accepted;
     const hasMask = finding.polygons.length > 0;
     return (
-      <g key={finding.index}>
+      <g key={finding.index} opacity={finding.is_passing ? undefined : BELOW_MINIMUM_OPACITY}>
         {hasMask && options.isMaskShown && (
           <MaskShape
             polygons={finding.polygons}
@@ -209,7 +209,7 @@ export function ResultViewer({
             {countNote}
             {resultNote}
             {isFrameOfCurrent && frame.outdated !== null && (
-              <span style={{ color: "var(--warning)" }} title={`Recognized with other classes: ${frame.outdated}`}>
+              <span style={{ color: "var(--warning)" }} title={`Inferred with other classes: ${frame.outdated}`}>
                 {" "}
                 ⚠ outdated
               </span>

@@ -192,6 +192,7 @@ class ClassificationModel(RecognitionModel):
             precision=self.precision,
             image_pooling=self._settings.image_pooling.value,
             tiling_grid_size=None if self._tiling is None else self._tiling.grid_size,
+            text_templates=self._settings.text_templates,
         )
 
     def customized(self, selection: ModelSelection) -> "ClassificationModel":
@@ -201,7 +202,7 @@ class ClassificationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, pooling and tiling to use.
+            Device, precision, pooling, tiling and text templates to use.
 
         Returns
         -------
@@ -211,7 +212,7 @@ class ClassificationModel(RecognitionModel):
         Raises
         ------
         ValueError
-            If the pooling is not offered by the backend.
+            If the pooling is not offered by the backend or a text template is malformed.
         """
         pooling: ImagePooling = (
             self._settings.image_pooling if selection.image_pooling is None else ImagePooling(selection.image_pooling)
@@ -223,6 +224,9 @@ class ClassificationModel(RecognitionModel):
                 device=Device(selection.device.value),
                 precision=Precision(selection.precision.value),
                 image_pooling=pooling,
+                text_templates=self._settings.text_templates
+                if selection.text_templates is None
+                else selection.text_templates,
             ),
             None if selection.tiling_grid_size is None else ImageTiling(grid_size=selection.tiling_grid_size),
         )

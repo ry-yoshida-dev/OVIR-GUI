@@ -25,12 +25,23 @@ export class FrameResultIndex {
   }
 
   merged(payload: VideoFramesPayload): FrameResultIndex {
-    const byFrame = new Map<number, FramePayload>(this.frames.map((frame) => [frame.frame ?? 0, frame]));
+    const byFrame = new Map<number, FramePayload>(
+      this.frames.map((frame) => [frame.frame ?? 0, frame]),
+    );
     for (const frame of payload.frames) {
       if (frame.frame !== null) byFrame.set(frame.frame, frame);
     }
-    const frames = [...byFrame.entries()].sort(([left], [right]) => left - right).map(([, frame]) => frame);
+    const frames = [...byFrame.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([, frame]) => frame);
     return new FrameResultIndex({ path: payload.path, frames });
+  }
+
+  mapped(transform: (frame: FramePayload) => FramePayload): FrameResultIndex {
+    return new FrameResultIndex({
+      path: this.frames[0]?.path ?? "",
+      frames: this.frames.map(transform),
+    });
   }
 
   coveredUntil(frame: number, frameStep: number): number | null {
@@ -38,7 +49,9 @@ export class FrameResultIndex {
     const first = this.frameIndices[position];
     if (first === undefined || first - frame >= frameStep) return null;
     while (position + 1 < this.frameIndices.length) {
-      const gap = (this.frameIndices[position + 1] ?? 0) - (this.frameIndices[position] ?? 0);
+      const gap =
+        (this.frameIndices[position + 1] ?? 0) -
+        (this.frameIndices[position] ?? 0);
       if (gap > frameStep) break;
       position += 1;
     }
@@ -58,7 +71,12 @@ export class FrameResultIndex {
     const after = this.frames[position + 1];
     const beforeFrame = before.frame ?? frame;
     const afterFrame = after?.frame ?? null;
-    if (after === undefined || afterFrame === null || afterFrame - beforeFrame > this.samplingGap) return before;
+    if (
+      after === undefined ||
+      afterFrame === null ||
+      afterFrame - beforeFrame > this.samplingGap
+    )
+      return before;
     if (!before.is_recognized || !after.is_recognized) return before;
     return FindingInterpolator.between(before, after, frame);
   }
@@ -77,7 +95,8 @@ export class FrameResultIndex {
   private static commonGapOf(frameIndices: number[]): number {
     const counts = new Map<number, number>();
     for (let position = 1; position < frameIndices.length; position += 1) {
-      const gap = (frameIndices[position] ?? 0) - (frameIndices[position - 1] ?? 0);
+      const gap =
+        (frameIndices[position] ?? 0) - (frameIndices[position - 1] ?? 0);
       counts.set(gap, (counts.get(gap) ?? 0) + 1);
     }
     let commonGap = 0;

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selected by `ExportScope` and `ExportSelection`, writes them in the chosen `ExportFormat` (CSV/JSON tables, box formats of `object_detection_format`, COCO or YOLO segmentation, mask images, class folders) and optionally saves annotated images and videos drawn by `OverlayRenderer`. It returns an `ExportReport`; the export jobs are planned and run by `workspace/`.
+Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selected by `ExportScope` and `ExportSelection`, writes them in the chosen `ExportFormat` (CSV/JSON tables, box formats of `object_detection_format`, mask formats of `segmentation_format`, mask images, class folders) and optionally saves annotated images and videos drawn by `OverlayRenderer`. It returns an `ExportReport`; the export jobs are planned and run by `workspace/`.
 
 ## Components
 
@@ -12,7 +12,6 @@ Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selec
 | [annotated_video_writer.py](./annotated_video_writer.py) | `AnnotatedVideoWriter` saves every exported video with its findings drawn on every frame as `annotated/<stem>_annotated.mp4`. |
 | [box_annotation_writer.py](./box_annotation_writer.py) | `BoxAnnotationWriter` writes the boxes of exported instances in a box format of `object_detection_format`. |
 | [class_folder_writer.py](./class_folder_writer.py) | `ClassFolderWriter` copies every classified picture into a folder named after its class, `_unlabeled` without one. |
-| [coco_segmentation_writer.py](./coco_segmentation_writer.py) | `CocoSegmentationWriter` writes exported instances as MS COCO instance segmentation with polygon outlines. |
 | [export_format.py](./export_format.py) | `ExportFormat` enumerates the file formats results are exported to. |
 | [export_item.py](./export_item.py) | `ExportItem` describes one picture as it is exported. |
 | [export_options.py](./export_options.py) | `ExportOptions` holds how and where results are written. |
@@ -20,9 +19,9 @@ Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selec
 | [export_scope.py](./export_scope.py) | `ExportScope` enumerates which kept findings are exported. |
 | [export_selection.py](./export_selection.py) | `ExportSelection` holds which stored findings of a picture are exported. |
 | [listed_findings_writer.py](./listed_findings_writer.py) | `ListedFindingsWriter` writes the findings a result table lists, in display order, as CSV text. |
+| [mask_annotation_writer.py](./mask_annotation_writer.py) | `MaskAnnotationWriter` writes the masks of exported instances in a mask format of `segmentation_format` (COCO, YOLO, LabelMe), one picture at a time. |
 | [mask_image_writer.py](./mask_image_writer.py) | `MaskImageWriter` writes label maps of exported instances as PNG images. |
 | [overlay_renderer.py](./overlay_renderer.py) | `OverlayRenderer` draws a result over its picture as tinted masks, labeled boxes or top classes. |
 | [picture_files.py](./picture_files.py) | `PictureFiles` provides the image file of every exported picture, writing a JPEG for video frames. |
 | [result_exporter.py](./result_exporter.py) | `ResultExporter` writes exported pictures in the chosen format with optional annotated images and videos. |
 | [table_export_writer.py](./table_export_writer.py) | `TableExportWriter` writes exported results as one CSV table or one JSON document. |
-| [yolo_segmentation_writer.py](./yolo_segmentation_writer.py) | `YoloSegmentationWriter` writes exported instances as YOLO segmentation labels with `classes.txt`. |

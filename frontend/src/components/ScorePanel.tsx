@@ -19,7 +19,7 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
   if (scores.length === 0 || !options.isScorePanelShown) return null;
   const hiddenCount = scores.length - SCORE_LINES;
   const top = frame.findings[0];
-  const isTopKept = top !== undefined && top.is_accepted && top.is_above_minimum && (listedIndices?.has(0) ?? true);
+  const isTopKept = top !== undefined && top.is_accepted && top.is_passing && (listedIndices?.has(0) ?? true);
   const compared = comparedOf(frame, options);
   const colorOf = (className: string) => classColors[className] ?? FALLBACK_CLASS_COLOR;
   return (

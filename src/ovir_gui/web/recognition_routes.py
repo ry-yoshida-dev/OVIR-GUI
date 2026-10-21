@@ -8,7 +8,7 @@ from ..media import FrameKey
 from ..models import ComputeDevice, ComputePrecision, ModelProfile, ModelSelection
 from ..recognition import RecognitionTask
 from ..results import ResultCatalog
-from ..review import ClassThresholds
+from ..review import ClassThresholds, DuplicateSuppression
 from ..workspace import Workspace
 from .json_value import JsonObject
 from .schema import (
@@ -19,6 +19,7 @@ from .schema import (
     ProfileBody,
     ProfilesBody,
     RunMediaBody,
+    SuppressionBody,
     TableBody,
     TaskBody,
     ThresholdsBody,
@@ -98,8 +99,8 @@ class RecognitionRoutes:
                     nms_iou_threshold=body.nms_iou_threshold,
                     image_pooling=body.image_pooling,
                     box_detector_label=body.box_detector_label,
-                    box_confidence_threshold=body.box_confidence_threshold,
                     tiling_grid_size=body.tiling_grid_size,
+                    text_templates=None if body.text_templates is None else tuple(body.text_templates),
                 )
             )
             return {}
@@ -163,7 +164,16 @@ class RecognitionRoutes:
 
         @router.put("/thresholds")
         async def set_thresholds(body: ThresholdsBody) -> JsonObject:
-            context.workspace.set_class_thresholds(ClassThresholds(body.default_minimum, body.class_minimums))
+            context.workspace.set_class_thresholds(
+                ClassThresholds(body.default_minimum, body.class_minimums, body.phrase_minimums)
+            )
+            return {}
+
+        @router.put("/suppression")
+        async def set_suppression(body: SuppressionBody) -> JsonObject:
+            context.workspace.set_duplicate_suppression(
+                DuplicateSuppression(body.is_enabled, body.overlap_threshold, body.class_overlap_thresholds)
+            )
             return {}
 
         @router.post("/findings/csv")

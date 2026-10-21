@@ -137,7 +137,7 @@ class InferenceEngine:
             self._send(job)
             return True
         if self._foreground_job is not None:
-            raise RuntimeError("A recognition is already running.")
+            raise RuntimeError("An inference is already running.")
         self._foreground_job = job
         self._listener.on_busy_changed(True)
         if self._running_job is None:
@@ -280,7 +280,7 @@ class InferenceEngine:
         first_number: int = job.control.processed_count + 1
         last_number: int = job.control.processed_count + len(frame_keys)
         span: str = frame_keys[0].label if len(frame_keys) == 1 else f"{frame_keys[0].label} … {frame_keys[-1].label}"
-        self._dispatch_activity(f"Recognizing {span} ({first_number}-{last_number}/{total_count}) ...")
+        self._dispatch_activity(f"Inferring {span} ({first_number}-{last_number}/{total_count}) ...")
         try:
             pictures: list[KeyedPicture] = [
                 KeyedPicture(frame_key=frame_key, image=image)

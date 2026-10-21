@@ -12,18 +12,18 @@ interface RunButtonProps {
 export function RunButton({ isDisabled, onRun, onRunAll, onOpenMenu }: RunButtonProps) {
   return (
     <div className="run-button">
-      <button disabled={isDisabled} onClick={onRun} title="Recognize the shown image or video frame (Ctrl+Enter)">
+      <button disabled={isDisabled} onClick={onRun} title="Run inference on the shown image or video frame (Ctrl+Enter)">
         Run <kbd>{RUN_SHORTCUT}</kbd>
       </button>
       <button
         className="run-more"
         disabled={isDisabled}
         aria-haspopup="menu"
-        title="Recognize every picture lacking a result (Ctrl+Shift+Enter)"
+        title="Run inference on every picture lacking a result (Ctrl+Shift+Enter)"
         onClick={(event) =>
           onOpenMenu(event.currentTarget, [
             {
-              label: <span title="Recognize every picture lacking a result (Ctrl+Shift+Enter)">Run All</span>,
+              label: <span title="Run inference on every picture lacking a result (Ctrl+Shift+Enter)">Run All</span>,
               shortcut: "Ctrl+Shift+Enter",
               onSelect: onRunAll,
             },

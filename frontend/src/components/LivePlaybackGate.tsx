@@ -119,9 +119,9 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
   if (status === null) return null;
   return (
     <div className={`live-badge${status.isWaiting ? " waiting" : ""}`}>
-      {status.isWaiting ? "◌ Recognizing ahead…" : "● LIVE"}
+      {status.isWaiting ? "◌ Inferring ahead…" : "● LIVE"}
       <span className="muted">
-        {status.frontier === null ? " · waiting for the first result" : ` · recognized to #${status.frontier}`}
+        {status.frontier === null ? " · waiting for the first result" : ` · inferred to #${status.frontier}`}
         {status.rate < 1 ? ` · ×${status.rate.toFixed(2)}` : ""}
       </span>
     </div>

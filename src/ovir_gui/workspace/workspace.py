@@ -27,7 +27,7 @@ from ..prompting import (
 )
 from ..recognition import FrameResult, RecognitionTask
 from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
-from ..review import ClassThresholds
+from ..review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ..storage import ResultsSnapshot, Session
 from ..vocabulary import ClassDefinition
 from .action_reply import ActionReply
@@ -126,6 +126,7 @@ class Workspace:
         self._shown_profile: ModelProfile | None = None
         self._compared_profile: ModelProfile | None = None
         self._thresholds: dict[RecognitionTask, ClassThresholds] = stores.class_threshold_store.load()
+        self._suppressions: dict[RecognitionTask, DuplicateSuppression] = stores.duplicate_suppression_store.load()
         self._workbench: ClassWorkbench = ClassWorkbench(stores.class_set_store)
         remembered_classes: tuple[ClassDefinition, ...] | None = stores.class_list_store.load()
         self._workbench.restore(
@@ -412,6 +413,30 @@ class Workspace:
             Default and per-class minimums.
         """
         return self._thresholds.get(self._task, ClassThresholds())
+
+    @property
+    def duplicate_suppression(self) -> DuplicateSuppression:
+        """
+        Review suppression of overlapping boxes for the current task.
+
+        Returns
+        -------
+        DuplicateSuppression
+            Whether it runs and its overlaps.
+        """
+        return self._suppressions.get(self._task, DuplicateSuppression())
+
+    @property
+    def review_filter(self) -> ReviewFilter:
+        """
+        Which stored findings of the current task pass the review.
+
+        Returns
+        -------
+        ReviewFilter
+            Minimums and suppression of the current task.
+        """
+        return self._review_filter_of(self._task)
 
     @property
     def status_message(self) -> str:
@@ -706,7 +731,7 @@ class Workspace:
         catalog: ResultCatalog | None = self.shown_catalog()
         profile: ModelProfile | None = self._shown_profile
         is_up_to_date: Callable[[FrameKey], bool] = self._up_to_date_check(profile)
-        thresholds: ClassThresholds = self.class_thresholds
+        review_filter: ReviewFilter = self.review_filter
         statuses: dict[Path, MediaStatus] = {}
         for path, item in self._media.items():
             expected: tuple[FrameKey, ...] = self.expected_keys(item)
@@ -729,9 +754,8 @@ class Workspace:
                         continue
                     kept_count += sum(
                         1
-                        for finding in stored.result.findings
-                        if stored.is_accepted(finding.index)
-                        and thresholds.accepts(finding.class_name, finding.confidence)
+                        for index in review_filter.passing_indices(stored.result.findings)
+                        if stored.is_accepted(index)
                     )
             state: MediaState
             if outdated_count:
@@ -756,28 +780,42 @@ class Workspace:
 
     def profile_summaries(self) -> tuple[ProfileSummary, ...]:
         """
-        Counts of every stored profile of the current task over the open media.
+        Progress and counts of every stored profile of the current task over the open media.
 
         Returns
         -------
         tuple[ProfileSummary, ...]
             Summaries in the order the profiles were added.
         """
+        expected_by_path: dict[Path, tuple[FrameKey, ...]] = {
+            path: self.expected_keys(item) for path, item in self._media.items()
+        }
+        expected_frame_count: int = sum(len(expected) for expected in expected_by_path.values())
         summaries: list[ProfileSummary] = []
         for profile in self.task_profiles():
             catalog: ResultCatalog = self._library.catalog_of(profile)
-            keys: tuple[FrameKey, ...] = self.recognized_keys(catalog)
+            done_file_count: int = 0
+            recognized: list[FrameKey] = []
+            for expected in expected_by_path.values():
+                recognized_of_file: list[FrameKey] = [key for key in expected if key in catalog]
+                recognized.extend(recognized_of_file)
+                if len(recognized_of_file) == len(expected):
+                    done_file_count += 1
             finding_count: int = 0
-            for key in keys:
+            for key in self.recognized_keys(catalog):
                 stored: StoredResult | None = catalog.stored_of(key)
                 if stored is not None:
                     finding_count += len(stored.result.findings)
             summaries.append(
                 ProfileSummary(
                     profile=profile,
-                    media_count=len({key.path for key in keys}),
-                    frame_count=len(keys),
-                    outdated_count=len(self._library.outdated_keys(profile, self.signature_for(profile), keys)),
+                    file_count=len(expected_by_path),
+                    done_file_count=done_file_count,
+                    expected_frame_count=expected_frame_count,
+                    recognized_frame_count=len(recognized),
+                    outdated_count=len(
+                        self._library.outdated_keys(profile, self.signature_for(profile), tuple(recognized))
+                    ),
                     finding_count=finding_count,
                 )
             )
@@ -796,7 +834,7 @@ class Workspace:
         if catalog is None:
             return None
         return ResultStatistics.of(
-            catalog, self.recognized_keys(catalog), self._workbench.class_names, self.class_thresholds
+            catalog, self.recognized_keys(catalog), self._workbench.class_names, self.review_filter
         )
 
     def comparison(self) -> ProfileComparison | None:
@@ -984,7 +1022,7 @@ class Workspace:
             If a foreground job runs or the task has no preset.
         """
         if self.is_busy:
-            raise ValueError("The task cannot be changed while a recognition is running.")
+            raise ValueError("The task cannot be changed while an inference is running.")
         if task not in self._model_selector.tasks:
             raise ValueError(f"No {task.value} models are available.")
         if task is self._task:
@@ -1016,7 +1054,7 @@ class Workspace:
             If a foreground job runs, the preset belongs to another task, or the device or an option is not available.
         """
         if self.is_busy:
-            raise ValueError("The model cannot be changed while a recognition is running.")
+            raise ValueError("The model cannot be changed while an inference is running.")
         if selection.task is not self._task:
             raise ValueError(f"A {selection.task.value} model cannot be chosen while the task is {self._task.value}.")
         validated: ModelSelection = self._model_selector.validated(selection)
@@ -1206,7 +1244,7 @@ class Workspace:
             return self._reject("No outdated pictures to update.")
         if profile != self.current_model().profile():
             return self._reject(
-                f"The outdated pictures were recognized with {profile.label} ({profile.options_text}); "
+                f"The outdated pictures were inferred with {profile.label} ({profile.options_text}); "
                 + "choose these model settings to update them."
             )
         return self._start(JobPurpose.UPDATE_OUTDATED, outdated, is_skipping_approved)
@@ -1234,11 +1272,11 @@ class Workspace:
         if not self._media:
             issue = "Open images or videos first."
         elif self.is_busy:
-            issue = "A recognition is already running."
+            issue = "An inference is already running."
         elif pending and profile != self.current_model().profile():
             issue = (
                 f"{len(pending)} pictures have no up-to-date result of {profile.label} ({profile.options_text}); "
-                + "choose these model settings to recognize them before exporting."
+                + "choose these model settings to run inference on them before exporting."
             )
         return ExportPlan(
             profile=profile,
@@ -1268,7 +1306,7 @@ class Workspace:
             return self._reject(plan.issue)
         if request.options.scope is ExportScope.LISTED and plan.pending_count:
             return self._reject(
-                f"Only listed findings can be exported once every picture is recognized; {plan.pending_count} "
+                f"Only listed findings can be exported once inference has run on every picture; {plan.pending_count} "
                 + "pictures have no up-to-date result. Run All first, or export every kept finding."
             )
         if not plan.pending_count:
@@ -1403,6 +1441,22 @@ class Workspace:
             self._inform(f"Could not save the class minimums: {error}")
         self._changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
 
+    def set_duplicate_suppression(self, suppression: DuplicateSuppression) -> None:
+        """
+        Change the review suppression of overlapping boxes for the current task and remember it.
+
+        Parameters
+        ----------
+        suppression : DuplicateSuppression
+            Whether it runs and its overlaps.
+        """
+        self._suppressions[self._task] = suppression
+        try:
+            self._stores.duplicate_suppression_store.save(self._suppressions)
+        except OSError as error:
+            self._inform(f"Could not save the duplicate suppression: {error}")
+        self._changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
+
     def save_results(self) -> None:
         """
         Write the stored results to the data directory soon, off the owning thread.
@@ -1521,10 +1575,10 @@ class Workspace:
                 pass
             case JobPurpose.RUN_CURRENT:
                 self._inform(
-                    f"Done{unreadable_note}." if summary.recognized_count else f"Nothing recognized{unreadable_note}."
+                    f"Done{unreadable_note}." if summary.recognized_count else f"Nothing inferred{unreadable_note}."
                 )
             case JobPurpose.RUN_MEDIA | JobPurpose.RUN_ALL | JobPurpose.UPDATE_OUTDATED:
-                verb: str = "stopped after" if summary.is_cancelled else "recognized"
+                verb: str = "stopped after" if summary.is_cancelled else "inferred"
                 self._inform(f"{job.purpose.title} {verb} {summary.recognized_count} pictures{unreadable_note}.")
             case JobPurpose.EXPORT:
                 request: ExportRequest | None = self._pending_export
@@ -1555,7 +1609,7 @@ class Workspace:
             self._alert(f"{job.purpose.title} failed", message)
         else:
             self._planner.pause()
-            self._inform(f"Background recognition paused: {message}")
+            self._inform(f"Background inference paused: {message}")
         self._changed(WorkspaceTopic.STATE)
         self._detect_in_background()
 
@@ -1805,10 +1859,10 @@ class Workspace:
 
     def _start(self, purpose: JobPurpose, frame_keys: tuple[FrameKey, ...], is_skipping_approved: bool) -> ActionReply:
         if self.is_busy:
-            return self._reject("A recognition is already running.")
+            return self._reject("An inference is already running.")
         model: RecognitionModel = self.current_model()
         if model.prompt_mode.is_class_list_needed and not self._workbench.classes:
-            return self._reject("Add at least one class to recognize.")
+            return self._reject("Add at least one class before running inference.")
         if model.is_sequential:
             frame_keys = self._sequential_keys(frame_keys)
         if model.prompt_mode is PromptMode.MARKS and not any(
@@ -1825,7 +1879,7 @@ class Workspace:
                 return ActionReply(
                     status=ActionStatus.NEEDS_APPROVAL,
                     message=f"{model.preset.label} does not take reference images, so these classes have no usable "
-                    + f"query: {listed}. Recognize the other classes without them?",
+                    + f"query: {listed}. Run inference on the other classes without them?",
                     skipped_class_names=preparation.unapproved_class_names,
                 )
             return self._reject(preparation.issue)
@@ -1864,13 +1918,18 @@ class Workspace:
         self._summary = ""
         self._changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
 
+    def _review_filter_of(self, task: RecognitionTask) -> ReviewFilter:
+        return ReviewFilter(
+            self._thresholds.get(task, ClassThresholds()), self._suppressions.get(task, DuplicateSuppression())
+        )
+
     def _write_export(self, profile: ModelProfile, request: ExportRequest) -> None:
         if profile not in self._library:
             self._inform("Nothing to export.")
             return
         catalog: ResultCatalog = self._library.catalog_of(profile)
         selection: ExportSelection = ExportSelection(
-            class_thresholds=self._thresholds.get(profile.task, ClassThresholds()),
+            review_filter=self._review_filter_of(profile.task),
             minimum_confidence=request.options.minimum_confidence,
             listed_indices=(
                 request.listed_indices

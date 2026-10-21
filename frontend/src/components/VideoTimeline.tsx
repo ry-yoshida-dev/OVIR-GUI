@@ -52,7 +52,7 @@ export function VideoTimeline({ timeline, frameCount, frame, isTopClassBanded, o
         isDragging.current = false;
         onSeek(frameAt(event.clientX), true);
       }}
-      title="Click or drag to seek; marks show recognized frames and where each class was found"
+      title="Click or drag to seek; marks show inferred frames and where each class was found"
     >
       <svg width="100%" height={height} viewBox={`0 0 1 ${height}`} preserveAspectRatio="none">
         <rect x={0} y={0} width={1} height={height} fill="var(--timeline-bg)" />

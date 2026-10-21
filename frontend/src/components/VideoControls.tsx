@@ -45,7 +45,6 @@ export function VideoControls({
   const frameCount = current.frame_count ?? 1;
   const fps = current.fps ?? 30;
   const lastFrame = frameCount - 1;
-  const recognized = timeline?.frames ?? [];
 
   useEffect(() => {
     if (!isPlaying || !isPlaybackShown) return;
@@ -70,23 +69,6 @@ export function VideoControls({
     const base = Math.floor(frame / frameStep) * frameStep;
     const next = direction > 0 ? base + frameStep : frame > base ? base : base - frameStep;
     onSeek(Math.min(lastFrame, Math.max(0, next)), true);
-  };
-
-  const jumpToFound = (direction: number) => {
-    if (timeline === null) return;
-    const positions = recognized.map((_, position) => position);
-    const hasFinding = (position: number) =>
-      isTopClassBanded
-        ? timeline.top_classes[position] !== null
-        : timeline.classes.some((entry) => (entry.values[position] ?? 0) > 0);
-    const candidates = direction > 0 ? positions : [...positions].reverse();
-    for (const position of candidates) {
-      const index = recognized[position] ?? 0;
-      if ((direction > 0 ? index > frame : index < frame) && hasFinding(position)) {
-        onSeek(index, true);
-        return;
-      }
-    }
   };
 
   return (
@@ -131,19 +113,13 @@ export function VideoControls({
       </div>
       )}
       <div className="row">
-        <button className="small" onClick={() => jumpToFound(-1)} disabled={recognized.length === 0} title="Previous recognized frame with a kept finding">
-          ◁ Found
-        </button>
-        <button className="small" onClick={() => jumpToFound(1)} disabled={recognized.length === 0} title="Next recognized frame with a kept finding">
-          Found ▷
-        </button>
-        <span className="grow" />
-        <span className="small muted" title="Recognize every Nth frame">
-          every
-        </span>
+        <label className="sampling-label" title="Inference runs on every Nth frame only; frames in between show the previous result">
+          Inference interval
+        </label>
         <NumberField value={frameStep} minimum={1} maximum={100000} step={1} width={60} onCommit={(value) => onFrameStepChange(Math.round(value))} />
-        <span className="small muted">frames ({(frameStep / fps).toFixed(2)} s)</span>
-        <button className="small" disabled={isBusy} onClick={onRunVideo} title="Recognize every sampled frame of this video now">
+        <span className="small">frames</span>
+        <span className="row-spacer" />
+        <button className="small" disabled={isBusy} onClick={onRunVideo} title="Run inference on every sampled frame of this video now">
           Run Video
         </button>
         {onRunLive !== null && (
@@ -151,7 +127,7 @@ export function VideoControls({
             className="small primary"
             disabled={isBusy}
             onClick={onRunLive}
-            title="Recognize from the shown frame onward and play the video as results arrive; playback slows down to stay behind recognition"
+            title="Run inference from the shown frame onward and play the video as results arrive; playback slows down to stay behind inference"
           >
             ▶ Run Live
           </button>

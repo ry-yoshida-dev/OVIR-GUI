@@ -195,7 +195,7 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
     shown === null || listed === null ? null : (listed.get(pictureKeyOf(shown.path, shown.result_frame)) ?? new Set<number>());
   const resultNote =
     shown === null || !shown.is_recognized
-      ? "not recognized"
+      ? "not inferred"
       : shown.result_frame === shownFrame
         ? `${visibleInstancesOf(shown, listedIndices, options).length} findings`
         : shown.frame === shownFrame
@@ -232,7 +232,7 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
         <div className="video-hud">
           {current.name} ({current.width}×{current.height}) · {resultNote}
           {shown !== null && shown.outdated !== null && (
-            <span style={{ color: "var(--warning)" }} title={`Recognized with other classes: ${shown.outdated}`}>
+            <span style={{ color: "var(--warning)" }} title={`Inferred with other classes: ${shown.outdated}`}>
               {" "}
               ⚠ outdated
             </span>

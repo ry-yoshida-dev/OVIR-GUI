@@ -103,7 +103,6 @@ export function DialogHost({ children }: { children: ReactNode }) {
             <button onClick={() => done(false)}>Cancel</button>
             <button
               className={pending.options.isDanger ? "primary danger" : "primary"}
-              style={pending.options.isDanger ? { background: "var(--danger)", borderColor: "var(--danger)" } : {}}
               autoFocus
               onClick={() => done(true)}
             >

@@ -130,7 +130,7 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
                     }}
                   />
                   <span className="name">{entry.name}</span>
-                  {isRecognizing && <span className="faint small">recognizing…</span>}
+                  {isRecognizing && <span className="faint small">inferring…</span>}
                   <span className="muted small">{entry.count_text}</span>
                 </div>
               );

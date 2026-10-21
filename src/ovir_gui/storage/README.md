@@ -13,7 +13,8 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [class_set_entry.py](./class_set_entry.py) | `ClassSetEntry` describes a saved class set as listed in the data directory. |
 | [class_set_store.py](./class_set_store.py) | `ClassSetStore` manages the named class sets saved by the user, each one a `ClassSetArchive` at `classes/<name>.ovirset`. |
 | [class_set_summary.py](./class_set_summary.py) | `ClassSetSummary` holds counts describing a class set, read from its manifest without decoding any image. |
-| [class_threshold_store.py](./class_threshold_store.py) | `ClassThresholdStore` remembers the minimum confidence per class and task in `class_thresholds.json`. |
+| [class_threshold_store.py](./class_threshold_store.py) | `ClassThresholdStore` remembers the minimum confidence per task, class and phrase in `class_thresholds.json`. |
+| [duplicate_suppression_store.py](./duplicate_suppression_store.py) | `DuplicateSuppressionStore` remembers the review suppression of overlapping boxes per task in `duplicate_suppression.json`. |
 | [json_fields.py](./json_fields.py) | `JsonFields` gives typed access to parsed JSON values, raising `TypeError` naming the field on a type mismatch. |
 | [picture_prompt_codec.py](./picture_prompt_codec.py) | `PicturePromptCodec` writes and reads exemplar boxes and object marks as JSON, shared by the results archive and the remembered drawings. |
 | [picture_prompt_store.py](./picture_prompt_store.py) | `PicturePromptStore` remembers the exemplar boxes and object marks drawn on pictures in `picture_prompts.json`. |

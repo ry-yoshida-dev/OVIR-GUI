@@ -34,15 +34,16 @@ class ModelSelection:
     box_detector_label : str | None
         Detection preset ``"<backend>/<name>"`` finding the boxes a segmenter masks; ``None`` keeps the box detector
         of the segmentation preset.
-    box_confidence_threshold : float | None
-        Minimum confidence of a box the segmenter masks, in ``[0, 1]``.
     tiling_grid_size : int | None
         Tiles along each side a classifier also scores every picture on; ``None`` scores the whole picture only.
+    text_templates : tuple[str, ...] | None
+        Sentences with one ``{}`` every phrase of a classifier is filled into; ``("{}",)`` uses the phrase as it is
+        and ``None`` keeps the templates of the preset.
 
     Raises
     ------
     ValueError
-        If a threshold is outside ``[0, 1]`` or the tiling grid is smaller than 2.
+        If a threshold is outside ``[0, 1]``, the tiling grid is smaller than 2 or no text template is given.
     """
 
     task: RecognitionTask
@@ -54,19 +55,20 @@ class ModelSelection:
     nms_iou_threshold: float | None = None
     image_pooling: str | None = None
     box_detector_label: str | None = None
-    box_confidence_threshold: float | None = None
     tiling_grid_size: int | None = None
+    text_templates: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
             ("confidence_threshold", self.confidence_threshold),
             ("nms_iou_threshold", self.nms_iou_threshold),
-            ("box_confidence_threshold", self.box_confidence_threshold),
         ):
             if value is not None and not 0.0 <= value <= 1.0:
                 raise ValueError(f"{name} must be in [0, 1]. got {value}")
         if self.tiling_grid_size is not None and self.tiling_grid_size < 2:
             raise ValueError(f"tiling_grid_size must be at least 2. got {self.tiling_grid_size}")
+        if self.text_templates is not None and not self.text_templates:
+            raise ValueError("text_templates must hold at least one template; use ('{}',) for the phrase as it is.")
 
     @property
     def preset_label(self) -> str:

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { DialogHost } from "./components/DialogHost";
+import { TooltipLayer } from "./components/TooltipLayer";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -12,5 +13,6 @@ createRoot(root).render(
     <DialogHost>
       <App />
     </DialogHost>
+    <TooltipLayer />
   </StrictMode>,
 );

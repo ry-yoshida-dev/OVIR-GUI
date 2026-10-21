@@ -1,23 +1,76 @@
 import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../api/types";
 import { useDialogs } from "./DialogHost";
+import { ProfilesGlyph } from "./ProfilesGlyph";
+import { TrashGlyph } from "./TrashGlyph";
 
 interface ProfileTableProps {
   profiles: Profile[];
   shownKey: string | null;
   comparedKey: string | null;
+  isBusy: boolean;
   onSelect: (key: string) => void;
   onRemove: (keys: string[]) => void;
+  onUpdateOutdated: () => void;
 }
 
-export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemove }: ProfileTableProps) {
+interface ProfileDetail {
+  name: string;
+  valueOf: (profile: Profile) => string;
+}
+
+function detailsOf(profiles: Profile[]): ProfileDetail[] {
+  const optionNames = [...new Set(profiles.flatMap((profile) => profile.options.map((option) => option.name)))];
+  return [
+    { name: "Device", valueOf: (profile: Profile) => profile.device },
+    { name: "Precision", valueOf: (profile: Profile) => profile.precision },
+    ...optionNames.map((name) => ({
+      name,
+      valueOf: (profile: Profile) => profile.options.find((option) => option.name === name)?.value ?? "",
+    })),
+  ];
+}
+
+function isVideoOpen(profile: Profile): boolean {
+  return profile.expected_frame_count !== profile.file_count;
+}
+
+function progressText(profile: Profile): string {
+  return isVideoOpen(profile)
+    ? `${profile.recognized_frame_count}/${profile.expected_frame_count} frames`
+    : `${profile.done_file_count}/${profile.file_count} files`;
+}
+
+function progressTooltip(profile: Profile): string {
+  return (
+    `${profile.done_file_count} of ${profile.file_count} open files fully recognized\n` +
+    `${profile.recognized_frame_count} of ${profile.expected_frame_count} pictures recognized`
+  );
+}
+
+function rowTooltip(profile: Profile): string {
+  const options = profile.options.map((option) => `\n${option.name}: ${option.value}`).join("");
+  return `${profile.weights_path}\nDevice: ${profile.device}\nPrecision: ${profile.precision}${options}`;
+}
+
+export function ProfileTable({
+  profiles,
+  shownKey,
+  comparedKey,
+  isBusy,
+  onSelect,
+  onRemove,
+  onUpdateOutdated,
+}: ProfileTableProps) {
   const dialogs = useDialogs();
   const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const headerCheckbox = useRef<HTMLInputElement>(null);
   const checked = profiles.filter((profile) => checkedKeys.has(profile.key));
   const isAllChecked = profiles.length > 0 && checked.length === profiles.length;
   const isSomeChecked = checked.length > 0 && !isAllChecked;
-  const optionNames = [...new Set(profiles.flatMap((profile) => profile.options.map((option) => option.name)))];
+  const differingDetails = detailsOf(profiles).filter(
+    (detail) => new Set(profiles.map((profile) => detail.valueOf(profile))).size > 1,
+  );
 
   useEffect(() => {
     if (headerCheckbox.current !== null) headerCheckbox.current.indeterminate = isSomeChecked;
@@ -39,7 +92,7 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
       title: "Remove Model Results",
       message:
         checked.length === 1 && only !== undefined
-          ? `Forget the ${findingCount} findings of ${only.backend}/${only.model_name} (${only.options_text}) on ${only.frame_count} pictures?`
+          ? `Forget the ${findingCount} findings of ${only.backend}/${only.model_name} (${only.options_text}) on ${only.recognized_frame_count} pictures?`
           : `Forget the ${findingCount} findings of ${checked.length} models?`,
       confirmLabel: "Remove",
       isDanger: true,
@@ -50,15 +103,21 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
-      <div className="panel-title">
-        <span className="grow">Models</span>
+      <div className="section-header">
+        <span className="section-icon">
+          <ProfilesGlyph />
+        </span>
+        <span className="section-title">Models</span>
+        <span className="section-count">{profiles.length}</span>
+        <span className="grow" />
         <button
-          className="ghost icon"
+          className="section-action"
           disabled={checked.length === 0}
           onClick={() => void remove()}
           title="Remove the checked models (Delete)"
+          aria-label="Remove the checked models"
         >
-          🗑
+          <TrashGlyph />
         </button>
       </div>
       <div
@@ -90,22 +149,19 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
                 />
               </th>
               <th>Backend</th>
-              <th>Model</th>
-              <th>Device</th>
-              <th>Prec.</th>
-              {optionNames.map((name) => (
-                <th key={name}>{name}</th>
+              <th>Preset</th>
+              {differingDetails.map((detail) => (
+                <th key={detail.name}>{detail.name}</th>
               ))}
-              <th>Media</th>
-              <th>Pictures</th>
-              <th>Outdated</th>
-              <th>Findings</th>
+              <th title="How much of the open media this model has recognized">Progress</th>
+              <th title="Objects found across the recognized pictures">Findings</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {profiles.length === 0 && (
               <tr className="status">
-                <td colSpan={9 + optionNames.length}>No results yet. Open images or videos to fill this table.</td>
+                <td colSpan={6 + differingDetails.length}>No results yet. Open images or videos to fill this table.</td>
               </tr>
             )}
             {profiles.map((profile) => (
@@ -113,7 +169,7 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
                 key={profile.key}
                 className={profile.key === shownKey ? "selected" : ""}
                 onClick={() => onSelect(profile.key)}
-                title={profile.weights_path}
+                title={rowTooltip(profile)}
               >
                 <td>
                   <input
@@ -128,19 +184,38 @@ export function ProfileTable({ profiles, shownKey, comparedKey, onSelect, onRemo
                   {profile.model_name}
                   {profile.key === comparedKey && <span className="badge" style={{ marginLeft: 6 }}>compared</span>}
                 </td>
-                <td>{profile.device}</td>
-                <td>{profile.precision}</td>
-                {optionNames.map((name) => (
-                  <td key={name} className="ellipsis" title={profile.options.find((option) => option.name === name)?.value}>
-                    {profile.options.find((option) => option.name === name)?.value ?? ""}
+                {differingDetails.map((detail) => (
+                  <td key={detail.name} className="ellipsis" title={detail.valueOf(profile)}>
+                    {detail.valueOf(profile)}
                   </td>
                 ))}
-                <td className="number">{profile.media_count}</td>
-                <td className="number">{profile.frame_count}</td>
-                <td className="number" style={{ color: profile.outdated_count > 0 ? "var(--warning)" : undefined }}>
-                  {profile.outdated_count}
+                <td className="number" title={progressTooltip(profile)}>
+                  {progressText(profile)}
                 </td>
                 <td className="number">{profile.finding_count}</td>
+                <td>
+                  {profile.outdated_count > 0 &&
+                    (profile.key === shownKey ? (
+                      <button
+                        className="ghost small"
+                        disabled={isBusy}
+                        title={`${profile.outdated_count} pictures were recognized before the classes changed; recognize them again`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onUpdateOutdated();
+                        }}
+                      >
+                        Re-run ({profile.outdated_count})
+                      </button>
+                    ) : (
+                      <span
+                        style={{ color: "var(--warning)" }}
+                        title={`${profile.outdated_count} pictures were recognized before the classes changed; select this model to re-run them`}
+                      >
+                        ⚠ {profile.outdated_count}
+                      </span>
+                    ))}
+                </td>
               </tr>
             ))}
           </tbody>

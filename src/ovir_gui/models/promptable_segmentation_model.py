@@ -24,18 +24,14 @@ class PromptableSegmentationModel(RecognitionModel):
     Promptable segmenter of ``open_vocabulary_segmentation`` (SAM, SAM 2, SAM 3 tracker, EdgeTAM, Florence-2).
 
     Each object marked on a picture by points and a box is segmented on that picture and reported under the class of
-    its mark. Masks whose predicted IoU is below the minimum score are dropped; the minimum is read at inference time.
-
-    Attributes
-    ----------
-    minimum_score : float
-        Lowest predicted IoU of a kept mask, in ``[0, 1]``.
+    its mark with its predicted IoU as confidence. Every mask is kept, so the minimum is tuned afterwards through the
+    class minimums without recognizing again.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
     MODE: ClassVar[SegmentationMode] = SegmentationMode.PROMPTABLE
 
-    def __init__(self, preset: ModelPreset, settings: PromptableSegmenterSettings, minimum_score: float) -> None:
+    def __init__(self, preset: ModelPreset, settings: PromptableSegmenterSettings) -> None:
         """
         Parameters
         ----------
@@ -43,19 +39,9 @@ class PromptableSegmentationModel(RecognitionModel):
             Preset the settings were read from.
         settings : PromptableSegmenterSettings
             Library settings, possibly overridden.
-        minimum_score : float
-            Lowest predicted IoU of a kept mask.
-
-        Raises
-        ------
-        ValueError
-            If the minimum score is outside ``[0, 1]``.
         """
         super().__init__(preset)
-        if not 0.0 <= minimum_score <= 1.0:
-            raise ValueError(f"minimum_score must be in [0, 1]. got {minimum_score}")
         self._settings: PromptableSegmenterSettings = settings
-        self.minimum_score: float = minimum_score
 
     @classmethod
     def from_preset(cls, preset: ModelPreset) -> "PromptableSegmentationModel":
@@ -70,7 +56,7 @@ class PromptableSegmentationModel(RecognitionModel):
         Returns
         -------
         PromptableSegmentationModel
-            Model of the preset, keeping every mask.
+            Model of the preset.
 
         Raises
         ------
@@ -83,7 +69,7 @@ class PromptableSegmentationModel(RecognitionModel):
         settings: PromptableSegmenterSettings = DataclassInitializer.build(PromptableSegmenterSettings, section)
         if f"{cls.MODE.backend_prefix}{settings.backend.value}" != preset.backend:
             raise ValueError(f"{preset.label}: preset declares backend {settings.backend.value}")
-        return cls(preset, settings, 0.0)
+        return cls(preset, settings)
 
     @property
     def settings(self) -> PromptableSegmenterSettings:
@@ -151,7 +137,7 @@ class PromptableSegmentationModel(RecognitionModel):
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:
-        return (ProfileOption("Min IoU", self.format_threshold(self.minimum_score)),)
+        return ()
 
     def loading_signature(self) -> tuple[str, ...]:
         return (
@@ -170,7 +156,6 @@ class PromptableSegmentationModel(RecognitionModel):
             preset_name=self.preset.name,
             device=self.device,
             precision=self.precision,
-            confidence_threshold=self.minimum_score,
         )
 
     def customized(self, selection: ModelSelection) -> "PromptableSegmentationModel":
@@ -180,7 +165,7 @@ class PromptableSegmentationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision and minimum score to use.
+            Device and precision to use.
 
         Returns
         -------
@@ -190,10 +175,7 @@ class PromptableSegmentationModel(RecognitionModel):
         settings: PromptableSegmenterSettings = replace(
             self._settings, device=Device(selection.device.value), precision=Precision(selection.precision.value)
         )
-        minimum_score: float = (
-            self.minimum_score if selection.confidence_threshold is None else selection.confidence_threshold
-        )
-        return PromptableSegmentationModel(self.preset, settings, minimum_score)
+        return PromptableSegmentationModel(self.preset, settings)
 
     def build_recognizer(self) -> "Recognizer":
         from .promptable_recognizer import PromptableRecognizer

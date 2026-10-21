@@ -120,8 +120,8 @@ class SessionStore:
             "nms": selection.nms_iou_threshold,
             "pooling": selection.image_pooling,
             "box_detector": selection.box_detector_label,
-            "box_confidence": selection.box_confidence_threshold,
             "tiling": selection.tiling_grid_size,
+            "templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
         }
 
     @classmethod
@@ -155,8 +155,13 @@ class SessionStore:
             nms_iou_threshold=optional_number("nms"),
             image_pooling=optional_string("pooling"),
             box_detector_label=optional_string("box_detector"),
-            box_confidence_threshold=optional_number("box_confidence"),
             tiling_grid_size=None
             if content.get("tiling") is None
             else JsonFields.integer_of(content.get("tiling"), "tiling"),
+            text_templates=None
+            if content.get("templates") is None
+            else tuple(
+                JsonFields.string_of(template, "template")
+                for template in JsonFields.list_of(content.get("templates"), "templates")
+            ),
         )

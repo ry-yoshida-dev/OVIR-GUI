@@ -4,6 +4,7 @@ from .class_set_entry import ClassSetEntry
 from .class_set_store import ClassSetStore
 from .class_set_summary import ClassSetSummary
 from .class_threshold_store import ClassThresholdStore
+from .duplicate_suppression_store import DuplicateSuppressionStore
 from .json_fields import JsonFields, JsonValue
 from .picture_prompt_codec import PicturePromptCodec
 from .picture_prompt_store import PicturePromptStore
@@ -20,6 +21,7 @@ __all__ = [
     "ClassSetStore",
     "ClassSetSummary",
     "ClassThresholdStore",
+    "DuplicateSuppressionStore",
     "JsonFields",
     "JsonValue",
     "PicturePromptCodec",

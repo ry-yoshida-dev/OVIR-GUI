@@ -6,7 +6,7 @@ from ..media import FrameKey
 from ..models import ModelProfile
 from ..recognition import FrameResult, RecognizedInstance
 from ..results import ResultCatalog, StoredResult
-from ..review import ClassThresholds
+from ..review import ReviewFilter
 from ..workspace import Workspace
 from .json_value import JsonObject, JsonValue
 
@@ -48,7 +48,7 @@ class ObjectDocumentBuilder:
         """
         catalog: ResultCatalog | None = workspace.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
-        thresholds: ClassThresholds = workspace.class_thresholds
+        review_filter: ReviewFilter = workspace.review_filter
         pictures: list[JsonValue] = []
         open_paths: list[Path] = self._paths_of(workspace, paths)
         if catalog is None or profile is None:
@@ -58,10 +58,11 @@ class ObjectDocumentBuilder:
                 stored: StoredResult | None = catalog.stored_of(frame_key)
                 if stored is None or stored.result.class_scores:
                     continue
+                passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
                 kept: list[int] = [
                     index
-                    for index, instance in enumerate(stored.result.instances)
-                    if stored.is_accepted(index) and thresholds.accepts(instance.class_name, instance.confidence)
+                    for index in range(len(stored.result.instances))
+                    if stored.is_accepted(index) and index in passing
                 ]
                 pictures.append(self._picture(frame_key, stored.result, kept))
         return self._document(profile.label, pictures)

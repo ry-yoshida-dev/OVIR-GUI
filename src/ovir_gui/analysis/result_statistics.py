@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from ..media import FrameKey
 from ..recognition import Finding
 from ..results import ResultCatalog, StoredResult
-from ..review import ClassThresholds
+from ..review import ReviewFilter
 from .class_statistics import ClassStatistics
 from .confidence_histogram import ConfidenceHistogram
 
@@ -34,7 +34,7 @@ class ResultStatistics:
         catalog: ResultCatalog,
         frame_keys: Sequence[FrameKey],
         class_names: Sequence[str],
-        thresholds: ClassThresholds,
+        review_filter: ReviewFilter,
     ) -> "ResultStatistics":
         """
         Count the findings of some pictures.
@@ -47,8 +47,8 @@ class ResultStatistics:
             Pictures to consider.
         class_names : Sequence[str]
             Current classes, listed first even without findings.
-        thresholds : ClassThresholds
-            Minimum confidence of each class.
+        review_filter : ReviewFilter
+            Minimums and duplicate suppression of the review; findings failing it count as below the minimum.
 
         Returns
         -------
@@ -67,6 +67,7 @@ class ResultStatistics:
                 continue
             recognized_count += 1
             kept_classes: set[str] = set()
+            passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
             finding: Finding
             for finding in stored.result.findings:
                 if finding.class_name not in confidences:
@@ -78,7 +79,7 @@ class ResultStatistics:
                 confidences[finding.class_name].append(finding.confidence)
                 if not stored.is_accepted(finding.index):
                     rejected[finding.class_name] += 1
-                elif not thresholds.accepts(finding.class_name, finding.confidence):
+                elif finding.index not in passing:
                     below[finding.class_name] += 1
                 else:
                     kept_classes.add(finding.class_name)

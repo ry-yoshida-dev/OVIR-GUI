@@ -39,18 +39,18 @@ class MediaStatus:
         Returns
         -------
         str
-            E.g. ``"12/40 frames recognized · 3 outdated"``.
+            E.g. ``"12/40 frames inferred · 3 outdated"``.
         """
         if self.expected_count == 1:
             text: str = {
-                MediaState.NOT_ANALYZED: "Not recognized",
-                MediaState.PARTIAL: "Recognized",
-                MediaState.DONE: "Recognized",
-                MediaState.OUTDATED: "Recognized with other classes",
-                MediaState.FAILED: "Recognition failed",
+                MediaState.NOT_ANALYZED: "Not inferred",
+                MediaState.PARTIAL: "Inferred",
+                MediaState.DONE: "Inferred",
+                MediaState.OUTDATED: "Inferred with other classes",
+                MediaState.FAILED: "Inference failed",
             }[self.state]
             return text
-        parts: list[str] = [f"{self.recognized_count}/{self.expected_count} frames recognized"]
+        parts: list[str] = [f"{self.recognized_count}/{self.expected_count} frames inferred"]
         if self.outdated_count:
             parts.append(f"{self.outdated_count} outdated")
         if self.failed_count:

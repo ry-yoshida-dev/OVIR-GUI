@@ -77,8 +77,6 @@ class PromptableRecognizer(Recognizer):
         return FrameResult(task=RecognitionTask.SEGMENTATION, image_size=image_size, instances=tuple(instances))
 
     def _instance_of(self, segmentation: ObjectSegmentation, mark: ObjectMark) -> RecognizedInstance | None:
-        if segmentation.score < self._model.minimum_score:
-            return None
         mask: InstanceMask | None = InstanceMask.from_dense(segmentation.mask)
         if mask is None:
             return None

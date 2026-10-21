@@ -38,5 +38,6 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | [show_body.py](./show_body.py) | `ShowBody` names the picture to show. |
 | [table_body.py](./table_body.py) | `TableBody` lists the findings of the result table, in display order. |
 | [task_body.py](./task_body.py) | `TaskBody` names the task to switch to. |
+| [suppression_body.py](./suppression_body.py) | `SuppressionBody` sets the review suppression of overlapping boxes for the current task. |
 | [text_body.py](./text_body.py) | `TextBody` carries a text. |
-| [thresholds_body.py](./thresholds_body.py) | `ThresholdsBody` sets the minimum confidence of the classes for the current task. |
+| [thresholds_body.py](./thresholds_body.py) | `ThresholdsBody` sets the minimum confidence of the classes and phrases for the current task. |

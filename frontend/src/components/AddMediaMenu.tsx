@@ -1,4 +1,5 @@
 import type { MenuEntry } from "./Menu";
+import { PlusGlyph } from "./PlusGlyph";
 
 interface AddMediaMenuProps {
   onUploadFiles: () => void;
@@ -10,9 +11,10 @@ interface AddMediaMenuProps {
 export function AddMediaMenu({ onUploadFiles, onUploadFolder, onOpenFromServer, onOpenMenu }: AddMediaMenuProps) {
   return (
     <button
-      className="band-button"
+      className="section-action"
       aria-haspopup="menu"
       title="Add images and videos"
+      aria-label="Add media"
       onClick={(event) =>
         onOpenMenu(event.currentTarget, [
           {
@@ -31,7 +33,7 @@ export function AddMediaMenu({ onUploadFiles, onUploadFolder, onOpenFromServer, 
         ])
       }
     >
-      ＋ Add media ▾
+      <PlusGlyph />
     </button>
   );
 }

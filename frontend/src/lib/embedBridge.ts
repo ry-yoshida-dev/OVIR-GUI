@@ -17,7 +17,11 @@ export type EmbedRequest =
 
 export type EmbedNotice =
   | { type: "ovir-gui:ready"; version: number }
-  | { type: "ovir-gui:current-changed"; path: string | null; frame: number | null };
+  | {
+      type: "ovir-gui:current-changed";
+      path: string | null;
+      frame: number | null;
+    };
 
 type Fields = Record<string, unknown>;
 
@@ -26,29 +30,42 @@ function isFields(value: unknown): value is Fields {
 }
 
 function stringsOf(value: unknown): string[] | null {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : null;
+  return Array.isArray(value) &&
+    value.every((entry) => typeof entry === "string")
+    ? value
+    : null;
 }
 
 function optionalStringsOf(value: unknown): string[] | null | undefined {
-  return value === undefined || value === null ? null : (stringsOf(value) ?? undefined);
+  return value === undefined || value === null
+    ? null
+    : (stringsOf(value) ?? undefined);
 }
 
 function optionalStringOf(value: unknown): string | null | undefined {
-  return value === undefined || value === null ? null : typeof value === "string" ? value : undefined;
+  return value === undefined || value === null
+    ? null
+    : typeof value === "string"
+      ? value
+      : undefined;
 }
 
 function optionalFrameOf(value: unknown): number | null | undefined {
   if (value === undefined || value === null) return null;
-  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : undefined;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
 }
 
 export function parseEmbedRequest(data: unknown): EmbedRequest | string {
-  if (!isFields(data) || typeof data.type !== "string") return "a request needs a string type";
+  if (!isFields(data) || typeof data.type !== "string")
+    return "a request needs a string type";
   switch (data.type) {
     case "ovir-gui:open": {
       const paths = stringsOf(data.paths);
       const shownPath = optionalStringOf(data.show);
-      if (paths === null || paths.length === 0) return "open needs paths: a non-empty list of server paths";
+      if (paths === null || paths.length === 0)
+        return "open needs paths: a non-empty list of server paths";
       if (shownPath === undefined) return "show must be a path";
       return { type: data.type, paths, show: shownPath };
     }
@@ -79,7 +96,11 @@ export class EmbedBridge {
   private readonly handlers: EmbedHandlers;
   private parentOrigin: string | null = null;
 
-  constructor(parent: Window, origins: readonly string[], handlers: EmbedHandlers) {
+  constructor(
+    parent: Window,
+    origins: readonly string[],
+    handlers: EmbedHandlers,
+  ) {
     this.parent = parent;
     this.origins = origins;
     this.handlers = handlers;
@@ -95,25 +116,35 @@ export class EmbedBridge {
   }
 
   notify(notice: EmbedNotice): void {
-    const targets = this.parentOrigin === null ? this.origins : [this.parentOrigin];
+    const targets =
+      this.parentOrigin === null ? this.origins : [this.parentOrigin];
     for (const origin of targets) {
       this.parent.postMessage(notice, origin);
     }
   }
 
   private readonly onMessage = (event: MessageEvent<unknown>): void => {
-    if (event.source !== this.parent || !this.origins.includes(event.origin)) return;
+    if (event.source !== this.parent || !this.origins.includes(event.origin))
+      return;
     this.parentOrigin = event.origin;
-    const requestId = isFields(event.data) && typeof event.data.request_id === "string" ? event.data.request_id : null;
+    const requestId =
+      isFields(event.data) && typeof event.data.request_id === "string"
+        ? event.data.request_id
+        : null;
     const request = parseEmbedRequest(event.data);
     if (typeof request === "string") {
       this.respond(event.origin, requestId, { ok: false, error: request });
       return;
     }
     this.handle(request)
-      .then((payload) => this.respond(event.origin, requestId, { ok: true, payload }))
+      .then((payload) =>
+        this.respond(event.origin, requestId, { ok: true, payload }),
+      )
       .catch((error: unknown) =>
-        this.respond(event.origin, requestId, { ok: false, error: error instanceof Error ? error.message : String(error) }),
+        this.respond(event.origin, requestId, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }),
       );
   };
 
@@ -136,8 +167,13 @@ export class EmbedBridge {
   private respond(
     origin: string,
     requestId: string | null,
-    outcome: { ok: true; payload: ObjectDocument | null } | { ok: false; error: string },
+    outcome:
+      | { ok: true; payload: ObjectDocument | null }
+      | { ok: false; error: string },
   ): void {
-    this.parent.postMessage({ type: "ovir-gui:response", request_id: requestId, ...outcome }, origin);
+    this.parent.postMessage(
+      { type: "ovir-gui:response", request_id: requestId, ...outcome },
+      origin,
+    );
   }
 }

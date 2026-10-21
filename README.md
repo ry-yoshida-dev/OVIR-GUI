@@ -8,7 +8,7 @@ drawn as reference boxes on example images, and every model shipped as a preset 
 [OpenVocabularyClassification](https://github.com/ry-yoshida-dev/OpenVocabularyClassification),
 [OpenVocabularyDetector](https://github.com/ry-yoshida-dev/OpenVocabularyDetector) and
 [OpenVocabularySegmentation](https://github.com/ry-yoshida-dev/OpenVocabularySegmentation) can be selected, with its
-device, precision and thresholds.
+device, precision, thresholds and, for classifiers, the text templates phrases are written into.
 
 - **Images and videos**: videos are recognized on every Nth frame and played in the browser with the frame-accurate
   [VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) player; boxes and masks of the latest recognized frame
@@ -17,10 +17,11 @@ device, precision and thresholds.
   SAM, SAM 2, the SAM 3 tracker, EdgeTAM and Florence-2 segment objects marked by clicks and boxes, refined click by
   click; automatic mask generation segments every region; video trackers follow marked objects, or every instance of
   phrases, through a video.
-- **Review**: a filterable, sortable result table, per-class minimum confidences, keeping or rejecting single findings,
+- **Review**: a filterable, sortable result table and a Review panel of confidence and NMS IoU histograms over every result, for all classes, each class and each phrase, with kept counts. Dragging, scrolling or typing on a chart moves its threshold at once without recognizing again; double-clicking takes a class or phrase back to its parent value. Filtered-out findings are dimmed or hidden
+  (detectors and segmenters keep findings down to a low floor), keeping or rejecting single findings,
   a class timeline per video and statistics.
 - **Comparison**: results of several models are kept side by side, and one can be overlaid on another.
-- **Export**: YOLO and COCO labels, masks, class folders, CSV tables and annotated images and videos.
+- **Export**: YOLO, COCO and LabelMe boxes or mask polygons, mask images, class folders, CSV tables and annotated images and videos.
 - **Embedding**: another web application, such as a GIS, can show the interface in a window of its own page and drive
   it with `postMessage`: open pictures and receive the findings of the shown model as polygons.
 

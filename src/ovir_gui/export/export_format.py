@@ -1,6 +1,7 @@
 from enum import Enum
 
-from object_detection_format import AnnotationFormat
+from object_detection_format import AnnotationFormat as BoxAnnotationFormat
+from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
 from ..recognition import RecognitionTask
 
@@ -28,7 +29,9 @@ class ExportFormat(Enum):
     COCO_SEGMENTATION : str
         MS COCO instance segmentation with polygon outlines.
     YOLO_SEGMENTATION : str
-        YOLO segmentation polygons, one text file per picture.
+        YOLO segmentation polygons of the largest region of every mask, one text file per picture.
+    LABELME_SEGMENTATION : str
+        LabelMe polygons, one JSON file per picture.
     MASK_PNG : str
         Instance and class label maps as PNG images.
     CLASS_FOLDERS : str
@@ -44,6 +47,7 @@ class ExportFormat(Enum):
     CREATE_ML = "create_ml"
     COCO_SEGMENTATION = "coco_segmentation"
     YOLO_SEGMENTATION = "yolo_segmentation"
+    LABELME_SEGMENTATION = "labelme_segmentation"
     MASK_PNG = "mask_png"
     CLASS_FOLDERS = "class_folders"
 
@@ -69,13 +73,15 @@ class ExportFormat(Enum):
             case ExportFormat.PASCAL_VOC:
                 return "Pascal VOC (XML)"
             case ExportFormat.LABELME:
-                return "LabelMe (JSON)"
+                return "LabelMe rectangles (JSON)"
             case ExportFormat.CREATE_ML:
                 return "Create ML (JSON)"
             case ExportFormat.COCO_SEGMENTATION:
                 return "MS COCO segmentation (JSON)"
             case ExportFormat.YOLO_SEGMENTATION:
                 return "YOLO segmentation (TXT)"
+            case ExportFormat.LABELME_SEGMENTATION:
+                return "LabelMe polygons (JSON)"
             case ExportFormat.MASK_PNG:
                 return "Mask images (PNG)"
             case ExportFormat.CLASS_FOLDERS:
@@ -102,7 +108,12 @@ class ExportFormat(Enum):
                 | ExportFormat.CREATE_ML
             ):
                 return frozenset({RecognitionTask.DETECTION, RecognitionTask.SEGMENTATION})
-            case ExportFormat.COCO_SEGMENTATION | ExportFormat.YOLO_SEGMENTATION | ExportFormat.MASK_PNG:
+            case (
+                ExportFormat.COCO_SEGMENTATION
+                | ExportFormat.YOLO_SEGMENTATION
+                | ExportFormat.LABELME_SEGMENTATION
+                | ExportFormat.MASK_PNG
+            ):
                 return frozenset({RecognitionTask.SEGMENTATION})
             case ExportFormat.CLASS_FOLDERS:
                 return frozenset({RecognitionTask.CLASSIFICATION})
@@ -147,26 +158,46 @@ class ExportFormat(Enum):
                 return True
 
     @property
-    def annotation_format(self) -> AnnotationFormat | None:
+    def box_annotation_format(self) -> BoxAnnotationFormat | None:
         """
         Box format of ``object_detection_format`` writing this format.
 
         Returns
         -------
-        AnnotationFormat | None
-            ``None`` for formats written by this package.
+        BoxAnnotationFormat | None
+            ``None`` for formats that are not box formats.
         """
         match self:
             case ExportFormat.COCO:
-                return AnnotationFormat.COCO
+                return BoxAnnotationFormat.COCO
             case ExportFormat.YOLO:
-                return AnnotationFormat.YOLO
+                return BoxAnnotationFormat.YOLO
             case ExportFormat.PASCAL_VOC:
-                return AnnotationFormat.PASCAL_VOC
+                return BoxAnnotationFormat.PASCAL_VOC
             case ExportFormat.LABELME:
-                return AnnotationFormat.LABELME
+                return BoxAnnotationFormat.LABELME
             case ExportFormat.CREATE_ML:
-                return AnnotationFormat.CREATEML
+                return BoxAnnotationFormat.CREATEML
+            case _:
+                return None
+
+    @property
+    def mask_annotation_format(self) -> MaskAnnotationFormat | None:
+        """
+        Mask format of ``segmentation_format`` writing this format.
+
+        Returns
+        -------
+        MaskAnnotationFormat | None
+            ``None`` for formats that are not mask formats of ``segmentation_format``.
+        """
+        match self:
+            case ExportFormat.COCO_SEGMENTATION:
+                return MaskAnnotationFormat.COCO
+            case ExportFormat.YOLO_SEGMENTATION:
+                return MaskAnnotationFormat.YOLO
+            case ExportFormat.LABELME_SEGMENTATION:
+                return MaskAnnotationFormat.LABELME
             case _:
                 return None
 

@@ -1,9 +1,16 @@
 import type { TaskValue } from "../api/types";
 import type { DisplayOptions } from "./displayOptions";
-import { BOX_FINDING_COLUMNS, type ColumnDefinition, MASK_FINDING_COLUMNS, SCORE_COLUMNS } from "./resultColumns";
+import {
+  BOX_FINDING_COLUMNS,
+  type ColumnDefinition,
+  MASK_FINDING_COLUMNS,
+  SCORE_COLUMNS,
+} from "./resultColumns";
 
 export type ToggleDisplayKey = {
-  [Key in keyof DisplayOptions]: DisplayOptions[Key] extends boolean ? Key : never;
+  [Key in keyof DisplayOptions]: DisplayOptions[Key] extends boolean
+    ? Key
+    : never;
 }[keyof DisplayOptions];
 
 export interface DisplayToggle {
@@ -37,7 +44,10 @@ const COMMON_TOGGLES: DisplayToggle[] = [
   { key: "isComparedShown", label: "Compared model" },
 ];
 
-const INTERPOLATION_TOGGLE: DisplayToggle = { key: "isInterpolated", label: "Interpolate between sampled frames" };
+const INTERPOLATION_TOGGLE: DisplayToggle = {
+  key: "isInterpolated",
+  label: "Interpolate between sampled frames",
+};
 
 const FINDING_MINIMUM_HINT = "Findings below it are hidden and not exported.";
 const NOTHING_FOUND_TEXT = "Nothing found";
@@ -51,16 +61,20 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     label: "Classification",
     resultTitle: "Predictions",
     findingNoun: "predictions",
-    displayToggles: [...COMMON_TOGGLES, { key: "isScorePanelShown", label: "Score panel" }],
+    displayToggles: [
+      ...COMMON_TOGGLES,
+      { key: "isScorePanelShown", label: "Score panel" },
+    ],
     isLineWidthShown: false,
     isMaskOpacityShown: false,
     isGalleryAvailable: true,
     isScoreBased: true,
     isEmbeddingTuningShown: true,
     columns: SCORE_COLUMNS,
-    emptyPictureText: "Below the class minimum",
+    emptyPictureText: "Low confidence",
     drawnShapeNoun: "boxes",
-    minimumConfidenceHint: "Pictures whose top score is below it get no label and are not exported.",
+    minimumConfidenceHint:
+      "Pictures whose top score is below it get no label and are not exported.",
     topCountLabel: "Top-1",
     comparisonHintOf: () => "matched when both give the same top class.",
   },
@@ -69,7 +83,11 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     label: "Detection",
     resultTitle: "Detections",
     findingNoun: "boxes",
-    displayToggles: [...COMMON_TOGGLES, { key: "isFilled", label: "Fill boxes" }, INTERPOLATION_TOGGLE],
+    displayToggles: [
+      ...COMMON_TOGGLES,
+      { key: "isFilled", label: "Fill boxes" },
+      INTERPOLATION_TOGGLE,
+    ],
     isLineWidthShown: true,
     isMaskOpacityShown: false,
     isGalleryAvailable: false,
@@ -109,7 +127,11 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
 
 export const DEFAULT_TASK: TaskValue = "detection";
 
-export const TASK_ORDER: TaskValue[] = ["classification", "detection", "segmentation"];
+export const TASK_ORDER: TaskValue[] = [
+  "classification",
+  "detection",
+  "segmentation",
+];
 
 export function taskViewOf(task: TaskValue): TaskView {
   return TASK_VIEWS[task];

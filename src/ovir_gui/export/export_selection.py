@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from ..media import FrameKey
 from ..recognition import Finding, FrameResult, RecognitionTask
 from ..results import StoredResult
-from ..review import ClassThresholds
+from ..review import ReviewFilter
 
 
 @dataclass(frozen=True)
@@ -12,50 +12,53 @@ class ExportSelection:
     """
     Which stored findings of a picture are exported.
 
-    A finding is exported when the user kept it, it reaches the minimum of its class and of the export, and, when
-    only listed findings are exported, the result table lists it.
+    A finding is exported when the user kept it, it passes the review (its minimum and the suppression of duplicates),
+    it reaches the minimum of the export, and, when only listed findings are exported, the result table lists it.
 
     Attributes
     ----------
-    class_thresholds : ClassThresholds
-        Minimum confidence of each class.
+    review_filter : ReviewFilter
+        Minimums and duplicate suppression of the review.
     minimum_confidence : float
         Minimum confidence of the export.
     listed_indices : Mapping[FrameKey, frozenset[int]] | None
         Findings the result table lists per picture; ``None`` exports every kept finding.
     """
 
-    class_thresholds: ClassThresholds
+    review_filter: ReviewFilter
     minimum_confidence: float = 0.0
     listed_indices: Mapping[FrameKey, frozenset[int]] | None = None
 
-    def is_exported(self, frame_key: FrameKey, stored: StoredResult, finding: Finding) -> bool:
+    def exported_indices(self, frame_key: FrameKey, stored: StoredResult) -> tuple[int, ...]:
         """
-        Whether one finding is exported.
+        Findings of a stored result that are exported.
 
         Parameters
         ----------
         frame_key : FrameKey
-            Picture of the finding.
+            Picture of the result.
         stored : StoredResult
             Stored result of the picture.
-        finding : Finding
-            Finding of the result.
 
         Returns
         -------
-        bool
-            True when kept, above the minimums and, if required, listed.
+        tuple[int, ...]
+            Indices in result order of the findings kept, passing the review, above the export minimum and, if
+            required, listed.
         """
-        if not stored.is_accepted(finding.index):
-            return False
-        if finding.confidence < self.minimum_confidence:
-            return False
-        if not self.class_thresholds.accepts(finding.class_name, finding.confidence):
-            return False
-        if self.listed_indices is not None:
-            return finding.index in self.listed_indices.get(frame_key, frozenset())
-        return True
+        findings: tuple[Finding, ...] = stored.result.findings
+        passing: frozenset[int] = self.review_filter.passing_indices(findings)
+        listed: frozenset[int] | None = (
+            None if self.listed_indices is None else self.listed_indices.get(frame_key, frozenset())
+        )
+        return tuple(
+            finding.index
+            for finding in findings
+            if stored.is_accepted(finding.index)
+            and finding.index in passing
+            and finding.confidence >= self.minimum_confidence
+            and (listed is None or finding.index in listed)
+        )
 
     def selected(self, frame_key: FrameKey, stored: StoredResult) -> tuple[FrameResult, str | None]:
         """
@@ -75,10 +78,8 @@ class ExportSelection:
             its top class is not exported).
         """
         result: FrameResult = stored.result
+        kept: tuple[int, ...] = self.exported_indices(frame_key, stored)
         if result.task is RecognitionTask.CLASSIFICATION:
             top: Finding = result.findings[0]
-            return result, top.class_name if self.is_exported(frame_key, stored, top) else None
-        kept: tuple[int, ...] = tuple(
-            finding.index for finding in result.findings if self.is_exported(frame_key, stored, finding)
-        )
+            return result, top.class_name if top.index in kept else None
         return replace(result, instances=tuple(result.instances[index] for index in kept)), None

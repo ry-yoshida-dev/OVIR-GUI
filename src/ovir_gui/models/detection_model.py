@@ -22,11 +22,14 @@ class DetectionModel(RecognitionModel):
     """
     Open-vocabulary object detector of ``open_vocabulary_detector``.
 
-    Thresholds are read at inference time, so changing them reuses the loaded model.
+    Detections are kept down to a low confidence floor, so the minimum confidence is tuned afterwards through the
+    class minimums without recognizing again. The NMS threshold is read at inference time, so changing it reuses the
+    loaded model.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.DETECTION
     SECTION_KEY: ClassVar[str] = "detector"
+    CONFIDENCE_FLOOR: ClassVar[float] = 0.05
 
     def __init__(self, preset: ModelPreset, settings: DetectorSettings) -> None:
         """
@@ -123,10 +126,7 @@ class DetectionModel(RecognitionModel):
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:
-        return (
-            ProfileOption("Conf", self.format_threshold(self._settings.thresholds.confidence_threshold)),
-            ProfileOption("NMS", self.format_threshold(self._settings.thresholds.nms_iou_threshold)),
-        )
+        return (ProfileOption("NMS", self.format_threshold(self._settings.thresholds.nms_iou_threshold)),)
 
     def loading_signature(self) -> tuple[str, ...]:
         return (
@@ -144,18 +144,17 @@ class DetectionModel(RecognitionModel):
             preset_name=self.preset.name,
             device=self.device,
             precision=self.precision,
-            confidence_threshold=self._settings.thresholds.confidence_threshold,
             nms_iou_threshold=self._settings.thresholds.nms_iou_threshold,
         )
 
     def customized(self, selection: ModelSelection) -> "DetectionModel":
         """
-        Same preset with the overrides of a selection.
+        Same preset with the overrides of a selection, keeping detections down to the confidence floor.
 
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision and thresholds to use.
+            Device, precision and NMS threshold to use.
 
         Returns
         -------
@@ -163,11 +162,7 @@ class DetectionModel(RecognitionModel):
             Model with the overrides applied.
         """
         thresholds: DetectionThresholds = DetectionThresholds(
-            confidence_threshold=(
-                self._settings.thresholds.confidence_threshold
-                if selection.confidence_threshold is None
-                else selection.confidence_threshold
-            ),
+            confidence_threshold=min(self._settings.thresholds.confidence_threshold, self.CONFIDENCE_FLOOR),
             nms_iou_threshold=selection.nms_iou_threshold,
         )
         return DetectionModel(

@@ -1,7 +1,8 @@
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from object_detection_format import AnnotationFormat
+from object_detection_format import AnnotationFormat as BoxAnnotationFormat
+from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
 from ..media import MediaItem
 from ..recognition import RecognitionTask
@@ -9,16 +10,15 @@ from .annotated_image_writer import AnnotatedImageWriter
 from .annotated_video_writer import AnnotatedVideoWriter
 from .box_annotation_writer import BoxAnnotationWriter
 from .class_folder_writer import ClassFolderWriter
-from .coco_segmentation_writer import CocoSegmentationWriter
 from .export_format import ExportFormat
 from .export_item import ExportItem
 from .export_options import ExportOptions
 from .export_report import ExportReport
+from .mask_annotation_writer import MaskAnnotationWriter
 from .mask_image_writer import MaskImageWriter
 from .overlay_renderer import OverlayRenderer
 from .picture_files import PictureFiles
 from .table_export_writer import TableExportWriter
-from .yolo_segmentation_writer import YoloSegmentationWriter
 
 
 class ResultExporter:
@@ -131,16 +131,19 @@ class ResultExporter:
                 | ExportFormat.LABELME
                 | ExportFormat.CREATE_ML
             ):
-                annotation_format: AnnotationFormat | None = options.export_format.annotation_format
-                if annotation_format is None:
+                box_format: BoxAnnotationFormat | None = options.export_format.box_annotation_format
+                if box_format is None:
                     raise ValueError(f"{options.export_format.label} has no box writer.")
-                return BoxAnnotationWriter(annotation_format, is_confidence_included).write(
+                return BoxAnnotationWriter(box_format, is_confidence_included).write(
                     items, pictures, class_names, directory
                 )
-            case ExportFormat.COCO_SEGMENTATION:
-                return CocoSegmentationWriter(is_confidence_included).write(items, pictures, class_names, directory)
-            case ExportFormat.YOLO_SEGMENTATION:
-                return YoloSegmentationWriter(is_confidence_included).write(items, pictures, class_names, directory)
+            case ExportFormat.COCO_SEGMENTATION | ExportFormat.YOLO_SEGMENTATION | ExportFormat.LABELME_SEGMENTATION:
+                mask_format: MaskAnnotationFormat | None = options.export_format.mask_annotation_format
+                if mask_format is None:
+                    raise ValueError(f"{options.export_format.label} has no mask writer.")
+                return MaskAnnotationWriter(mask_format, is_confidence_included).write(
+                    items, pictures, class_names, directory
+                )
             case ExportFormat.MASK_PNG:
                 return MaskImageWriter().write(items, pictures, class_names, directory)
             case ExportFormat.CLASS_FOLDERS:

@@ -6,7 +6,8 @@ export type MediaKindValue = "image" | "video";
 
 export type PlaybackValue = "none" | "preparing" | "ready" | "failed";
 
-export type MediaStateValue = "not_analyzed" | "partial" | "done" | "outdated" | "failed";
+export type MediaStateValue =
+  "not_analyzed" | "partial" | "done" | "outdated" | "failed";
 
 export interface PictureKey {
   path: string;
@@ -54,15 +55,19 @@ export interface BackendEntry {
   mode: SegmentationModeValue | null;
 }
 
-export type SegmentationModeValue = "concept" | "promptable" | "generation" | "tracker" | "concept_tracker";
+export type SegmentationModeValue =
+  "concept" | "promptable" | "generation" | "tracker" | "concept_tracker";
 
 export type PromptModeValue = "classes" | "marks" | "automatic";
+
+export type QueryKindValue = "text" | "visual" | "exemplar" | "mark";
 
 export type DrawingKindValue = "exemplar" | "mark";
 
 export interface ModelTuning {
   confidence_label: string | null;
   is_nms_shown: boolean;
+  is_minimum_confidence_shown: boolean;
 }
 
 export interface DeviceEntry {
@@ -85,8 +90,8 @@ export interface ModelSelection {
   nms_iou_threshold: number | null;
   image_pooling: string | null;
   box_detector_label: string | null;
-  box_confidence_threshold: number | null;
   tiling_grid_size: number | null;
+  text_templates: string[] | null;
 }
 
 export interface TaskState {
@@ -108,7 +113,8 @@ export interface ModelState {
   box_detectors: string[];
   selection: ModelSelection;
   is_image_prompt_supported: boolean;
-  query_kinds: string[];
+  query_kinds: QueryKindValue[];
+  text_templates: string[] | null;
   weights_path: string;
   description: string;
 }
@@ -128,8 +134,10 @@ export interface Profile {
   precision: string;
   options: ProfileOption[];
   options_text: string;
-  media_count: number;
-  frame_count: number;
+  file_count: number;
+  done_file_count: number;
+  expected_frame_count: number;
+  recognized_frame_count: number;
   outdated_count: number;
   finding_count: number;
 }
@@ -160,6 +168,13 @@ export interface ClassSetState {
 export interface Thresholds {
   default_minimum: number;
   class_minimums: Record<string, number>;
+  phrase_minimums: Record<string, Record<string, number>>;
+}
+
+export interface DuplicateSuppression {
+  is_enabled: boolean;
+  overlap_threshold: number;
+  class_overlap_thresholds: Record<string, number>;
 }
 
 export interface Progress {
@@ -226,6 +241,9 @@ export interface WorkspaceState {
   classes: ClassEntry[];
   class_set: ClassSetState;
   thresholds: Thresholds;
+  suppression: DuplicateSuppression;
+  standard_minimum: number;
+  standard_overlap_threshold: number;
   status: { message: string; serial: number };
   activity: string;
   summary: string;
@@ -247,7 +265,7 @@ export interface Finding {
   box: Box | null;
   area: number | null;
   is_accepted: boolean;
-  is_above_minimum: boolean;
+  is_passing: boolean;
 }
 
 export interface FrameInstance extends Finding {
@@ -271,7 +289,13 @@ export interface ObjectDocument {
   version: number;
   model: string | null;
   coordinate_space: string;
-  pictures: { path: string; frame: number | null; width: number; height: number; objects: DocumentObject[] }[];
+  pictures: {
+    path: string;
+    frame: number | null;
+    width: number;
+    height: number;
+    objects: DocumentObject[];
+  }[];
 }
 
 export interface ClassScore {
@@ -296,7 +320,11 @@ export interface FramePayload {
   outdated: string | null;
   findings: (Finding | FrameInstance)[];
   scores: ClassScore[];
-  compared: { model_name: string; findings: FrameInstance[]; top_class: string | null } | null;
+  compared: {
+    model_name: string;
+    findings: FrameInstance[];
+    top_class: string | null;
+  } | null;
 }
 
 export interface VideoFramesPayload {

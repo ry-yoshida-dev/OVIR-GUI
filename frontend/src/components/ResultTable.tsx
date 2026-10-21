@@ -14,17 +14,17 @@ import {
   type TableFilter,
   type TableRow,
 } from "../lib/resultTable";
-import { taskViewOf } from "../lib/taskViews";
-import { useDialogs } from "./DialogHost";
 import { FilterPopup } from "./FilterPopup";
 import { useMenu } from "./Menu";
-import { ResultScopeToggle } from "./ResultScopeToggle";
+import { ResultsHeading } from "./ResultsHeading";
 
 interface ResultTableProps {
   task: TaskValue;
   scope: ResultScope;
-  isScopeSelectable: boolean;
-  onScopeChange: (scope: ResultScope) => void;
+  title: string;
+  emptyText: string;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
   rows: TableRow[];
   allRows: TableRow[];
   filter: TableFilter;
@@ -33,15 +33,8 @@ interface ResultTableProps {
   onOrderChange: (order: SortOrder | null) => void;
   currentPictureKey: string | null;
   selectedKey: string | null;
-  isShownMediaOnly: boolean;
-  onShownMediaOnlyChange: (isShownMediaOnly: boolean) => void;
   onSelectRow: (row: TableRow) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
-  onSaveCsv: () => void;
-  onUpdateOutdated: () => void;
-  onClearResults: () => void;
-  outdatedCount: number;
-  hasResults: boolean;
   classColors: Record<string, string>;
 }
 
@@ -51,8 +44,10 @@ const OVERSCAN = 12;
 export function ResultTable({
   task,
   scope,
-  isScopeSelectable,
-  onScopeChange,
+  title,
+  emptyText,
+  isCollapsed,
+  onToggleCollapsed,
   rows,
   allRows,
   filter,
@@ -61,18 +56,10 @@ export function ResultTable({
   onOrderChange,
   currentPictureKey,
   selectedKey,
-  isShownMediaOnly,
-  onShownMediaOnlyChange,
   onSelectRow,
   onSetAccepted,
-  onSaveCsv,
-  onUpdateOutdated,
-  onClearResults,
-  outdatedCount,
-  hasResults,
   classColors,
 }: ResultTableProps) {
-  const dialogs = useDialogs();
   const menu = useMenu();
   const scroller = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -87,7 +74,7 @@ export function ResultTable({
     const observer = new ResizeObserver(() => setViewportHeight(element.clientHeight));
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [isCollapsed]);
 
   useEffect(() => {
     if (selectedKey === null) return;
@@ -135,7 +122,6 @@ export function ResultTable({
         onSelect: () => onSetAccepted(findingRows, false),
       },
       { isSeparator: true, label: "" },
-      { label: "Save Listed as CSV…", isDisabled: findingRows.length === 0, onSelect: onSaveCsv },
       { label: "Clear Filters", isDisabled: filteredCount === 0, onSelect: () => onFilterChange({}) },
     ]);
 
@@ -209,191 +195,155 @@ export function ResultTable({
     key === "confidence" || key === "area" || key === "x1" || key === "y1" || key === "x2" || key === "y2";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
-      <div className="panel-title">
-        <span>{taskViewOf(task).resultTitle}</span>
-        {isScopeSelectable && <ResultScopeToggle scope={scope} onChange={onScopeChange} />}
+    <div className="result-table">
+      <ResultsHeading title={title} isCollapsed={isCollapsed} onToggle={onToggleCollapsed}>
+        {!isCollapsed && (
+          <>
+            <button
+              className="ghost small"
+              onClick={(event) => {
+                const bounds = event.currentTarget.getBoundingClientRect();
+                menu.openBelow(
+                  event.currentTarget,
+                  columns.map((column) => ({
+                    label: column.label,
+                    isChecked: filter[column.key] !== undefined,
+                    onSelect: () => setPopup({ column, x: bounds.left, y: bounds.bottom + 4 }),
+                  })),
+                );
+              }}
+            >
+              Filter{filteredCount > 0 ? ` (${filteredCount})` : ""}
+            </button>
+            {filteredCount > 0 && (
+              <button className="ghost small" onClick={() => onFilterChange({})}>
+                Clear Filters
+              </button>
+            )}
+          </>
+        )}
         <span className="grow" />
-        <label className="small" title="List only the findings of the shown image or video">
-          <input
-            type="checkbox"
-            checked={isShownMediaOnly}
-            onChange={(event) => onShownMediaOnlyChange(event.target.checked)}
-          />
-          Shown file only
-        </label>
-        <span className="muted small">
-          {findingRows.length} listed{filteredCount > 0 ? ` · ${filteredCount} filters` : ""}
-        </span>
-      </div>
-      <div
-        ref={scroller}
-        className="table-wrap"
-        tabIndex={0}
-        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-        onContextMenu={(event) => {
-          event.preventDefault();
-          openTableMenu(event.clientX, event.clientY);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
+        <span className="muted small">{findingRows.length} listed</span>
+      </ResultsHeading>
+      {!isCollapsed && (
+        <div
+          ref={scroller}
+          className="table-wrap"
+          tabIndex={0}
+          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+          onContextMenu={(event) => {
             event.preventDefault();
-            moveSelection(1);
-          } else if (event.key === "ArrowUp") {
-            event.preventDefault();
-            moveSelection(-1);
-          } else if (event.key === " ") {
-            event.preventDefault();
-            const row = rows.find((candidate) => candidate.key === selectedKey);
-            if (row?.kind === "finding") onSetAccepted([row], !row.finding.is_accepted);
-          }
-        }}
-      >
-        <table className="grid">
-          <colgroup>
-            {columns.map((column) => (
-              <col key={column.key} style={{ width: column.width }} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
+            openTableMenu(event.clientX, event.clientY);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveSelection(1);
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveSelection(-1);
+            } else if (event.key === " ") {
+              event.preventDefault();
+              const row = rows.find((candidate) => candidate.key === selectedKey);
+              if (row?.kind === "finding") onSetAccepted([row], !row.finding.is_accepted);
+            }
+          }}
+        >
+          <table className="grid">
+            <colgroup>
               {columns.map((column) => (
-                <th
-                  key={column.key}
-                  title="Click to sort; right-click to filter"
-                  onClick={() => cycleOrder(column.key)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setPopup({ column, x: event.clientX, y: event.clientY });
-                  }}
-                >
-                  {column.label}
-                  {order?.key === column.key && (order.isDescending ? " ▾" : " ▴")}
-                  {filter[column.key] !== undefined && (
-                    <span
-                      className="funnel"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setPopup({ column, x: event.clientX, y: event.clientY });
-                      }}
-                    >
-                      ⏷
-                    </span>
-                  )}
-                </th>
+                <col key={column.key} style={{ width: column.width }} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr className="status">
-                <td colSpan={columns.length}>
-                  {allRows.length > 0
-                    ? "Nothing passes the filters."
-                    : scope === "videos"
-                      ? "Run a video to list the findings on its sampled frames here."
-                      : "Open images or videos; their results are listed here as they are recognized."}
-                </td>
+            </colgroup>
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    title="Click to sort; right-click to filter"
+                    onClick={() => cycleOrder(column.key)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setPopup({ column, x: event.clientX, y: event.clientY });
+                    }}
+                  >
+                    {column.label}
+                    {order?.key === column.key && (order.isDescending ? " ▾" : " ▴")}
+                    {filter[column.key] !== undefined && (
+                      <span
+                        className="funnel"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setPopup({ column, x: event.clientX, y: event.clientY });
+                        }}
+                      >
+                        ⏷
+                      </span>
+                    )}
+                  </th>
+                ))}
               </tr>
-            )}
-            {first > 0 && (
-              <tr style={{ height: first * ROW_HEIGHT }}>
-                <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
-              </tr>
-            )}
-            {visibleRows.map((row) => {
-              const isCurrent = pictureKeyOf(row.path, row.frame) === currentPictureKey;
-              const isSelected = row.key === selectedKey;
-              const classes = [
-                isSelected ? "selected" : isCurrent ? "current" : "",
-                row.kind === "status" ? "status" : row.finding.is_accepted ? "" : "rejected",
-              ].join(" ");
-              return (
-                <tr key={row.key} className={classes} onClick={() => onSelectRow(row)} style={{ height: ROW_HEIGHT }}>
-                  {row.kind === "status" ? (
-                    <>
-                      {columns.slice(0, statusLeadCount).map((column) => (
-                        <td key={column.key} title={column.key === "media" ? row.path : undefined}>
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr className="status">
+                  <td colSpan={columns.length}>{allRows.length > 0 ? "Nothing passes the filters." : emptyText}</td>
+                </tr>
+              )}
+              {first > 0 && (
+                <tr style={{ height: first * ROW_HEIGHT }}>
+                  <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
+                </tr>
+              )}
+              {visibleRows.map((row) => {
+                const isCurrent = pictureKeyOf(row.path, row.frame) === currentPictureKey;
+                const isSelected = row.key === selectedKey;
+                const classes = [
+                  isSelected ? "selected" : isCurrent ? "current" : "",
+                  row.kind === "status" ? "status" : row.finding.is_accepted ? "" : "rejected",
+                  row.kind === "finding" && !row.finding.is_passing ? "below-minimum" : "",
+                ].join(" ");
+                return (
+                  <tr key={row.key} className={classes} onClick={() => onSelectRow(row)} style={{ height: ROW_HEIGHT }}>
+                    {row.kind === "status" ? (
+                      <>
+                        {columns.slice(0, statusLeadCount).map((column) => (
+                          <td key={column.key} title={column.key === "media" ? row.path : undefined}>
+                            {renderCell(row, column)}
+                          </td>
+                        ))}
+                        <td colSpan={columns.length - statusLeadCount}>{row.text}</td>
+                      </>
+                    ) : (
+                      columns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={`${isNumeric(column.key) ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
+                          title={
+                            column.key === "media"
+                              ? row.outdated === null
+                                ? row.path
+                                : `${row.path}\nInferred with other classes: ${row.outdated}`
+                              : undefined
+                          }
+                        >
                           {renderCell(row, column)}
                         </td>
-                      ))}
-                      <td colSpan={columns.length - statusLeadCount}>{row.text}</td>
-                    </>
-                  ) : (
-                    columns.map((column) => (
-                      <td
-                        key={column.key}
-                        className={`${isNumeric(column.key) ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
-                        title={
-                          column.key === "media"
-                            ? row.outdated === null
-                              ? row.path
-                              : `${row.path}\nRecognized with other classes: ${row.outdated}`
-                            : undefined
-                        }
-                      >
-                        {renderCell(row, column)}
-                      </td>
-                    ))
-                  )}
+                      ))
+                    )}
+                  </tr>
+                );
+              })}
+              {last < rows.length && (
+                <tr style={{ height: (rows.length - last) * ROW_HEIGHT }}>
+                  <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
                 </tr>
-              );
-            })}
-            {last < rows.length && (
-              <tr style={{ height: (rows.length - last) * ROW_HEIGHT }}>
-                <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="panel-footer">
-        <button
-          onClick={(event) => {
-            const bounds = event.currentTarget.getBoundingClientRect();
-            menu.openBelow(
-              event.currentTarget,
-              columns.map((column) => ({
-                label: column.label,
-                isChecked: filter[column.key] !== undefined,
-                onSelect: () => setPopup({ column, x: bounds.left, y: bounds.top - 320 }),
-              })),
-            );
-          }}
-        >
-          Filter{filteredCount > 0 ? ` (${filteredCount})` : ""}
-        </button>
-        <button onClick={() => onFilterChange({})} disabled={filteredCount === 0}>
-          Clear Filters
-        </button>
-        <button
-          onClick={onUpdateOutdated}
-          disabled={outdatedCount === 0}
-          title="Recognize again the pictures recognized with other classes"
-        >
-          Update Outdated{outdatedCount > 0 ? ` (${outdatedCount})` : ""}
-        </button>
-        <span className="grow" />
-        <button onClick={onSaveCsv} disabled={findingRows.length === 0}>
-          Save CSV…
-        </button>
-        <button
-          className="danger"
-          disabled={!hasResults}
-          onClick={async () => {
-            const isConfirmed = await dialogs.confirm({
-              title: "Clear Results",
-              message: "Forget the stored results of every model of this task?",
-              confirmLabel: "Clear",
-              isDanger: true,
-            });
-            if (isConfirmed) onClearResults();
-          }}
-        >
-          Clear Results
-        </button>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
       {popup !== null && (
         <FilterPopup
           column={popup.column}

@@ -17,7 +17,9 @@ export class LivePace {
     const last = this.samples[this.samples.length - 1];
     if (last !== undefined && frontier <= last.frontier) return;
     this.samples.push({ frontier, at });
-    this.samples = this.samples.filter((sample) => at - sample.at <= LivePace.WINDOW_MILLISECONDS);
+    this.samples = this.samples.filter(
+      (sample) => at - sample.at <= LivePace.WINDOW_MILLISECONDS,
+    );
   }
 
   reset(): void {
@@ -30,9 +32,20 @@ export class LivePace {
   rateFor(framesPerSecond: number): number | null {
     const first = this.samples[0];
     const last = this.samples[this.samples.length - 1];
-    if (first === undefined || last === undefined || last.at <= first.at || framesPerSecond <= 0) return null;
-    const recognizedFramesPerSecond = ((last.frontier - first.frontier) * 1000) / (last.at - first.at);
-    const rate = (recognizedFramesPerSecond / framesPerSecond) * LivePace.SAFETY_FACTOR;
-    return Math.min(LivePace.MAXIMUM_RATE, Math.max(LivePace.MINIMUM_RATE, rate));
+    if (
+      first === undefined ||
+      last === undefined ||
+      last.at <= first.at ||
+      framesPerSecond <= 0
+    )
+      return null;
+    const recognizedFramesPerSecond =
+      ((last.frontier - first.frontier) * 1000) / (last.at - first.at);
+    const rate =
+      (recognizedFramesPerSecond / framesPerSecond) * LivePace.SAFETY_FACTOR;
+    return Math.min(
+      LivePace.MAXIMUM_RATE,
+      Math.max(LivePace.MINIMUM_RATE, rate),
+    );
   }
 }

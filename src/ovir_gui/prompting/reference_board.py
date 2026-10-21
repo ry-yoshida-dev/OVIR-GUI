@@ -322,7 +322,7 @@ class ReferenceBoard:
             ``None`` when a prompt can be built.
         """
         if not definitions:
-            return "Add at least one class to recognize."
+            return "Add at least one class before running inference."
         is_visual_supported: bool = QueryKind.VISUAL in supported_kinds
         for definition in definitions:
             has_references: bool = bool(self.reference_images_of(definition.name))

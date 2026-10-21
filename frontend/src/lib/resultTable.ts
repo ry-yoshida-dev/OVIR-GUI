@@ -1,19 +1,41 @@
-import type { Finding, PictureFindings, RankedScore, ResultsPayload, TaskValue } from "../api/types";
+import type {
+  Finding,
+  PictureFindings,
+  RankedScore,
+  ResultsPayload,
+  TaskValue,
+} from "../api/types";
+import type { BelowMinimumStyle } from "./displayOptions";
 import type { ColumnDefinition, ColumnKey, ResultScope } from "./resultColumns";
 import { taskViewOf } from "./taskViews";
 
-export type { ColumnDefinition, ColumnKey, ColumnKind, ResultScope } from "./resultColumns";
+export type {
+  ColumnDefinition,
+  ColumnKey,
+  ColumnKind,
+  ResultScope,
+} from "./resultColumns";
 
-export function columnsOf(task: TaskValue, scope: ResultScope): ColumnDefinition[] {
+export function columnsOf(
+  task: TaskValue,
+  scope: ResultScope,
+): ColumnDefinition[] {
   const columns = taskViewOf(task).columns;
-  return scope === "videos" ? columns : columns.filter((column) => column.key !== "frame");
+  return scope === "videos"
+    ? columns
+    : columns.filter((column) => column.key !== "frame");
 }
 
 export function isRowInScope(row: TableRow, scope: ResultScope): boolean {
-  return scope === "videos" ? row.frame !== null && row.kind === "finding" : row.frame === null;
+  return scope === "videos"
+    ? row.frame !== null && row.kind === "finding"
+    : row.frame === null;
 }
 
-export function filterOfScope(filter: TableFilter, scope: ResultScope): TableFilter {
+export function filterOfScope(
+  filter: TableFilter,
+  scope: ResultScope,
+): TableFilter {
   if (scope === "videos" || filter.frame === undefined) return filter;
   const { frame: _frame, ...rest } = filter;
   return rest;
@@ -50,6 +72,7 @@ export interface FindingRow extends RowBase {
 export interface StatusRow extends RowBase {
   kind: "status";
   text: string;
+  isBelowMinimum: boolean;
 }
 
 export type TableRow = FindingRow | StatusRow;
@@ -63,14 +86,23 @@ export function pictureKeyOf(path: string, frame: number | null): string {
 
 export function runnerUpTextOf(scores: RankedScore[]): string | null {
   const runnerUp = scores[1];
-  return runnerUp === undefined ? null : `${runnerUp.class_name} ${runnerUp.score.toFixed(2)}`;
+  return runnerUp === undefined
+    ? null
+    : `${runnerUp.class_name} ${runnerUp.score.toFixed(2)}`;
 }
 
-export function rowKeyOf(path: string, frame: number | null, index: number): string {
+export function rowKeyOf(
+  path: string,
+  frame: number | null,
+  index: number,
+): string {
   return `${pictureKeyOf(path, frame)}#${index}`;
 }
 
-export function buildRows(payload: ResultsPayload | null): TableRow[] {
+export function buildRows(
+  payload: ResultsPayload | null,
+  belowMinimum: BelowMinimumStyle,
+): TableRow[] {
   if (payload === null) return [];
   const rows: TableRow[] = [];
   payload.pictures.forEach((picture, pictureOrder) => {
@@ -85,24 +117,36 @@ export function buildRows(payload: ResultsPayload | null): TableRow[] {
       scores: picture.scores,
       classCount: picture.class_count,
     };
-    const listed = picture.findings.filter((finding) => finding.is_above_minimum);
+    const listed =
+      belowMinimum === "dim"
+        ? picture.findings
+        : picture.findings.filter((finding) => finding.is_passing);
     if (listed.length === 0) {
       rows.push({
         ...base,
         kind: "status",
         key: `${pictureKeyOf(picture.path, picture.frame)}#status`,
         text: taskViewOf(payload.task).emptyPictureText,
+        isBelowMinimum: picture.findings.length > 0,
       });
       return;
     }
     for (const finding of listed) {
-      rows.push({ ...base, kind: "finding", key: rowKeyOf(picture.path, picture.frame, finding.index), finding });
+      rows.push({
+        ...base,
+        kind: "finding",
+        key: rowKeyOf(picture.path, picture.frame, finding.index),
+        finding,
+      });
     }
   });
   return rows;
 }
 
-export function cellValue(row: TableRow, key: ColumnKey): string | number | null {
+export function cellValue(
+  row: TableRow,
+  key: ColumnKey,
+): string | number | null {
   switch (key) {
     case "media":
       return row.mediaName;
@@ -137,10 +181,15 @@ export function cellValue(row: TableRow, key: ColumnKey): string | number | null
   }
 }
 
-function passes(row: TableRow, key: ColumnKey, condition: ColumnCondition): boolean {
+function passes(
+  row: TableRow,
+  key: ColumnKey,
+  condition: ColumnCondition,
+): boolean {
   const value = cellValue(row, key);
   if (value === null) return false;
-  if (condition.kind === "values") return condition.values.includes(String(value));
+  if (condition.kind === "values")
+    return condition.values.includes(String(value));
   const number = Number(value);
   return (
     (condition.minimum === null || number >= condition.minimum) &&
@@ -151,25 +200,36 @@ function passes(row: TableRow, key: ColumnKey, condition: ColumnCondition): bool
 export function filterRows(rows: TableRow[], filter: TableFilter): TableRow[] {
   const conditions = Object.entries(filter) as [ColumnKey, ColumnCondition][];
   if (conditions.length === 0) return rows;
-  return rows.filter((row) => conditions.every(([key, condition]) => passes(row, key, condition)));
+  return rows.filter((row) =>
+    conditions.every(([key, condition]) => passes(row, key, condition)),
+  );
 }
 
-export function sortRows(rows: TableRow[], order: SortOrder | null): TableRow[] {
+export function sortRows(
+  rows: TableRow[],
+  order: SortOrder | null,
+): TableRow[] {
   if (order === null) return rows;
   const direction = order.isDescending ? -1 : 1;
-  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const collator = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
   return [...rows].sort((left, right) => {
     const leftValue = cellValue(left, order.key);
     const rightValue = cellValue(right, order.key);
     if (leftValue === null || rightValue === null) {
-      if (leftValue === rightValue) return left.pictureOrder - right.pictureOrder;
+      if (leftValue === rightValue)
+        return left.pictureOrder - right.pictureOrder;
       return leftValue === null ? 1 : -1;
     }
     const compared =
       typeof leftValue === "number" && typeof rightValue === "number"
         ? leftValue - rightValue
         : collator.compare(String(leftValue), String(rightValue));
-    return compared === 0 ? left.pictureOrder - right.pictureOrder : compared * direction;
+    return compared === 0
+      ? left.pictureOrder - right.pictureOrder
+      : compared * direction;
   });
 }
 
@@ -179,11 +239,17 @@ export function valuesOf(rows: TableRow[], key: ColumnKey): string[] {
     const value = cellValue(row, key);
     if (value !== null) values.add(String(value));
   }
-  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const collator = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
   return [...values].sort(collator.compare);
 }
 
-export function spanOf(rows: TableRow[], key: ColumnKey): [number, number] | null {
+export function spanOf(
+  rows: TableRow[],
+  key: ColumnKey,
+): [number, number] | null {
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
   for (const row of rows) {
@@ -238,7 +304,10 @@ export function formatSeconds(seconds: number): string {
   return `${minutes}:${rest.toFixed(1).padStart(4, "0")}`;
 }
 
-export function frameText(frame: number | null, seconds: number | null): string {
+export function frameText(
+  frame: number | null,
+  seconds: number | null,
+): string {
   if (frame === null) return "";
   return seconds === null ? `#${frame}` : `${formatSeconds(seconds)} #${frame}`;
 }

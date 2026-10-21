@@ -134,7 +134,7 @@ export function StatisticsPanel({
         <div className="muted">
           {payload?.model ?? "No results shown."}
           {statistics !== null &&
-            ` · ${statistics.recognized_count} of ${statistics.picture_count} recognized pictures`}
+            ` · ${statistics.recognized_count} of ${statistics.picture_count} inferred pictures`}
         </div>
         <div className="row">
           <span>Default minimum confidence</span>
@@ -258,7 +258,7 @@ export function StatisticsPanel({
         {payload?.comparison != null && (
           <>
             <div className="hint">
-              {payload.comparison.picture_count} pictures recognized by both;{" "}
+              {payload.comparison.picture_count} pictures inferred by both;{" "}
               {taskView.comparisonHintOf(payload.comparison.iou_threshold)}
             </div>
             <div className="table-wrap" style={{ flex: "none", maxHeight: 220, border: "1px solid var(--border)", borderRadius: 6 }}>

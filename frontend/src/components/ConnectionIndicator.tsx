@@ -4,18 +4,15 @@ interface ConnectionIndicatorProps {
   connection: ConnectionState;
 }
 
-function textOf(connection: ConnectionState): string {
-  switch (connection) {
-    case "open":
-      return "● connected";
-    case "closed":
-      return "● disconnected";
-    case "connecting":
-      return "● connecting";
-  }
-}
-
 export function ConnectionIndicator({ connection }: ConnectionIndicatorProps) {
-  const text = textOf(connection);
-  return <span className={`connection ${connection}`} title={text} aria-label={text} role="status" />;
+  if (connection === "open") return null;
+  return (
+    <span
+      className="connection-lost"
+      role="status"
+      title="The connection to the OVIR server was lost. The view will not update until it reconnects."
+    >
+      Server disconnected — reconnecting…
+    </span>
+  );
 }

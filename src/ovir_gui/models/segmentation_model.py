@@ -34,8 +34,9 @@ class SegmentationModel(RecognitionModel):
 
     SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector
     of the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases
-    themselves, and SAM 3 also of the exemplar boxes drawn on each picture. Thresholds of the masks and of the boxes
-    are read at inference time.
+    themselves, and SAM 3 also of the exemplar boxes drawn on each picture. Masks and boxes are kept down to the
+    confidence floor of ``DetectionModel``, so the minimum confidence is tuned afterwards through the class minimums
+    without recognizing again. NMS thresholds are read at inference time.
 
     A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases and exemplar boxes, and the
     others phrases only.
@@ -213,15 +214,11 @@ class SegmentationModel(RecognitionModel):
     @property
     def options(self) -> tuple[ProfileOption, ...]:
         options: list[ProfileOption] = [
-            ProfileOption("Conf", self.format_threshold(self._settings.thresholds.confidence_threshold)),
             ProfileOption("NMS", self.format_threshold(self._settings.thresholds.nms_iou_threshold)),
         ]
         box_detector: DetectorSettings | None = self._settings.box_detector
         if box_detector is not None:
             options.append(ProfileOption("Boxes", self.box_detector_description))
-            options.append(
-                ProfileOption("Box conf", self.format_threshold(box_detector.thresholds.confidence_threshold))
-            )
             options.append(ProfileOption("Box NMS", self.format_threshold(box_detector.thresholds.nms_iou_threshold)))
         return tuple(options)
 
@@ -246,48 +243,24 @@ class SegmentationModel(RecognitionModel):
         return tuple(signature)
 
     def as_selection(self) -> ModelSelection:
-        box_detector: DetectorSettings | None = self._settings.box_detector
         return ModelSelection(
             task=self.TASK,
             backend=self.backend,
             preset_name=self.preset.name,
             device=self.device,
             precision=self.precision,
-            confidence_threshold=self._settings.thresholds.confidence_threshold,
             nms_iou_threshold=self._settings.thresholds.nms_iou_threshold,
             box_detector_label=self._box_detector_label,
-            box_confidence_threshold=None if box_detector is None else box_detector.thresholds.confidence_threshold,
         )
-
-    def default_box_confidence(self, box_model: DetectionModel | None) -> float | None:
-        """
-        Box threshold of the detector a selection would use.
-
-        Parameters
-        ----------
-        box_model : DetectionModel | None
-            Detection preset replacing the preset's own detector, or ``None``.
-
-        Returns
-        -------
-        float | None
-            Confidence threshold of that detector; ``None`` when the model masks no boxes.
-        """
-        if not self.is_box_prompted:
-            return None
-        if box_model is not None:
-            return box_model.settings.thresholds.confidence_threshold
-        box_detector: DetectorSettings | None = self._settings.box_detector
-        return None if box_detector is None else box_detector.thresholds.confidence_threshold
 
     def customized(self, selection: ModelSelection, box_model: DetectionModel | None) -> "SegmentationModel":
         """
-        Same preset with the overrides of a selection.
+        Same preset with the overrides of a selection, keeping masks and boxes down to the confidence floor.
 
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision and thresholds to use.
+            Device, precision and NMS threshold to use.
         box_model : DetectionModel | None
             Detection preset replacing the preset's own box detector; ignored unless the model masks boxes.
 
@@ -308,10 +281,8 @@ class SegmentationModel(RecognitionModel):
                 device=device,
                 is_half_precision_enabled=selection.precision is ComputePrecision.FLOAT16,
                 thresholds=DetectionThresholds(
-                    confidence_threshold=(
-                        box_detector.thresholds.confidence_threshold
-                        if selection.box_confidence_threshold is None
-                        else selection.box_confidence_threshold
+                    confidence_threshold=min(
+                        box_detector.thresholds.confidence_threshold, DetectionModel.CONFIDENCE_FLOOR
                     ),
                     nms_iou_threshold=box_detector.thresholds.nms_iou_threshold,
                 ),
@@ -321,10 +292,8 @@ class SegmentationModel(RecognitionModel):
             device=device,
             precision=Precision(selection.precision.value),
             thresholds=SegmentationThresholds(
-                confidence_threshold=(
-                    self._settings.thresholds.confidence_threshold
-                    if selection.confidence_threshold is None
-                    else selection.confidence_threshold
+                confidence_threshold=min(
+                    self._settings.thresholds.confidence_threshold, DetectionModel.CONFIDENCE_FLOOR
                 ),
                 nms_iou_threshold=selection.nms_iou_threshold,
             ),

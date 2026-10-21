@@ -7,6 +7,7 @@ export interface MenuEntry {
   isChecked?: boolean;
   shortcut?: string;
   isSeparator?: boolean;
+  control?: ReactNode;
 }
 
 interface MenuProps {
@@ -52,6 +53,12 @@ export function Menu({ x, y, entries, onClose }: MenuProps) {
       {entries.map((entry, index) =>
         entry.isSeparator ? (
           <div key={index} className="menu-separator" />
+        ) : entry.control !== undefined ? (
+          <div key={index} className="menu-item menu-control">
+            <span style={{ width: 12 }} />
+            <span>{entry.label}</span>
+            <span className="menu-control-slot">{entry.control}</span>
+          </div>
         ) : (
           <div
             key={index}

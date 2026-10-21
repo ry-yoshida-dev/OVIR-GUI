@@ -1,5 +1,6 @@
 import type { ClassEntry } from "../api/types";
 import type { PicturePromptEditor } from "../hooks/usePicturePromptEditor";
+import { InfoTip } from "./InfoTip";
 
 interface PromptToolbarProps {
   editor: PicturePromptEditor;
@@ -96,7 +97,8 @@ export function PromptToolbar({ editor, classes, frameStep }: PromptToolbarProps
       >
         Clear picture
       </button>
-      <span className="hint">{hintOf(editor, frameStep)}</span>
+      <span className="grow" />
+      <InfoTip label="How to draw">{hintOf(editor, frameStep)}</InfoTip>
     </div>
   );
 }

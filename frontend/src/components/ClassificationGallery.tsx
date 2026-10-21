@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { MediaEntry } from "../api/types";
 import {
@@ -24,7 +24,6 @@ export interface ClassificationGalleryProps {
   onSelectRow: (row: TableRow) => void;
   onOpenPicture: (path: string, frame: number | null) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
-  leading: ReactNode;
 }
 
 function directionOf(key: string): GalleryDirection | null {
@@ -55,7 +54,7 @@ function titleOf(tile: GalleryTile): string {
   if (frame !== "") lines.push(`Frame ${frame}`);
   if (tile.finding !== null) {
     if (!tile.finding.is_accepted) lines.push("Rejected");
-    if (!tile.finding.is_above_minimum) lines.push("Below the class minimum");
+    if (!tile.finding.is_passing) lines.push("Low confidence: under the Confidence ≥ cut");
   } else if (tile.row.kind === "status") {
     lines.push(tile.row.text);
   }
@@ -65,7 +64,7 @@ function titleOf(tile: GalleryTile): string {
   }
   const unlistedCount = tile.row.classCount - tile.scores.length;
   if (unlistedCount > 0) lines.push(`+${unlistedCount} more classes`);
-  if (tile.row.outdated !== null) lines.push(`Recognized with other classes: ${tile.row.outdated}`);
+  if (tile.row.outdated !== null) lines.push(`Inferred with other classes: ${tile.row.outdated}`);
   return lines.join("\n");
 }
 
@@ -105,7 +104,7 @@ function GalleryTileView({
 }: GalleryTileViewProps) {
   const { row, finding } = tile;
   const isRejected = finding !== null && !finding.is_accepted;
-  const isBelowMinimum = finding !== null && !finding.is_above_minimum;
+  const isBelowMinimum = finding !== null && !finding.is_passing;
   const classes = [
     "gallery-tile",
     isSelected ? "selected" : "",
@@ -132,7 +131,7 @@ function GalleryTileView({
         {frame !== "" && <span className="gallery-tile-frame"> {frame}</span>}
       </div>
       {isRejected && <span className="gallery-tile-badge">Rejected</span>}
-      {!isRejected && isBelowMinimum && <span className="gallery-tile-badge">Below minimum</span>}
+      {!isRejected && isBelowMinimum && <span className="gallery-tile-badge">Low confidence</span>}
       {!isRejected && !isBelowMinimum && tile.isUncertain && tile.margin !== null && (
         <span className="gallery-tile-badge warning">Δ {tile.margin.toFixed(2)}</span>
       )}
@@ -158,7 +157,6 @@ export function ClassificationGallery({
   onSelectRow,
   onOpenPicture,
   onSetAccepted,
-  leading,
 }: ClassificationGalleryProps) {
   const [sort, setSort] = useState<GallerySortValue>("uncertain");
   const tileElements = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -213,7 +211,6 @@ export function ClassificationGallery({
   if (rows.length === 0) {
     return (
       <div className="classification-gallery">
-        <div className="canvas-bar">{leading}</div>
         <div className="gallery-empty">Pictures appear here after they are classified.</div>
       </div>
     );
@@ -222,7 +219,6 @@ export function ClassificationGallery({
   return (
     <div className="classification-gallery">
       <div className="canvas-bar">
-        {leading}
         <span className="grow gallery-count">{tileCount} pictures</span>
         <div className="segmented gallery-sort" role="tablist" aria-label="Sort tiles">
           {GALLERY_SORT_OPTIONS.map((option) => (

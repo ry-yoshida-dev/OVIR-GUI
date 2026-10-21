@@ -4,6 +4,7 @@ import type { ClassEntry, ClassSetState, ReferenceEntry } from "../api/types";
 import { useDialogs } from "./DialogHost";
 import { useMenu } from "./Menu";
 import { SaveGlyph } from "./SaveGlyph";
+import { TrashGlyph } from "./TrashGlyph";
 
 interface ClassEditorProps {
   classes: ClassEntry[];
@@ -379,7 +380,7 @@ export function ClassEditor({
         </button>
         <span className="grow" />
         <button className="ghost icon" onClick={() => void removeSelection()} disabled={selected === null} title="Remove (Delete)">
-          🗑
+          <TrashGlyph />
         </button>
         <button
           className="ghost icon"
@@ -627,10 +628,6 @@ export function ClassEditor({
           onDoubleClick={() => setEditing({ kind: "new-class", position: classes.length })}
           title="Double-click to add a class"
         />
-      </div>
-      <div className="hint">
-        Double-click to rename or add a class. Write <span className="mono">car: car, suv</span> to query a class by
-        several phrases; drag phrases between classes.
       </div>
       <input
         ref={fileInput}
