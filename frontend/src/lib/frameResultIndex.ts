@@ -60,7 +60,8 @@ export class FrameResultIndex {
 
   resultAt(frame: number): FramePayload | null {
     const position = this.positionAt(frame);
-    return position < 0 ? null : (this.frames[position] ?? null);
+    const candidate = position < 0 ? undefined : this.frames[position];
+    return candidate !== undefined && candidate.frame === frame ? candidate : null;
   }
 
   interpolatedAt(frame: number): FramePayload | null {
@@ -76,8 +77,8 @@ export class FrameResultIndex {
       afterFrame === null ||
       afterFrame - beforeFrame > this.samplingGap
     )
-      return before;
-    if (!before.is_recognized || !after.is_recognized) return before;
+      return null;
+    if (!before.is_recognized || !after.is_recognized) return null;
     return FindingInterpolator.between(before, after, frame);
   }
 

@@ -27,7 +27,9 @@ interface CountScale {
   ticks: number[];
 }
 
-export const CHART_LABEL_WIDTH = 132;
+const CHART_LABEL_WIDTH = 132;
+const CHART_AXIS_WIDTH = 28;
+export const CHART_PLOT_OFFSET = CHART_LABEL_WIDTH + CHART_AXIS_WIDTH;
 const RULER_HEIGHT = 18;
 const CHART_HEIGHT = 140;
 const PLOT_WIDTH = 1000;
@@ -133,8 +135,8 @@ export const CountChart = memo(function CountChart({
   const hoverRatio = hoverFrame === null ? 0 : hoverFrame / frameCount;
 
   return (
-    <div className="chart-grid" style={{ gridTemplateColumns: `${CHART_LABEL_WIDTH}px 1fr` }}>
-      <div className="track-corner" style={{ height: RULER_HEIGHT }} />
+    <div className="chart-grid" style={{ gridTemplateColumns: `${CHART_LABEL_WIDTH}px ${CHART_AXIS_WIDTH}px 1fr` }}>
+      <div className="track-corner" style={{ height: RULER_HEIGHT, gridColumn: "span 2" }} />
       <div className="track-ruler" style={{ height: RULER_HEIGHT }}>
         {tickSecondsOf(durationSeconds).map((seconds) => (
           <span key={seconds} style={{ left: `${(seconds / durationSeconds) * 100}%` }}>
@@ -176,6 +178,13 @@ export const CountChart = memo(function CountChart({
             </div>
           );
         })}
+      </div>
+      <div className="chart-axis" style={{ height: CHART_HEIGHT }}>
+        {scale.ticks.map((tick) => (
+          <span key={tick} className="chart-axis-label" style={{ top: yOf(tick, scale) }}>
+            {tick}
+          </span>
+        ))}
       </div>
       <div
         ref={plot}
@@ -267,13 +276,6 @@ export const CountChart = memo(function CountChart({
             />
           )}
         </svg>
-        {scale.ticks
-          .filter((tick) => tick > 0)
-          .map((tick) => (
-            <span key={tick} className="chart-axis-label" style={{ top: yOf(tick, scale) }}>
-              {tick}
-            </span>
-          ))}
         {hoverFrame !== null && (
           <div
             className={`chart-tooltip${hoverRatio > TOOLTIP_FLIP_RATIO ? " flipped" : ""}`}

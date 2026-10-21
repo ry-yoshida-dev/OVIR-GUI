@@ -11,8 +11,6 @@ class JobPurpose(Enum):
         Pictures without an up-to-date result, recognized while the user works; always yields to the others.
     RUN_CURRENT : str
         The shown image or video frame, at the user's request.
-    RUN_MEDIA : str
-        Every sampled frame of the shown video, or the shown image.
     RUN_ALL : str
         Every picture of the open media.
     UPDATE_OUTDATED : str
@@ -23,7 +21,6 @@ class JobPurpose(Enum):
 
     BACKGROUND = "background"
     RUN_CURRENT = "run_current"
-    RUN_MEDIA = "run_media"
     RUN_ALL = "run_all"
     UPDATE_OUTDATED = "update_outdated"
     EXPORT = "export"
@@ -36,17 +33,15 @@ class JobPurpose(Enum):
         Returns
         -------
         str
-            E.g. ``"Run All"``.
+            E.g. ``"Infer All"``.
         """
         match self:
             case JobPurpose.BACKGROUND:
-                return "Background"
+                return "Auto inference"
             case JobPurpose.RUN_CURRENT:
-                return "Run"
-            case JobPurpose.RUN_MEDIA:
-                return "Run Video"
+                return "Infer"
             case JobPurpose.RUN_ALL:
-                return "Run All"
+                return "Infer All"
             case JobPurpose.UPDATE_OUTDATED:
                 return "Update Outdated"
             case JobPurpose.EXPORT:

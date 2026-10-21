@@ -21,7 +21,7 @@ class SegmentationMode(Enum):
     OBJECT_TRACKING : str
         Objects marked on some frames, followed through the video (``ObjectTracker``).
     CONCEPT_TRACKING : str
-        Every instance of phrases, detected and followed through the video (``ConceptTracker``).
+        Every instance of phrases or reference images, detected and followed through the video (``ConceptTracker``).
     """
 
     CONCEPT = "concept"

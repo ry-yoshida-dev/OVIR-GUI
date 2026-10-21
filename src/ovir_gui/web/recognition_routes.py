@@ -5,7 +5,7 @@ from fastapi import APIRouter, Response
 
 from ..export import ListedFindingsWriter
 from ..media import FrameKey
-from ..models import ComputeDevice, ComputePrecision, ModelProfile, ModelSelection
+from ..models import ComputeDevice, ComputePrecision, LicensedDependency, ModelProfile, ModelSelection
 from ..recognition import RecognitionTask
 from ..results import ResultCatalog
 from ..review import ClassThresholds, DuplicateSuppression
@@ -14,11 +14,12 @@ from .json_value import JsonObject
 from .schema import (
     AcceptanceBody,
     ApprovalBody,
+    LicenseBody,
     ModelSelectionBody,
     PresetBody,
     ProfileBody,
     ProfilesBody,
-    RunMediaBody,
+    RunAllBody,
     SuppressionBody,
     TableBody,
     TaskBody,
@@ -29,8 +30,8 @@ from .web_context import WebContext
 
 class RecognitionRoutes:
     """
-    Requests reading the state, choosing the task and model, running recognitions, and reviewing and comparing the
-    stored results.
+    Requests reading the state, choosing the task and model, accepting the licenses of optional modules, running
+    recognitions, and reviewing and comparing the stored results.
     """
 
     CSV_FILE_NAME = "findings.csv"
@@ -110,17 +111,18 @@ class RecognitionRoutes:
             context.workspace.select_preset(body.backend, body.preset_name)
             return {}
 
+        @router.post("/licenses/accept")
+        async def accept_license(body: LicenseBody) -> JsonObject:
+            context.workspace.accept_license(LicensedDependency(body.dependency))
+            return {}
+
         @router.post("/run")
         async def run(body: ApprovalBody) -> JsonObject:
             return context.payloads.reply(context.workspace.run_current(body.is_skipping_approved))
 
-        @router.post("/run-media")
-        async def run_media(body: RunMediaBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.run_media(body.is_skipping_approved, body.start_frame))
-
         @router.post("/run-all")
-        async def run_all(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.run_all(body.is_skipping_approved))
+        async def run_all(body: RunAllBody) -> JsonObject:
+            return context.payloads.reply(context.workspace.run_all(body.is_skipping_approved, body.start_frame))
 
         @router.post("/update-outdated")
         async def update_outdated(body: ApprovalBody) -> JsonObject:

@@ -2,16 +2,17 @@ from collections.abc import Callable, Sequence
 
 from ..media import FrameKey, MediaItem
 from ..models import ModelProfile
-from .background_scope import BackgroundScope
+from .inference_mode import InferenceMode
 
 
 class BackgroundPlanner:
     """
     Chooses what to recognize next in the background, and remembers what failed.
 
-    Only images are recognized in the background; videos are long and costly, so their frames are recognized only when
-    the user runs them. The shown image comes first; with ``BackgroundScope.ALL`` the other images follow in list order
-    after the shown media.
+    With ``InferenceMode.SHOWN`` only the picture on screen is recognized: the image, or the sampled frame at or before
+    the shown video frame. With ``InferenceMode.ALL`` the shown media comes first, from the shown frame on, and the
+    other media follow in list order. Videos are left to the user with sequential (tracking) models, which must run a
+    whole video in frame order.
     Pictures that could not be read are skipped for the profile they failed with; a model error pauses background
     recognition until the user does something that may fix it. While the user pins a stored profile other than the
     selected model, nothing runs, so the shown results are not replaced.
@@ -19,7 +20,7 @@ class BackgroundPlanner:
 
     def __init__(self) -> None:
         self._failed_keys: dict[ModelProfile, set[FrameKey]] = {}
-        self._is_paused: bool = False
+        self._pause_reason: str | None = None
         self._is_pinned: bool = False
 
     @property
@@ -32,7 +33,19 @@ class BackgroundPlanner:
         bool
             True until ``resume``.
         """
-        return self._is_paused
+        return self._pause_reason is not None
+
+    @property
+    def pause_reason(self) -> str | None:
+        """
+        Error message that paused background recognition.
+
+        Returns
+        -------
+        str | None
+            Message of the model error; None while not paused.
+        """
+        return self._pause_reason
 
     def pin(self) -> None:
         """
@@ -46,17 +59,22 @@ class BackgroundPlanner:
         """
         self._is_pinned = False
 
-    def pause(self) -> None:
+    def pause(self, reason: str) -> None:
         """
         Stop planning after a model error.
+
+        Parameters
+        ----------
+        reason : str
+            Error message shown to the user.
         """
-        self._is_paused = True
+        self._pause_reason = reason
 
     def resume(self) -> None:
         """
         Plan again after the user acted.
         """
-        self._is_paused = False
+        self._pause_reason = None
 
     def record_failures(self, profile: ModelProfile, frame_keys: Sequence[FrameKey]) -> None:
         """
@@ -98,47 +116,71 @@ class BackgroundPlanner:
     def next_keys(
         self,
         profile: ModelProfile,
-        scope: BackgroundScope,
+        mode: InferenceMode,
         current: FrameKey | None,
         media: Sequence[MediaItem],
+        expected_keys: Callable[[MediaItem], tuple[FrameKey, ...]],
         is_up_to_date: Callable[[FrameKey], bool],
     ) -> tuple[FrameKey, ...]:
         """
-        Picture of the next background job: the first image in order that still needs a result.
+        Pictures of the next background job.
 
         Parameters
         ----------
         profile : ModelProfile
             Profile of the selected model.
-        scope : BackgroundScope
-            Which media are recognized in the background.
+        mode : InferenceMode
+            Which pictures are recognized.
         current : FrameKey | None
             Shown picture.
         media : Sequence[MediaItem]
             Open media in list order.
+        expected_keys : Callable[[MediaItem], tuple[FrameKey, ...]]
+            Pictures of a media that are recognized: the image, or the sampled frames of the video in order.
         is_up_to_date : Callable[[FrameKey], bool]
             Whether a picture has an up-to-date result of the profile.
 
         Returns
         -------
         tuple[FrameKey, ...]
-            The picture to recognize; empty when nothing is to do.
+            The shown picture, or the pending pictures of the first media needing results; empty when nothing is to do.
         """
-        if self._is_paused or self._is_pinned or scope is BackgroundScope.OFF or current is None:
+        if self.is_paused or self._is_pinned or current is None:
             return ()
         items: list[MediaItem] = list(media)
         shown_index: int = next((index for index, item in enumerate(items) if item.path == current.path), -1)
         if shown_index < 0:
             return ()
-        ordered: list[MediaItem] = [items[shown_index]]
-        if scope is BackgroundScope.ALL:
-            ordered.extend(items[shown_index + 1 :])
-            ordered.extend(items[:shown_index])
         failed: set[FrameKey] = self._failed_keys.get(profile, set())
-        for item in ordered:
-            if item.is_video:
-                continue
-            key: FrameKey = item.key_at(None)
-            if key not in failed and not is_up_to_date(key):
-                return (key,)
-        return ()
+
+        def is_pending(key: FrameKey) -> bool:
+            return key not in failed and not is_up_to_date(key)
+
+        match mode:
+            case InferenceMode.SHOWN:
+                shown: MediaItem = items[shown_index]
+                if shown.is_video and profile.is_sequential:
+                    return ()
+                key: FrameKey | None = self._sampled_key_at(expected_keys(shown), current)
+                return (key,) if key is not None and is_pending(key) else ()
+            case InferenceMode.ALL:
+                ordered: list[MediaItem] = [*items[shown_index:], *items[:shown_index]]
+                for item in ordered:
+                    if item.is_video and profile.is_sequential:
+                        continue
+                    start_frame: int = (current.frame_index or 0) if item.path == current.path else 0
+                    keys: list[FrameKey] = sorted(
+                        filter(is_pending, expected_keys(item)),
+                        key=lambda pending: (pending.frame_index or 0) < start_frame,
+                    )
+                    if keys:
+                        return tuple(keys)
+                return ()
+
+    @staticmethod
+    def _sampled_key_at(sampled_keys: tuple[FrameKey, ...], current: FrameKey) -> FrameKey | None:
+        frame_index: int = current.frame_index or 0
+        earlier: list[FrameKey] = [key for key in sampled_keys if (key.frame_index or 0) <= frame_index]
+        if earlier:
+            return earlier[-1]
+        return sampled_keys[0] if sampled_keys else None

@@ -5,6 +5,7 @@ from ..prompting import PromptMode, QueryKind
 from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
+from .licensed_dependency import LicensedDependency
 from .model_preset import ModelPreset
 from .model_profile import ModelProfile
 from .model_selection import ModelSelection
@@ -172,6 +173,18 @@ class RecognitionModel(ABC):
             False unless a subclass tracks.
         """
         return False
+
+    @property
+    def licensed_dependencies(self) -> frozenset[LicensedDependency]:
+        """
+        Optional modules of restrictive licenses the model is imported from.
+
+        Returns
+        -------
+        frozenset[LicensedDependency]
+            Empty unless a subclass runs a model of such a module.
+        """
+        return frozenset()
 
     @property
     @abstractmethod

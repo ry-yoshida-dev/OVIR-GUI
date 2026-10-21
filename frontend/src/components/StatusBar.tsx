@@ -9,7 +9,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ state, localMessage, upload, onCancel }: StatusBarProps) {
-  const progress = state.progress;
+  const progress = state.progress ?? state.background_progress;
   const isWorking = progress !== null || state.activity !== "";
   return (
     <div className="statusbar">
@@ -31,7 +31,15 @@ export function StatusBar({ state, localMessage, upload, onCancel }: StatusBarPr
       )}
       {isWorking && (
         <span className="progress">
-          <span className="muted" style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span
+            className="muted"
+            style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            title={
+              state.progress === null && state.background_progress !== null
+                ? `${state.activity}\nAuto inference fills in results while you work; choose its scope in the runtime settings.`
+                : state.activity
+            }
+          >
             {progress === null
               ? state.activity
               : `${progress.title} ${progress.processed_count}/${progress.total_count}`}

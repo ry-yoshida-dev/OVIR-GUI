@@ -9,9 +9,10 @@ API is exercised through FastAPI's `TestClient` on generated media.
 
 | Component | Description |
 | --- | --- |
-| [test_background_planner.py](./test_background_planner.py) | `TestBackgroundPlanner`: background recognition covers images only and skips videos. |
+| [test_background_planner.py](./test_background_planner.py) | `TestBackgroundPlanner`: background recognition covers the shown picture or every picture, the shown media first, and leaves videos to sequential models' users. |
 | [test_embedding.py](./test_embedding.py) | `TestEmbeddingPolicy`, `TestCommandLineEmbedding`: embedding origins and the fixed access token. |
 | [test_embedding_routes.py](./test_embedding_routes.py) | `TestEmbeddingRoutes`: parent origins, result documents and framing headers of every response. |
+| [test_license_routes.py](./test_license_routes.py) | `TestLicenseRoutes`: YOLO-World and YOLOE presets are marked as needing Ultralytics, refused until its license is accepted, accepted only when installed, remembered once accepted, and chosen without importing it. |
 | [test_media_routes.py](./test_media_routes.py) | `TestMediaRoutes`: open videos are served with range requests, other files are refused, `/api/video-frames` answers for an unrecognized video, and a playable copy replaces the served video. |
 | [test_model_presets.py](./test_model_presets.py) | `TestModelPresets`: every preset of the three model libraries is read, including the promptable, generation and tracking presets, each segmentation mode decides its prompting, and segmentation precision overrides reach the library settings. |
 | [test_picture_prompt_routes.py](./test_picture_prompt_routes.py) | `TestPicturePromptRoutes`: exemplar boxes and object marks are drawn, shown and remembered, every segmentation mode describes its prompting, and mark models refuse to run without marks. |

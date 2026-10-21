@@ -1,7 +1,7 @@
-import { type MouseEvent, useState } from "react";
+import { useState } from "react";
 import type { ReviewMode } from "../lib/reviewModes";
 import type { ScoreHistogram } from "../lib/scoreHistogram";
-import { useMenu } from "./Menu";
+import { ResetGlyph } from "./ResetGlyph";
 import { ScoreHistogramChart } from "./ScoreHistogramChart";
 
 export type ScoreChartLevel = "overall" | "class" | "phrase";
@@ -26,9 +26,9 @@ interface ScoreChartRowProps {
 }
 
 const CHART_HEIGHTS: Record<ScoreChartLevel, number> = {
-  overall: 26,
-  class: 26,
-  phrase: 18,
+  overall: 44,
+  class: 44,
+  phrase: 30,
 };
 
 export function ScoreChartRow({
@@ -49,22 +49,9 @@ export function ScoreChartRow({
   onReset,
   onToggleExpanded,
 }: ScoreChartRowProps) {
-  const menu = useMenu();
   const [isEditing, setIsEditing] = useState(false);
-  const openMenu = (event: MouseEvent) => {
-    event.preventDefault();
-    if (isDisabled) return;
-    menu.open(event.clientX, event.clientY, [
-      { label: "Enter Value…", onSelect: () => setIsEditing(true) },
-      {
-        label: resetLabel,
-        isDisabled: onReset === null,
-        onSelect: () => onReset?.(),
-      },
-    ]);
-  };
   return (
-    <div className={`score-chart-row ${level}`} onContextMenu={openMenu}>
+    <div className={`score-chart-row ${level}`}>
       <div
         className={`score-chart-label${isExpandable ? " expandable" : ""}`}
         title={
@@ -108,7 +95,16 @@ export function ScoreChartRow({
       >
         {keptCount}
       </span>
-      {menu.element}
+      <button
+        type="button"
+        className={`section-action score-chart-reset${onReset === null ? " hidden" : ""}`}
+        title={resetLabel}
+        aria-label={`${resetLabel}: ${title}`}
+        disabled={isDisabled || onReset === null}
+        onClick={() => onReset?.()}
+      >
+        <ResetGlyph />
+      </button>
     </div>
   );
 }

@@ -7,10 +7,10 @@ from fastapi import APIRouter, File, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from ..media import MediaItem
-from ..workspace import BackgroundScope, Workspace
+from ..workspace import InferenceMode, Workspace
 from .image_preview import ImagePreview
 from .json_value import JsonObject
-from .schema import BackgroundBody, PathBody, PathsBody, SamplingBody, ShowBody
+from .schema import InferenceBody, PathBody, PathsBody, SamplingBody, ShowBody
 from .web_context import WebContext
 
 
@@ -67,9 +67,14 @@ class MediaRoutes:
             context.workspace.set_sampling(body.frame_step)
             return {}
 
-        @router.put("/background")
-        async def set_background(body: BackgroundBody) -> JsonObject:
-            context.workspace.set_background_scope(BackgroundScope(body.scope))
+        @router.put("/inference")
+        async def set_inference(body: InferenceBody) -> JsonObject:
+            context.workspace.set_inference(InferenceMode(body.mode), body.is_auto)
+            return {}
+
+        @router.post("/inference/retry")
+        async def retry_inference() -> JsonObject:
+            context.workspace.retry_background()
             return {}
 
         @router.post("/uploads")

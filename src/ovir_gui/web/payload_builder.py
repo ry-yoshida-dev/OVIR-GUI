@@ -15,6 +15,8 @@ from ..models import (
     ComputePrecision,
     ConceptTrackingModel,
     DetectionModel,
+    LicenseConsent,
+    LicensedDependency,
     MaskGenerationModel,
     ModelProfile,
     ModelSelection,
@@ -32,9 +34,9 @@ from ..review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ..storage import ClassSet, ClassSetEntry, ClassThresholdStore
 from ..workspace import (
     ActionReply,
-    BackgroundScope,
     ClassWorkbench,
     ExportPlan,
+    InferenceMode,
     MediaStatus,
     RunProgress,
     Workspace,
@@ -102,11 +104,13 @@ class PayloadBuilder:
             "activity": workspace.activity_message,
             "summary": workspace.summary,
             "progress": self._progress(workspace.progress),
+            "background_progress": self._progress(workspace.background_progress),
             "is_busy": workspace.is_busy,
-            "background": {
-                "scope": workspace.background_scope.value,
-                "scopes": [{"value": scope.value, "label": scope.label} for scope in BackgroundScope],
-                "is_paused": workspace.is_background_paused,
+            "inference": {
+                "mode": workspace.inference_mode.value,
+                "is_auto": workspace.is_auto_inference,
+                "modes": [{"value": mode.value, "label": mode.label} for mode in InferenceMode],
+                "pause_reason": workspace.background_pause_reason if workspace.is_auto_inference else None,
             },
             "sampling": {"frame_step": workspace.sampling.frame_step},
             "last_export": self._export_report(workspace.last_export),
@@ -563,7 +567,12 @@ class PayloadBuilder:
                 {
                     "value": backend,
                     "presets": [
-                        {"name": preset.name, "label": preset.label} for preset in selector.presets_of(task, backend)
+                        {
+                            "name": preset.name,
+                            "label": preset.label,
+                            "licenses": self._licenses_of(selector.base_model(task, backend, preset.name)),
+                        }
+                        for preset in selector.presets_of(task, backend)
                     ],
                     "image_poolings": list[JsonValue](ClassificationModel.image_poolings_of(backend))
                     if task is RecognitionTask.CLASSIFICATION
@@ -611,9 +620,13 @@ class PayloadBuilder:
                 }
                 for precision in ComputePrecision
             ],
-            "box_detectors": list[JsonValue](selector.box_detector_labels)
+            "box_detectors": [
+                {"label": label, "licenses": self._licenses_of(selector.box_detector_model(label))}
+                for label in selector.box_detector_labels
+            ]
             if task is RecognitionTask.SEGMENTATION
             else [],
+            "licenses": self._license_entries(workspace.license_consent),
             "selection": self._selection(selection),
             "is_image_prompt_supported": QueryKind.VISUAL in model.supported_query_kinds,
             "query_kinds": list[JsonValue](sorted(kind.value for kind in model.supported_query_kinds)),
@@ -621,6 +634,26 @@ class PayloadBuilder:
             "weights_path": model.weights_path,
             "description": self._model_description(model),
         }
+
+    @staticmethod
+    def _licenses_of(model: RecognitionModel) -> list[JsonValue]:
+        return [dependency.value for dependency in sorted(model.licensed_dependencies, key=lambda entry: entry.value)]
+
+    @staticmethod
+    def _license_entries(consent: LicenseConsent) -> list[JsonValue]:
+        return [
+            {
+                "value": dependency.value,
+                "title": dependency.title,
+                "license_name": dependency.license_name,
+                "license_url": dependency.license_url,
+                "notice": dependency.notice,
+                "install_command": dependency.install_command,
+                "is_installed": dependency.is_installed,
+                "is_accepted": consent.is_accepted(dependency),
+            }
+            for dependency in LicensedDependency
+        ]
 
     @staticmethod
     def _model_description(model: RecognitionModel) -> str:
@@ -641,7 +674,7 @@ class PayloadBuilder:
             case MaskGenerationModel():
                 return "Segments every region of the picture; no classes are needed."
             case ObjectTrackingModel():
-                return "Mark objects on any frame, then Run Video follows them through the video."
+                return "Mark objects on any frame, then inferring every sampled frame follows them through the video."
             case ConceptTrackingModel():
                 return "Detects every instance of the phrases and follows it through the video."
             case _:

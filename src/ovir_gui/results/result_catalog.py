@@ -13,8 +13,7 @@ class ResultCatalog:
     Latest result of every recognized image and video frame of one model profile.
 
     Recording a picture again replaces its previous result and keeps all of its findings. The recognized frames of
-    each video are kept sorted, so the result shown for any frame of a video is that of the latest recognized frame at
-    or before it.
+    each video are kept sorted; a frame that was not recognized shows no result.
     """
 
     def __init__(self) -> None:
@@ -150,14 +149,9 @@ class ResultCatalog:
         Returns
         -------
         FrameKey | None
-            The key itself when recognized; for a video frame otherwise the latest recognized frame before it;
-            ``None`` when there is none.
+            The key itself when recognized, ``None`` otherwise; a result is never shown on another frame.
         """
-        if frame_key in self._results or frame_key.frame_index is None:
-            return frame_key if frame_key in self._results else None
-        indices: list[int] = self._frame_indices.get(frame_key.path, [])
-        position: int = bisect.bisect_right(indices, frame_key.frame_index)
-        return FrameKey(frame_key.path, indices[position - 1]) if position else None
+        return frame_key if frame_key in self._results else None
 
     def set_accepted(self, frame_key: FrameKey, indices: Iterable[int], is_accepted: bool) -> None:
         """

@@ -11,13 +11,13 @@ drawn as reference boxes on example images, and every model shipped as a preset 
 device, precision, thresholds and, for classifiers, the text templates phrases are written into.
 
 - **Images and videos**: videos are recognized on every Nth frame and played in the browser with the frame-accurate
-  [VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) player; boxes and masks of the latest recognized frame
-  are drawn over every frame while it plays. Videos the browser cannot decode fall back to frames decoded by the server.
-- **Segmentation modes**: besides phrases, SAM 3 takes positive and negative exemplar boxes drawn on each picture;
-  SAM, SAM 2, the SAM 3 tracker, EdgeTAM and Florence-2 segment objects marked by clicks and boxes, refined click by
-  click; automatic mask generation segments every region; video trackers follow marked objects, or every instance of
-  phrases, through a video.
-- **Review**: a filterable, sortable result table and a Review panel of confidence and NMS IoU histograms over every result, for all classes, each class and each phrase, with kept counts. Dragging, scrolling or typing on a chart moves its threshold at once without recognizing again; double-clicking takes a class or phrase back to its parent value. Filtered-out findings are dimmed or hidden
+  [VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) player; boxes and masks are drawn only on the recognized
+  frames, or interpolated between adjacent recognized frames when interpolation is on. Videos the browser cannot decode fall back to frames decoded by the server.
+- **Segmentation modes**: besides phrases, SAM 3 takes reference images and positive and negative exemplar boxes
+  drawn on each picture; SAM, SAM 2, the SAM 3 tracker, EdgeTAM and Florence-2 segment objects marked by clicks and
+  boxes, refined click by click; automatic mask generation segments every region; video trackers follow marked
+  objects, or every instance of phrases and reference images, through a video.
+- **Review**: a filterable, sortable result table and a Review panel of confidence and NMS IoU histograms over every result, for all classes, each class and each phrase, with kept counts. Dragging, arrow keys or typing on a chart moves its threshold at once without recognizing again; the reset button beside a chart (or double-clicking it) takes a class or phrase back to its parent value, and the reset button in the Review heading restores every threshold of the shown chart type. Filtered-out findings are shown faded or hidden, chosen in the view settings.
   (detectors and segmenters keep findings down to a low floor), keeping or rejecting single findings,
   a class timeline per video and statistics.
 - **Comparison**: results of several models are kept side by side, and one can be overlaid on another.
@@ -38,6 +38,19 @@ The server runs on this machine and only the browser opening the printed address
 ```bash
 pip install -e .
 ```
+
+YOLO-World and YOLOE run on [Ultralytics](https://www.ultralytics.com/license), which is licensed under AGPL-3.0, so it
+is not installed by default. Install it only if your use complies with AGPL-3.0 or you hold an Ultralytics Enterprise
+License:
+
+```bash
+pip install -e ".[ultralytics]"
+```
+
+The first time one of these models is chosen, you are asked to confirm that your use complies with the license and
+that you alone are responsible for it, before the `ultralytics` module is imported. The acceptance is remembered in
+`license_consent.json` of the data directory; delete that file to withdraw it. OVIR-GUI grants no license to
+Ultralytics or its weights, and its authors accept no responsibility for how they are used.
 
 ## Usage
 

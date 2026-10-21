@@ -5,7 +5,7 @@ import type { FrameResultIndex } from "../lib/frameResultIndex";
 import type { PlaybackPosition } from "../lib/playbackPosition";
 import { VideoEventBuilder } from "../lib/videoEvents";
 import { formatSeconds } from "../lib/videoTime";
-import { CHART_LABEL_WIDTH, CountChart } from "./CountChart";
+import { CHART_PLOT_OFFSET, CountChart } from "./CountChart";
 import { NumberField } from "./NumberField";
 import { ResultsHeading } from "./ResultsHeading";
 
@@ -27,7 +27,7 @@ function colorOf(classColors: Record<string, string>, className: string): string
 
 function PlaybackCursor({ frame, frameCount }: { frame: number; frameCount: number }) {
   return (
-    <div className="track-cursor-layer" style={{ left: CHART_LABEL_WIDTH }}>
+    <div className="track-cursor-layer" style={{ left: CHART_PLOT_OFFSET }}>
       <div className="track-cursor" style={{ left: `${(frame / frameCount) * 100}%` }} />
     </div>
   );
@@ -126,7 +126,7 @@ export function VideoFindingsPanel({
       </ResultsHeading>
       {isCollapsed ? null : results === null || summary.recognizedCount === 0 ? (
         <div className="video-findings-empty muted">
-          {results === null ? "Loading the results of this video…" : "No inferred frames yet. Run Video to infer the sampled frames."}
+          {results === null ? "Loading the results of this video…" : "No inferred frames yet. Infer every sampled frame to see them here."}
         </div>
       ) : (
         <>

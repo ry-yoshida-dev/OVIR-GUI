@@ -16,6 +16,7 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [class_threshold_store.py](./class_threshold_store.py) | `ClassThresholdStore` remembers the minimum confidence per task, class and phrase in `class_thresholds.json`. |
 | [duplicate_suppression_store.py](./duplicate_suppression_store.py) | `DuplicateSuppressionStore` remembers the review suppression of overlapping boxes per task in `duplicate_suppression.json`. |
 | [json_fields.py](./json_fields.py) | `JsonFields` gives typed access to parsed JSON values, raising `TypeError` naming the field on a type mismatch. |
+| [license_consent_store.py](./license_consent_store.py) | `LicenseConsentStore` remembers the licenses of optional modules the user accepted, and when, in `license_consent.json`. |
 | [picture_prompt_codec.py](./picture_prompt_codec.py) | `PicturePromptCodec` writes and reads exemplar boxes and object marks as JSON, shared by the results archive and the remembered drawings. |
 | [picture_prompt_store.py](./picture_prompt_store.py) | `PicturePromptStore` remembers the exemplar boxes and object marks drawn on pictures in `picture_prompts.json`. |
 | [results_archive.py](./results_archive.py) | `ResultsArchive` stores every result in one ZIP file with `manifest.json` and, with masks, `masks.npz`. |

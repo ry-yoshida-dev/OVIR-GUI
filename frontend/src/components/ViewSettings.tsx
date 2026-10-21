@@ -1,4 +1,4 @@
-import type { BelowMinimumStyle, DisplayOptions } from "../lib/displayOptions";
+import type { DisplayOptions } from "../lib/displayOptions";
 import type { TaskView } from "../lib/taskViews";
 import { StepperField } from "./StepperField";
 
@@ -12,10 +12,6 @@ interface ViewSettingsProps {
 const MINIMUM_LINE_WIDTH = 1;
 const MAXIMUM_LINE_WIDTH = 10;
 const MASK_OPACITIES = [0.25, 0.45, 0.65];
-const BELOW_MINIMUM_STYLES: { value: BelowMinimumStyle; label: string }[] = [
-  { value: "dim", label: "Dimmed" },
-  { value: "hide", label: "Hidden" },
-];
 
 export function ViewSettings({
   taskView,
@@ -43,26 +39,21 @@ export function ViewSettings({
             </label>
           );
         })}
+        <label title="Findings below their confidence threshold or removed as duplicates in Review stay visible but faded; uncheck to hide them">
+          <input
+            type="checkbox"
+            checked={display.belowMinimum === "dim"}
+            onChange={(event) =>
+              onChange({
+                ...display,
+                belowMinimum: event.target.checked ? "dim" : "hide",
+              })
+            }
+          />
+          Show filtered-out findings (faded)
+        </label>
       </div>
       <div className="form-grid">
-        <span>Filtered out</span>
-        <select
-          value={display.belowMinimum}
-          title="How findings below their confidence threshold or removed as duplicates in Review are shown"
-          onChange={(event) => {
-            const style = BELOW_MINIMUM_STYLES.find(
-              (option) => option.value === event.target.value,
-            );
-            if (style !== undefined)
-              onChange({ ...display, belowMinimum: style.value });
-          }}
-        >
-          {BELOW_MINIMUM_STYLES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
         {taskView.isLineWidthShown && (
           <>
             <span>Line width</span>

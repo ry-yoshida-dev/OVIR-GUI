@@ -14,8 +14,8 @@ from .stream_position import StreamPosition
 
 class ConceptTrackingRecognizer(Recognizer):
     """
-    Loaded SAM 3 concept tracker detecting and following the instances of the phrases through the frames it is
-    handed in order; the query label of each instance names its track.
+    Loaded SAM 3 concept tracker detecting and following the instances of the phrases and reference images through
+    the frames it is handed in order; the query label of each instance names its track.
     """
 
     def __init__(self, model: ConceptTrackingModel) -> None:

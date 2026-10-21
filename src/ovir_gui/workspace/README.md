@@ -10,8 +10,7 @@ User-interface-independent application core. `Workspace` holds everything the us
 | --- | --- |
 | [action_reply.py](./action_reply.py) | `ActionReply` is the answer of the workspace to a request such as Detect, Detect All or Export. |
 | [action_status.py](./action_status.py) | `ActionStatus` enumerates how the workspace answered a request of the user. |
-| [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses which image to recognize next in the background and remembers what failed. |
-| [background_scope.py](./background_scope.py) | `BackgroundScope` enumerates which images are recognized in the background while the user works; videos are recognized only when run. |
+| [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses what to recognize next in the background for the inference mode and remembers what failed. |
 | [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set. |
 | [deferred_save.py](./deferred_save.py) | `DeferredSave` writes one piece of workspace state shortly after it changes, off the owning thread. |
 | [export_plan.py](./export_plan.py) | `ExportPlan` describes what an export would write now. |
@@ -19,6 +18,7 @@ User-interface-independent application core. `Workspace` holds everything the us
 | [inference_engine.py](./inference_engine.py) | `InferenceEngine` runs recognition jobs on one worker thread, foreground jobs first and background jobs in between. |
 | [inference_job.py](./inference_job.py) | `InferenceJob` holds the pictures to recognize with one model and prompt. |
 | [inference_listener.py](./inference_listener.py) | `InferenceListener` receives what the `InferenceEngine` reports, always on the owning thread. |
+| [inference_mode.py](./inference_mode.py) | `InferenceMode` chooses which pictures are inferred: the shown picture only, or every picture with the shown media first. |
 | [job_control.py](./job_control.py) | `JobControl` is shared with the worker and tells whether a job should stop and how far it has come. |
 | [job_purpose.py](./job_purpose.py) | `JobPurpose` enumerates why a recognition job runs. |
 | [job_summary.py](./job_summary.py) | `JobSummary` describes how a job ended. |
@@ -29,7 +29,7 @@ User-interface-independent application core. `Workspace` holds everything the us
 | [playback_state.py](./playback_state.py) | `PlaybackState` enumerates whether a video has a browser-playable copy. |
 | [playback_store.py](./playback_store.py) | `PlaybackStore` caches browser-playable copies of videos, keyed by the source file. |
 | [prompt_preparation.py](./prompt_preparation.py) | `PromptPreparation` holds the prompt built from the classes, or why none could be built. |
-| [run_progress.py](./run_progress.py) | `RunProgress` is the progress of the running foreground job. |
+| [run_progress.py](./run_progress.py) | `RunProgress` is the progress of a running job, foreground or background. |
 | [scheduled_call.py](./scheduled_call.py) | `ScheduledCall` is a callback scheduled to run later that can still be cancelled. |
 | [task_scheduler.py](./task_scheduler.py) | `TaskScheduler` abstracts the thread owning the workspace state, like the GUI thread of a desktop application. |
 | [upload_store.py](./upload_store.py) | `UploadStore` is the default folder receiving images and videos sent from a browser, streamed to disk. |

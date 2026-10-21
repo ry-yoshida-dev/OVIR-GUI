@@ -8,11 +8,12 @@ interface SectionProps {
   isCollapsed: boolean;
   onToggle: () => void;
   isStretched?: boolean;
+  isFlush?: boolean;
   actions?: ReactNode;
   children: ReactNode;
 }
 
-export function Section({ title, icon, count, isCollapsed, onToggle, isStretched = false, actions, children }: SectionProps) {
+export function Section({ title, icon, count, isCollapsed, onToggle, isStretched = false, isFlush = false, actions, children }: SectionProps) {
   return (
     <section className={`section${isStretched && !isCollapsed ? " stretched" : ""}${isCollapsed ? " collapsed" : ""}`}>
       <div
@@ -40,7 +41,7 @@ export function Section({ title, icon, count, isCollapsed, onToggle, isStretched
           <ChevronGlyph />
         </span>
       </div>
-      {!isCollapsed && <div className="section-body">{children}</div>}
+      {!isCollapsed && <div className={`section-body${isFlush ? " flush" : ""}`}>{children}</div>}
     </section>
   );
 }

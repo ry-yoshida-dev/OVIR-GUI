@@ -11,7 +11,7 @@ from ovir_gui.models import (
     SegmentationMode,
     SegmentationModel,
 )
-from ovir_gui.prompting import PromptMode
+from ovir_gui.prompting import PromptMode, QueryKind
 from ovir_gui.recognition import RecognitionTask
 
 CATALOG: PresetCatalog = PresetCatalog.from_packages()
@@ -51,6 +51,14 @@ class TestModelPresets:
         assert model.profile().is_sequential is mode.is_sequential
         if mode.prompt_mode is PromptMode.AUTOMATIC:
             assert not model.supported_query_kinds
+
+    @pytest.mark.parametrize(
+        "backend", ["sam3", f"{SegmentationMode.CONCEPT_TRACKING.backend_prefix}sam3"], ids=lambda backend: backend
+    )
+    def test_sam3_concepts_take_reference_images(self, backend: str) -> None:
+        for preset in CATALOG.presets_of(RecognitionTask.SEGMENTATION, backend):
+            model: RecognitionModel = ModelSelector.read_preset(preset)
+            assert {QueryKind.TEXT, QueryKind.VISUAL} <= model.supported_query_kinds
 
     @pytest.mark.parametrize(
         "preset", CATALOG.presets_of(RecognitionTask.SEGMENTATION, "sam3"), ids=lambda preset: preset.label

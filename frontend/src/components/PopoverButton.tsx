@@ -6,11 +6,12 @@ interface PopoverButtonProps {
   title: string;
   trigger: ReactNode;
   children: ReactNode;
+  isOpeningUpward?: boolean;
 }
 
 const EDGE_MARGIN = 8;
 
-export function PopoverButton({ className, label, title, trigger, children }: PopoverButtonProps) {
+export function PopoverButton({ className, label, title, trigger, children, isOpeningUpward = false }: PopoverButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const button = useRef<HTMLButtonElement>(null);
@@ -22,9 +23,15 @@ export function PopoverButton({ className, label, title, trigger, children }: Po
     const bounds = panel.current.getBoundingClientRect();
     setPosition({
       left: Math.max(EDGE_MARGIN, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - EDGE_MARGIN)),
-      top: Math.max(EDGE_MARGIN, Math.min(anchor.bottom + 4, window.innerHeight - bounds.height - EDGE_MARGIN)),
+      top: Math.max(
+        EDGE_MARGIN,
+        Math.min(
+          isOpeningUpward ? anchor.top - bounds.height - 4 : anchor.bottom + 4,
+          window.innerHeight - bounds.height - EDGE_MARGIN,
+        ),
+      ),
     });
-  }, [isOpen]);
+  }, [isOpen, isOpeningUpward]);
 
   useEffect(() => {
     if (!isOpen) return;

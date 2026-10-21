@@ -1,13 +1,14 @@
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pytest
 
-from ovir_gui.media import FrameKey, MediaItem
+from ovir_gui.media import FrameKey, MediaItem, VideoSampling
 from ovir_gui.models import ModelProfile
 from ovir_gui.recognition import RecognitionTask
-from ovir_gui.workspace import BackgroundPlanner, BackgroundScope
+from ovir_gui.workspace import BackgroundPlanner, InferenceMode
 
 FRAME_COUNT = 6
 FRAME_WIDTH = 32
@@ -16,7 +17,7 @@ FRAME_HEIGHT = 24
 
 class TestBackgroundPlanner:
     """
-    Background recognition covers images only; videos wait until the user runs them.
+    Background recognition covers the shown picture, or every picture with the shown media first.
     """
 
     @pytest.fixture
@@ -46,21 +47,53 @@ class TestBackgroundPlanner:
     def images(self, tmp_path: Path) -> tuple[MediaItem, MediaItem]:
         return MediaItem.image(tmp_path / "first.png"), MediaItem.image(tmp_path / "second.png")
 
-    def test_shown_video_is_not_recognized(self, profile: ModelProfile, video: MediaItem) -> None:
+    def test_shown_mode_takes_sampled_frame_at_or_before_shown_frame(
+        self, profile: ModelProfile, video: MediaItem
+    ) -> None:
         keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
-            profile, BackgroundScope.SHOWN, video.key_at(0), [video], lambda _: False
+            profile, InferenceMode.SHOWN, video.key_at(3), [video], every_second_frame, lambda _: False
+        )
+        assert keys == (video.key_at(2),)
+
+    def test_shown_mode_ignores_other_media(
+        self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem]
+    ) -> None:
+        first, _ = images
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile, InferenceMode.SHOWN, first.key_at(None), [first, video], every_second_frame, lambda _: True
         )
         assert keys == ()
 
-    def test_all_scope_skips_videos(
+    def test_all_mode_starts_at_shown_frame(self, profile: ModelProfile, video: MediaItem) -> None:
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile, InferenceMode.ALL, video.key_at(2), [video], every_second_frame, lambda _: False
+        )
+        assert [key.frame_index for key in keys] == [2, 4, 0]
+
+    def test_all_mode_covers_videos_in_list_order(
         self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem]
     ) -> None:
         first, second = images
         keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
             profile,
-            BackgroundScope.ALL,
-            video.key_at(0),
+            InferenceMode.ALL,
+            first.key_at(None),
             [first, video, second],
-            lambda key: key == second.key_at(None),
+            every_second_frame,
+            lambda key: key == first.key_at(None) or key == video.key_at(0),
+        )
+        assert keys == (video.key_at(2), video.key_at(4))
+
+    def test_sequential_model_skips_videos(
+        self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem]
+    ) -> None:
+        first, _ = images
+        sequential: ModelProfile = replace(profile, is_sequential=True)
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            sequential, InferenceMode.ALL, video.key_at(0), [video, first], every_second_frame, lambda _: False
         )
         assert keys == (first.key_at(None),)
+
+
+def every_second_frame(item: MediaItem) -> tuple[FrameKey, ...]:
+    return item.frame_keys(VideoSampling(2))

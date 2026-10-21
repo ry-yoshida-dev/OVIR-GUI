@@ -6,6 +6,7 @@ from .class_set_summary import ClassSetSummary
 from .class_threshold_store import ClassThresholdStore
 from .duplicate_suppression_store import DuplicateSuppressionStore
 from .json_fields import JsonFields, JsonValue
+from .license_consent_store import LicenseConsentStore
 from .picture_prompt_codec import PicturePromptCodec
 from .picture_prompt_store import PicturePromptStore
 from .results_archive import ResultsArchive
@@ -24,6 +25,7 @@ __all__ = [
     "DuplicateSuppressionStore",
     "JsonFields",
     "JsonValue",
+    "LicenseConsentStore",
     "PicturePromptCodec",
     "PicturePromptStore",
     "ResultsArchive",

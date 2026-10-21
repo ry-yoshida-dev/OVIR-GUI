@@ -5,6 +5,7 @@ import type {
   CurrentPicture,
   DuplicateSuppression,
   FramePayload,
+  LicenseEntry,
   MediaEntry,
   ModelSelection,
   PictureFindings,
@@ -46,7 +47,7 @@ import { PromptToolbar } from "./components/PromptToolbar";
 import { ReferenceDialog } from "./components/ReferenceDialog";
 import { ResultTable } from "./components/ResultTable";
 import { ResultViewer } from "./components/ResultViewer";
-import { RunButton } from "./components/RunButton";
+import { InferControl } from "./components/InferControl";
 import { Section } from "./components/Section";
 import { ServerBrowserDialog } from "./components/ServerBrowserDialog";
 import { SlidersGlyph } from "./components/SlidersGlyph";
@@ -59,6 +60,7 @@ import { VideoFindingsPanel } from "./components/VideoFindingsPanel";
 import { ViewSettings } from "./components/ViewSettings";
 import { useDraftValue } from "./hooks/useDraftValue";
 import { useEmbedBridge } from "./hooks/useEmbedBridge";
+import { useLicenseGate } from "./hooks/useLicenseGate";
 import { usePicturePromptEditor } from "./hooks/usePicturePromptEditor";
 import { useStoredState } from "./hooks/useStoredState";
 import { useWorkspace } from "./hooks/useWorkspace";
@@ -114,7 +116,7 @@ const DEFAULT_LAYOUT: Layout = {
   sidebarWidth: 330,
   rightWidth: 560,
   profileHeight: 160,
-  reviewHeight: 230,
+  reviewHeight: 360,
   videoResultsHeight: 300,
   collapsedSections: [],
 };
@@ -125,6 +127,7 @@ const SHOW_THROTTLE_MILLISECONDS = 150;
 const VIDEO_RESULTS_DEBOUNCE_MILLISECONDS = 200;
 const LIVE_RESULTS_DEBOUNCE_MILLISECONDS = 30;
 const LIVE_FETCH_SAMPLES = 120;
+const NO_LICENSES: LicenseEntry[] = [];
 
 type OpenDialog =
   | { kind: "browse" }
@@ -228,6 +231,33 @@ export function App() {
     [report],
   );
   const promptEditor = usePicturePromptEditor({ state, call, report });
+  const ensureLicenses = useLicenseGate(
+    state?.model.licenses ?? NO_LICENSES,
+    report,
+  );
+  const selectPreset = useCallback(
+    async (backend: string, presetName: string) => {
+      const licenses =
+        state?.model.backends
+          .find((entry) => entry.value === backend)
+          ?.presets.find((preset) => preset.name === presetName)?.licenses ??
+        [];
+      if (await ensureLicenses(licenses))
+        await call(() => api.selectPreset(backend, presetName));
+    },
+    [state, ensureLicenses, call],
+  );
+  const selectModel = useCallback(
+    async (selection: ModelSelection) => {
+      const licenses =
+        state?.model.box_detectors.find(
+          (entry) => entry.label === selection.box_detector_label,
+        )?.licenses ?? [];
+      if (await ensureLicenses(licenses))
+        await call(() => api.selectModel(selection));
+    },
+    [state, ensureLicenses, call],
+  );
   const commitThresholds = useCallback(
     (thresholds: Thresholds) => call(() => api.setThresholds(thresholds)),
     [call],
@@ -474,20 +504,19 @@ export function App() {
     playbackPosition,
   ]);
 
-  const runLive = useCallback(async () => {
-    if (currentPath === null) return;
+  const runAll = useCallback(async () => {
     const path = currentPath;
-    const startFrame = playbackPosition.current() ?? current?.frame ?? 0;
+    const startFrame = isVideo ? (playbackPosition.current() ?? current?.frame ?? null) : null;
     const isStarted = await runAction((isSkippingApproved) =>
-      api.runMedia(isSkippingApproved, startFrame),
+      api.runAll(isSkippingApproved, startFrame),
     );
-    if (isStarted)
+    if (isStarted && isVideo && path !== null)
       setLiveRequest((request) => ({
         path,
         serial: (request?.serial ?? 0) + 1,
         isBusySeen: false,
       }));
-  }, [currentPath, current?.frame, playbackPosition, runAction]);
+  }, [currentPath, isVideo, current?.frame, playbackPosition, runAction]);
 
   const show = useCallback(
     (path: string, frame: number | null) => {
@@ -709,7 +738,17 @@ export function App() {
   );
 
   const run = useCallback(() => void runAction(api.run), [runAction]);
-  const runAll = useCallback(() => void runAction(api.runAll), [runAction]);
+  const inferenceMode = state?.inference.mode ?? "shown";
+  const infer = useCallback(() => {
+    switch (inferenceMode) {
+      case "all":
+        void runAll();
+        break;
+      case "shown":
+        run();
+        break;
+    }
+  }, [inferenceMode, run, runAll]);
 
   const exportResults = async (choice: ExportChoice): Promise<boolean> => {
     const listedPayload: PictureFindings[] | null =
@@ -791,10 +830,6 @@ export function App() {
       ) {
         event.preventDefault();
         selectTask(shortcutTask);
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        if (event.shiftKey) runAll();
-        else run();
       } else if (event.key.toLowerCase() === "e") {
         event.preventDefault();
         setOpenDialog({ kind: "export" });
@@ -808,7 +843,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [run, runAll, selectTask]);
+  }, [selectTask]);
 
   useEffect(() => {
     const onDragEnter = (event: DragEvent) => {
@@ -909,7 +944,7 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="binder">
+      <div className="binder" data-task={task}>
         <BinderShape task={task} tasks={TASK_ORDER} />
         <div className="binder-band">
           <BinderTabs
@@ -950,31 +985,16 @@ export function App() {
                       <PopoverButton
                         className="section-action runtime-button"
                         label="Runtime settings"
-                        title={
-                          state.background.is_paused
-                            ? "Background inference paused after an error; any action resumes it."
-                            : "Runtime settings: automatic runs, device, precision"
-                        }
-                        trigger={
-                          <>
-                            <GearGlyph />
-                            {state.background.is_paused && (
-                              <span className="attention-badge" />
-                            )}
-                          </>
-                        }
+                        title="Runtime settings: device, precision"
+                        trigger={<GearGlyph />}
                       >
                         <div className="popover-title">Runtime</div>
                         <InferenceSettings
                           model={state.model}
                           task={task}
-                          background={state.background}
                           isDisabled={state.is_busy}
-                          onBackgroundChange={(scope) =>
-                            void call(() => api.setBackground(scope))
-                          }
                           onChange={(selection: ModelSelection) =>
-                            void call(() => api.selectModel(selection))
+                            void selectModel(selection)
                           }
                         />
                       </PopoverButton>
@@ -985,10 +1005,10 @@ export function App() {
                     model={state.model}
                     isDisabled={state.is_busy}
                     onSelectPreset={(backend, preset) =>
-                      void call(() => api.selectPreset(backend, preset))
+                      void selectPreset(backend, preset)
                     }
                     onSelectionChange={(selection) =>
-                      void call(() => api.selectModel(selection))
+                      void selectModel(selection)
                     }
                   />
                 </Section>
@@ -1050,11 +1070,18 @@ export function App() {
                 </Section>
               </div>
               <div className="pane-footer">
-                <RunButton
+                <InferControl
                   isDisabled={state.is_busy}
-                  onRun={run}
-                  onRunAll={runAll}
-                  onOpenMenu={openMenuBelow}
+                  inference={state.inference}
+                  frameStep={state.sampling.frame_step}
+                  onInfer={infer}
+                  onInferenceChange={(mode, isAuto) =>
+                    void call(() => api.setInference(mode, isAuto))
+                  }
+                  onRetry={() => void call(() => api.retryInference())}
+                  onFrameStepChange={(frameStep) =>
+                    void call(() => api.setSampling(frameStep))
+                  }
                 />
               </div>
             </div>
@@ -1188,16 +1215,8 @@ export function App() {
                         }
                         frameStep={state.sampling.frame_step}
                         isClassification={task === "classification"}
-                        isBusy={state.is_busy}
                         isPlaybackShown={!isVideoPlayerUsed}
                         onSeek={seek}
-                        onFrameStepChange={(frameStep) =>
-                          void call(() => api.setSampling(frameStep))
-                        }
-                        onRunVideo={() => void runAction(api.runMedia)}
-                        onRunLive={
-                          isVideoPlayerUsed ? () => void runLive() : null
-                        }
                       />
                     )}
                   </div>
@@ -1240,7 +1259,11 @@ export function App() {
               </PaneHeader>
               <div
                 className="pane-region"
-                style={{ height: layout.profileHeight, flex: "none" }}
+                style={
+                  isCollapsed("models")
+                    ? { flex: "none" }
+                    : { height: layout.profileHeight, flex: "none" }
+                }
               >
                 <ProfileTable
                   profiles={state.profiles}
@@ -1249,21 +1272,25 @@ export function App() {
                   onSelect={(key) => void call(() => api.selectProfile(key))}
                   onRemove={(keys) => void call(() => api.removeProfiles(keys))}
                   isBusy={state.is_busy}
+                  isCollapsed={isCollapsed("models")}
+                  onToggleCollapsed={() => toggleSection("models")}
                   onUpdateOutdated={() => void runAction(api.updateOutdated)}
                 />
               </div>
-              <Splitter
-                isHorizontal
-                onResize={(delta) =>
-                  setLayout((currentLayout) => ({
-                    ...currentLayout,
-                    profileHeight: Math.max(
-                      90,
-                      Math.min(600, currentLayout.profileHeight + delta),
-                    ),
-                  }))
-                }
-              />
+              {!isCollapsed("models") && (
+                <Splitter
+                  isHorizontal
+                  onResize={(delta) =>
+                    setLayout((currentLayout) => ({
+                      ...currentLayout,
+                      profileHeight: Math.max(
+                        90,
+                        Math.min(600, currentLayout.profileHeight + delta),
+                      ),
+                    }))
+                  }
+                />
+              )}
               <div className="pane-region results-panel">
                 <div className="section-header">
                   <span className="section-icon">
@@ -1293,14 +1320,10 @@ export function App() {
                           standardMinimum={state.standard_minimum}
                           standardOverlap={state.standard_overlap_threshold}
                           isOverlapAvailable={!taskView.isScoreBased}
-                          belowMinimum={display.belowMinimum}
                           isCollapsed={isCollapsed("review")}
                           onToggleCollapsed={() => toggleSection("review")}
                           onThresholdsChange={draftThresholds.change}
                           onSuppressionChange={draftSuppression.change}
-                          onBelowMinimumChange={(belowMinimum) =>
-                            setDisplay({ ...display, belowMinimum })
-                          }
                         />
                       </div>
                       {!isCollapsed("review") && (

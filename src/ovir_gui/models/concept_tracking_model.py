@@ -23,7 +23,7 @@ class ConceptTrackingModel(RecognitionModel):
     """
     SAM 3 video concept tracker of ``open_vocabulary_segmentation``.
 
-    Every instance of the phrases of the classes is detected on each frame of a video, read in order, and matched
+    Every instance of the phrases and reference images of the classes is detected on each frame of a video, read in order, and matched
     with the tracks of earlier frames; results name the track of each instance. An image is a video of one frame.
     """
 
@@ -105,7 +105,7 @@ class ConceptTrackingModel(RecognitionModel):
 
     @property
     def supported_query_kinds(self) -> frozenset[QueryKind]:
-        return frozenset({QueryKind.TEXT})
+        return frozenset({QueryKind.TEXT, QueryKind.VISUAL})
 
     @property
     def is_sequential(self) -> bool:

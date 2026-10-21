@@ -155,8 +155,10 @@ class InferenceEngine:
 
     def cancel(self) -> None:
         """
-        Cancel the foreground job, if any, after its current mini-batch.
+        Cancel the running and the waiting job, if any, after the current mini-batch.
         """
+        if self._running_job is not None:
+            self._running_job.control.cancel()
         if self._foreground_job is not None:
             self._foreground_job.control.cancel()
 
@@ -167,8 +169,6 @@ class InferenceEngine:
         if self._is_stopped:
             return
         self._is_stopped = True
-        if self._running_job is not None:
-            self._running_job.control.cancel()
         self.cancel()
         self._inbox.put(None)
 

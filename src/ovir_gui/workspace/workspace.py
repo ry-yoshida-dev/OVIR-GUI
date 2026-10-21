@@ -7,6 +7,8 @@ from ..analysis import ProfileComparison, ResultStatistics
 from ..export import ExportItem, ExportReport, ExportScope, ExportSelection, ResultExporter
 from ..media import ClassColors, FrameKey, MediaCollection, MediaItem, PlaybackProxyWriter, VideoSampling
 from ..models import (
+    LicenseConsent,
+    LicensedDependency,
     ModelProfile,
     ModelSelection,
     ModelSelector,
@@ -33,13 +35,13 @@ from ..vocabulary import ClassDefinition
 from .action_reply import ActionReply
 from .action_status import ActionStatus
 from .background_planner import BackgroundPlanner
-from .background_scope import BackgroundScope
 from .class_workbench import ClassWorkbench
 from .deferred_save import DeferredSave
 from .export_plan import ExportPlan
 from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
 from .inference_job import InferenceJob
+from .inference_mode import InferenceMode
 from .job_purpose import JobPurpose
 from .job_summary import JobSummary
 from .media_state import MediaState
@@ -65,9 +67,9 @@ class Workspace:
 
     An image is recognized once; a video on its sampled frames (every ``VideoSampling.frame_step``-th frame), and any
     other frame on request. Results are kept per model profile, so switching tasks or models keeps every result.
-    Images without an up-to-date result of the selected model are recognized in the background, the shown image first,
-    as far as the background scope allows; videos are recognized only when run. A foreground job (Run, Run Video,
-    Run All, Update Outdated, export) interrupts it after the current mini-batch. Editing the classes keeps every
+    With auto inference on, pictures without an up-to-date result of the selected model are recognized in the background
+    as far as the inference mode allows: the shown picture only, or every picture with the shown media first. A foreground job (Infer,
+    Infer All, Update Outdated, export) interrupts it after the current mini-batch. Editing the classes keeps every
     result and reports pictures recognized with other classes as outdated. Results are saved shortly after every
     change, the session whenever it changes.
     """
@@ -117,11 +119,13 @@ class Workspace:
         self._media: dict[Path, MediaItem] = {}
         self._current_key: FrameKey | None = None
         self._sampling: VideoSampling = VideoSampling()
-        self._background_scope: BackgroundScope = BackgroundScope.ALL
+        self._inference_mode: InferenceMode = InferenceMode.SHOWN
+        self._is_auto_inference: bool = True
         self._task: RecognitionTask = (
             self.DEFAULT_TASK if self.DEFAULT_TASK in model_selector.tasks else model_selector.tasks[0]
         )
         self._selections: dict[RecognitionTask, ModelSelection] = {}
+        self._license_consent: LicenseConsent = LicenseConsent(stores.license_consent_store.load())
         self._library: ResultLibrary = self._load_results()
         self._shown_profile: ModelProfile | None = None
         self._compared_profile: ModelProfile | None = None
@@ -157,6 +161,18 @@ class Workspace:
             Selector given at construction.
         """
         return self._model_selector
+
+    @property
+    def license_consent(self) -> LicenseConsent:
+        """
+        Licensed modules the user accepted, in this run or an earlier one.
+
+        Returns
+        -------
+        LicenseConsent
+            Consent of the workspace.
+        """
+        return self._license_consent
 
     @property
     def stores(self) -> WorkspaceStores:
@@ -319,16 +335,28 @@ class Workspace:
         return self._sampling
 
     @property
-    def background_scope(self) -> BackgroundScope:
+    def inference_mode(self) -> InferenceMode:
         """
-        What is recognized in the background.
+        Which pictures are inferred, automatically while the user works and by Infer.
 
         Returns
         -------
-        BackgroundScope
-            Current scope.
+        InferenceMode
+            Current mode.
         """
-        return self._background_scope
+        return self._inference_mode
+
+    @property
+    def is_auto_inference(self) -> bool:
+        """
+        Whether the pictures of the inference mode are inferred automatically while the user works.
+
+        Returns
+        -------
+        bool
+            False when pictures are inferred only at the user's request.
+        """
+        return self._is_auto_inference
 
     @property
     def task(self) -> RecognitionTask:
@@ -511,6 +539,26 @@ class Workspace:
         return self._engine.is_busy or self._is_exporting
 
     @property
+    def background_progress(self) -> RunProgress | None:
+        """
+        Progress of the running background job.
+
+        Returns
+        -------
+        RunProgress | None
+            Titled with the file being recognized; ``None`` while no background job runs.
+        """
+        job: InferenceJob | None = self._engine.running_job
+        if job is None or job.purpose.is_foreground:
+            return None
+        return RunProgress(
+            title=f"{job.purpose.title}: {job.frame_keys[0].path.name}",
+            processed_count=job.control.processed_count,
+            total_count=len(job.frame_keys),
+            is_blocking=False,
+        )
+
+    @property
     def background_key(self) -> FrameKey | None:
         """
         Picture the background is about to hand back.
@@ -527,16 +575,16 @@ class Workspace:
         return remaining[0] if remaining else None
 
     @property
-    def is_background_paused(self) -> bool:
+    def background_pause_reason(self) -> str | None:
         """
-        Whether a model error paused the background.
+        Error message that paused automatic inference.
 
         Returns
         -------
-        bool
-            True until the user acts.
+        str | None
+            Message of the model error until the user acts; None while not paused.
         """
-        return self._planner.is_paused
+        return self._planner.pause_reason
 
     @property
     def last_export(self) -> ExportReport | None:
@@ -990,22 +1038,25 @@ class Workspace:
         self._engine.interrupt_background()
         self._resume_background()
 
-    def set_background_scope(self, scope: BackgroundScope) -> None:
+    def set_inference(self, mode: InferenceMode, is_auto: bool) -> None:
         """
-        Choose what is recognized in the background.
+        Choose which pictures are inferred, and whether automatically.
 
         Parameters
         ----------
-        scope : BackgroundScope
-            New scope.
+        mode : InferenceMode
+            New mode.
+        is_auto : bool
+            Whether the pictures of the mode are inferred automatically while the user works.
         """
-        self._background_scope = scope
+        if mode is self._inference_mode and is_auto == self._is_auto_inference:
+            return
+        self._inference_mode = mode
+        self._is_auto_inference = is_auto
         self._save_session()
         self._changed(WorkspaceTopic.STATE)
-        if scope is BackgroundScope.OFF:
-            self._engine.interrupt_background()
-        else:
-            self._resume_background()
+        self._engine.interrupt_background()
+        self._resume_background()
 
     def select_task(self, task: RecognitionTask) -> None:
         """
@@ -1052,13 +1103,17 @@ class Workspace:
             If the preset does not exist.
         ValueError
             If a foreground job runs, the preset belongs to another task, or the device or an option is not available.
+        ModuleNotFoundError
+            If the model needs a licensed module that is not installed.
+        PermissionError
+            If the model needs a licensed module whose license has not been accepted.
         """
         if self.is_busy:
             raise ValueError("The model cannot be changed while an inference is running.")
         if selection.task is not self._task:
             raise ValueError(f"A {selection.task.value} model cannot be chosen while the task is {self._task.value}.")
         validated: ModelSelection = self._model_selector.validated(selection)
-        self._model_selector.model_of(validated)
+        self._license_consent.ensure_permitted(self._model_selector.model_of(validated))
         self._selections[validated.task] = validated
         self._planner.unpin()
         self._planner.resume()
@@ -1084,8 +1139,33 @@ class Workspace:
             If the preset does not exist.
         ValueError
             If a foreground job runs.
+        ModuleNotFoundError
+            If the model needs a licensed module that is not installed.
+        PermissionError
+            If the model needs a licensed module whose license has not been accepted.
         """
         self.select_model(self._model_selector.selection_of(self._task, backend, preset_name))
+
+    def accept_license(self, dependency: LicensedDependency) -> None:
+        """
+        Record that the user confirmed compliant use of a licensed module, allowing the models needing it.
+
+        Parameters
+        ----------
+        dependency : LicensedDependency
+            Accepted module.
+
+        Raises
+        ------
+        ModuleNotFoundError
+            If the module is not installed.
+        """
+        self._license_consent.accept(dependency)
+        try:
+            self._stores.license_consent_store.save(self._license_consent.accepted)
+        except OSError as error:
+            self._inform(f"Could not remember the accepted license: {error}")
+        self._changed(WorkspaceTopic.STATE)
 
     def edit_classes(self, edit: Callable[[ClassWorkbench], object]) -> None:
         """
@@ -1144,7 +1224,7 @@ class Workspace:
             self._inform(f"Could not remember the drawings: {error}")
         model: RecognitionModel = self.current_model()
         is_drawing_read: bool = any(kind.is_drawn_on_picture for kind in model.supported_query_kinds)
-        if is_drawing_read and not model.is_sequential and frame_key == self._current_key:
+        if self._is_auto_inference and is_drawing_read and not model.is_sequential and frame_key == self._current_key:
             self._requested_key = frame_key
             self._planner.unpin()
         self._changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
@@ -1169,43 +1249,19 @@ class Workspace:
             return self._reject("Open an image or a video first.")
         return self._start(JobPurpose.RUN_CURRENT, (self._current_key,), is_skipping_approved)
 
-    def run_media(self, is_skipping_approved: bool, start_frame: int | None = None) -> ActionReply:
+    def run_all(self, is_skipping_approved: bool, start_frame: int | None = None) -> ActionReply:
         """
-        Recognize every sampled frame of the shown video (or the shown image) lacking an up-to-date result.
+        Recognize every picture of the open media lacking an up-to-date result of the chosen model.
+
+        The shown media comes first, from the shown frame on, and the other media follow in list order.
 
         Parameters
         ----------
         is_skipping_approved : bool
             Whether the user approved leaving out classes the model cannot query.
         start_frame : int | None, optional
-            Frame of the video recognized first, so results arrive ahead of playback from there; the frames before it
-            follow. From the first frame when absent.
-
-        Returns
-        -------
-        ActionReply
-            Started, refused, or waiting for approval.
-        """
-        item: MediaItem | None = self.current_item
-        if item is None:
-            return self._reject("Open an image or a video first.")
-        pending: tuple[FrameKey, ...] = self._pending_keys(self.current_model().profile(), (item,))
-        if not pending:
-            return self._reject(f"Every sampled picture of {item.path.name} is up to date.")
-        if start_frame is not None:
-            pending = tuple(
-                sorted(pending, key=lambda key: key.frame_index is not None and key.frame_index < start_frame)
-            )
-        return self._start(JobPurpose.RUN_MEDIA, pending, is_skipping_approved)
-
-    def run_all(self, is_skipping_approved: bool) -> ActionReply:
-        """
-        Recognize every picture of the open media lacking an up-to-date result of the chosen model.
-
-        Parameters
-        ----------
-        is_skipping_approved : bool
-            Whether the user approved leaving out classes the model cannot query.
+            Frame of the shown video recognized first, so results arrive ahead of playback; the frames before it
+            follow. From the shown frame when absent.
 
         Returns
         -------
@@ -1217,7 +1273,7 @@ class Workspace:
         pending: tuple[FrameKey, ...] = self._pending_keys(self.current_model().profile(), self.media)
         if not pending:
             return self._reject("Every picture is up to date with the chosen model.")
-        return self._start(JobPurpose.RUN_ALL, pending, is_skipping_approved)
+        return self._start(JobPurpose.RUN_ALL, self._from_shown(pending, start_frame), is_skipping_approved)
 
     def update_outdated(self, is_skipping_approved: bool) -> ActionReply:
         """
@@ -1251,9 +1307,16 @@ class Workspace:
 
     def cancel(self) -> None:
         """
-        Ask the foreground job, if any, to stop after its current mini-batch.
+        Stop every inference after its current mini-batch and turn automatic inference off.
+
+        Results of finished mini-batches are kept; nothing is inferred again until the user asks for it.
         """
+        self._requested_key = None
+        if self._is_auto_inference:
+            self._is_auto_inference = False
+            self._save_session()
         self._engine.cancel()
+        self._changed(WorkspaceTopic.STATE)
 
     def export_plan(self) -> ExportPlan:
         """
@@ -1307,7 +1370,7 @@ class Workspace:
         if request.options.scope is ExportScope.LISTED and plan.pending_count:
             return self._reject(
                 f"Only listed findings can be exported once inference has run on every picture; {plan.pending_count} "
-                + "pictures have no up-to-date result. Run All first, or export every kept finding."
+                + "pictures have no up-to-date result. Infer All first, or export every kept finding."
             )
         if not plan.pending_count:
             self._write_export(plan.profile, request)
@@ -1577,7 +1640,7 @@ class Workspace:
                 self._inform(
                     f"Done{unreadable_note}." if summary.recognized_count else f"Nothing inferred{unreadable_note}."
                 )
-            case JobPurpose.RUN_MEDIA | JobPurpose.RUN_ALL | JobPurpose.UPDATE_OUTDATED:
+            case JobPurpose.RUN_ALL | JobPurpose.UPDATE_OUTDATED:
                 verb: str = "stopped after" if summary.is_cancelled else "inferred"
                 self._inform(f"{job.purpose.title} {verb} {summary.recognized_count} pictures{unreadable_note}.")
             case JobPurpose.EXPORT:
@@ -1608,7 +1671,7 @@ class Workspace:
         if job.purpose.is_foreground:
             self._alert(f"{job.purpose.title} failed", message)
         else:
-            self._planner.pause()
+            self._planner.pause(message)
             self._inform(f"Background inference paused: {message}")
         self._changed(WorkspaceTopic.STATE)
         self._detect_in_background()
@@ -1622,19 +1685,21 @@ class Workspace:
         for task, selection in session.selections.items():
             try:
                 validated: ModelSelection = self._model_selector.validated(selection)
-                self._model_selector.model_of(validated)
-            except (KeyError, ValueError, TypeError):
+                self._license_consent.ensure_permitted(self._model_selector.model_of(validated))
+            except (KeyError, ValueError, TypeError, PermissionError, ModuleNotFoundError):
                 continue
             self._selections[task] = validated
         if session.task is not None and session.task in self._model_selector.tasks:
             self._task = session.task
         if session.frame_step is not None and session.frame_step > 0:
             self._sampling = VideoSampling(session.frame_step)
-        if session.background_scope is not None:
+        if session.inference_mode is not None:
             try:
-                self._background_scope = BackgroundScope(session.background_scope)
+                self._inference_mode = InferenceMode(session.inference_mode)
             except ValueError:
                 pass
+        if session.is_auto_inference is not None:
+            self._is_auto_inference = session.is_auto_inference
 
     def _show_profile_of_task(self) -> None:
         profiles: tuple[ModelProfile, ...] = self.task_profiles()
@@ -1730,7 +1795,8 @@ class Workspace:
                     current_frame_index=None if self._current_key is None else self._current_key.frame_index,
                     task=self._task,
                     frame_step=self._sampling.frame_step,
-                    background_scope=self._background_scope.value,
+                    inference_mode=self._inference_mode.value,
+                    is_auto_inference=self._is_auto_inference,
                     selections=dict(self._selections),
                 )
             )
@@ -1751,6 +1817,14 @@ class Workspace:
                 self._engine.interrupt_background()
         self._resume_background()
 
+    def retry_background(self) -> None:
+        """
+        Resume automatic inference paused by a model error, retrying failed pictures.
+        """
+        self._planner.forget_failures()
+        self._resume_background()
+        self._changed(WorkspaceTopic.STATE)
+
     def _resume_background(self) -> None:
         self._planner.resume()
         self._detect_in_background()
@@ -1763,13 +1837,16 @@ class Workspace:
             return
         profile: ModelProfile = model.profile()
         is_settled: Callable[[FrameKey], bool] = self._settled_check(profile)
-        keys: tuple[FrameKey, ...] = self._requested_keys(profile, is_settled) or self._planner.next_keys(
-            profile,
-            self._background_scope,
-            self._current_key,
-            self.media,
-            is_settled,
-        )
+        keys: tuple[FrameKey, ...] = self._requested_keys(profile, is_settled)
+        if not keys and self._is_auto_inference:
+            keys = self._planner.next_keys(
+                profile,
+                self._inference_mode,
+                self._current_key,
+                self.media,
+                self.expected_keys,
+                is_settled,
+            )
         if not keys:
             return
         prompt: LabeledPrompt | None = self._background_prompt(model)
@@ -1844,6 +1921,24 @@ class Workspace:
             return ()
         return () if is_settled(requested) else (requested,)
 
+    def _from_shown(self, frame_keys: tuple[FrameKey, ...], start_frame: int | None) -> tuple[FrameKey, ...]:
+        current: FrameKey | None = self._current_key
+        if current is None:
+            return frame_keys
+        paths: list[Path] = list(self._media)
+        shown_index: int = paths.index(current.path)
+        rank_of: dict[Path, int] = {path: (index - shown_index) % len(paths) for index, path in enumerate(paths)}
+        first_frame: int = start_frame if start_frame is not None else (current.frame_index or 0)
+        return tuple(
+            sorted(
+                frame_keys,
+                key=lambda key: (
+                    rank_of[key.path],
+                    key.path == current.path and (key.frame_index or 0) < first_frame,
+                ),
+            )
+        )
+
     def _sequential_keys(self, frame_keys: tuple[FrameKey, ...]) -> tuple[FrameKey, ...]:
         prompts: PicturePrompts = self._workbench.picture_board.prompts
         ordered: list[FrameKey] = []
@@ -1879,7 +1974,7 @@ class Workspace:
                 return ActionReply(
                     status=ActionStatus.NEEDS_APPROVAL,
                     message=f"{model.preset.label} does not take reference images, so these classes have no usable "
-                    + f"query: {listed}. Run inference on the other classes without them?",
+                    + f"query: {listed}. Infer the other classes without them?",
                     skipped_class_names=preparation.unapproved_class_names,
                 )
             return self._reject(preparation.issue)

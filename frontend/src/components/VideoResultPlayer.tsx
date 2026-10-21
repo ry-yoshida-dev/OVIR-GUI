@@ -47,7 +47,7 @@ function shownResultOf(
   isInterpolated: boolean,
 ): FramePayload | null {
   const indexed = results === null ? null : isInterpolated ? results.interpolatedAt(timeId) : results.resultAt(timeId);
-  return indexed ?? (frame !== null && frame.frame === timeId ? frame : null);
+  return indexed ?? (frame !== null && frame.frame === timeId && frame.is_exact ? frame : null);
 }
 
 function isLoaded(snapshot: PlayerSnapshot): boolean {
@@ -198,9 +198,7 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
       ? "not inferred"
       : shown.result_frame === shownFrame
         ? `${visibleInstancesOf(shown, listedIndices, options).length} findings`
-        : shown.frame === shownFrame
-          ? `interpolated from #${shown.result_frame}`
-          : `result of #${shown.result_frame}`;
+        : `interpolated from #${shown.result_frame}`;
 
   return (
     <div className="video-result-player">

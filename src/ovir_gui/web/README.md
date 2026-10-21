@@ -28,7 +28,7 @@ FastAPI web server exposing the `workspace` package to a browser: a JSON API und
 | [picture_prompt_routes.py](./picture_prompt_routes.py) | `PicturePromptRoutes` handles drawing exemplar boxes and object marks on the open pictures. |
 | [picture_info.py](./picture_info.py) | `PictureInfo` holds the version and upright size of an image file, read without decoding its pixels. |
 | [picture_preview_cache.py](./picture_preview_cache.py) | `PicturePreviewCache` caches images and video frames encoded as JPEG for the browser. |
-| [recognition_routes.py](./recognition_routes.py) | `RecognitionRoutes` handles reading the state, choosing task and model, running recognitions, and reviewing and comparing results. |
+| [recognition_routes.py](./recognition_routes.py) | `RecognitionRoutes` handles reading the state, choosing task and model, accepting licenses of optional modules, running recognitions, and reviewing and comparing results. |
 | [reference_draft.py](./reference_draft.py) | `ReferenceDraft` is a reference image waiting for the user to box its examples. |
 | [reference_draft_store.py](./reference_draft_store.py) | `ReferenceDraftStore` keeps reference images opened for boxing until they are added to a class or pushed out. |
 | [web_application.py](./web_application.py) | `WebApplication` assembles the FastAPI application from the routers, the event WebSocket and the static frontend. |
@@ -47,8 +47,8 @@ All routes below are prefixed with `/api`.
 
 | Router | Routes |
 | --- | --- |
-| `MediaRoutes` | `POST /media/open`, `POST /media/close`, `POST /media/show`, `PUT /sampling`, `PUT /background`, `POST /uploads`, `POST /media/playback`, `GET /media/image?path=`, `GET /media/frame?path=&frame=`, `GET /media/video?path=`, `GET /files?path=` |
-| `RecognitionRoutes` | `GET /state`, `GET /results`, `GET /frame?path=&frame=`, `GET /video-frames?path=&after=&until=`, `GET /timeline?path=`, `GET /statistics`, `PUT /task`, `PUT /model`, `PUT /model/preset`, `POST /run`, `POST /run-media`, `POST /run-all`, `POST /update-outdated`, `POST /cancel`, `POST /profiles/select`, `POST /profiles/remove`, `POST /profiles/clear`, `PUT /comparison`, `POST /findings/acceptance`, `PUT /thresholds`, `POST /findings/csv` |
+| `MediaRoutes` | `POST /media/open`, `POST /media/close`, `POST /media/show`, `PUT /sampling`, `PUT /inference`, `POST /inference/retry`, `POST /uploads`, `POST /media/playback`, `GET /media/image?path=`, `GET /media/frame?path=&frame=`, `GET /media/video?path=`, `GET /files?path=` |
+| `RecognitionRoutes` | `GET /state`, `GET /results`, `GET /frame?path=&frame=`, `GET /video-frames?path=&after=&until=`, `GET /timeline?path=`, `GET /statistics`, `PUT /task`, `PUT /model`, `PUT /model/preset`, `POST /run`, `POST /run-all`, `POST /update-outdated`, `POST /cancel`, `POST /profiles/select`, `POST /profiles/remove`, `POST /profiles/clear`, `PUT /comparison`, `POST /findings/acceptance`, `PUT /thresholds`, `POST /findings/csv` |
 | `ClassRoutes` | `POST /classes/rows`, `PUT /classes/{class_index}/name`, `PUT /classes/{class_index}/phrases/{phrase_index}`, `POST /classes/remove`, `POST /classes/move-phrase`, `POST /classes/move-reference`, `PUT /classes/text`, `POST /classes/clear`, `POST /classes/file`, `GET /references/image`, `POST /references/drafts`, `POST /references/drafts/path`, `POST /references/drafts/current`, `GET /references/drafts/{draft_id}/image`, `POST /references`, `GET /class-sets`, `GET /class-sets/{name}`, `GET /class-sets/{name}/image`, `POST /class-sets/save`, `POST /class-sets/load`, `PUT /class-sets/{name}`, `DELETE /class-sets/{name}`, `POST /class-sets/import`, `GET /class-sets/{name}/file` |
 | `PicturePromptRoutes` | `POST /prompts/exemplars`, `POST /prompts/exemplars/remove`, `PUT /prompts/marks`, `POST /prompts/marks/remove`, `POST /prompts/clear` |
 | `ExportRoutes` | `GET /export/plan`, `POST /export`, `GET /export/download` |
@@ -57,5 +57,5 @@ All routes below are prefixed with `/api`.
 
 - `GET /api/media/video?path=` streams an open video file with HTTP range support so the browser can play it.
 - `GET /api/video-frames?path=` returns the frame payload of every recognized frame of a video, used to draw findings during playback; `after` and `until` limit it to a frame range, so a browser playing a video while it is recognized fetches only the new frames.
-- `POST /api/run-media` takes an optional `start_frame`: the sampled frames from it onward are recognized first, then the earlier ones.
+- `POST /api/run-all` takes an optional `start_frame`: the shown media comes first, its sampled frames from that frame onward, then the earlier ones and the other media.
 - `GET /api/media/image` and `GET /api/media/frame` return JPEG previews from `PicturePreviewCache`, since browsers cannot display every format the models read.

@@ -1,12 +1,13 @@
 from .acceptance_body import AcceptanceBody
 from .approval_body import ApprovalBody
-from .background_body import BackgroundBody
 from .class_row_body import ClassRowBody
 from .exemplar_body import ExemplarBody
 from .exemplar_removal_body import ExemplarRemovalBody
 from .export_body import ExportBody
 from .finding_reference import FindingReference
 from .image_prompt_reference import ImagePromptReference
+from .inference_body import InferenceBody
+from .license_body import LicenseBody
 from .mark_body import MarkBody
 from .mark_removal_body import MarkRemovalBody
 from .model_selection_body import ModelSelectionBody
@@ -23,7 +24,7 @@ from .profile_body import ProfileBody
 from .profiles_body import ProfilesBody
 from .reference_boxes_body import ReferenceBoxesBody
 from .remove_classes_body import RemoveClassesBody
-from .run_media_body import RunMediaBody
+from .run_all_body import RunAllBody
 from .sampling_body import SamplingBody
 from .show_body import ShowBody
 from .suppression_body import SuppressionBody
@@ -35,13 +36,14 @@ from .thresholds_body import ThresholdsBody
 __all__ = [
     "AcceptanceBody",
     "ApprovalBody",
-    "BackgroundBody",
     "ClassRowBody",
     "ExemplarBody",
     "ExemplarRemovalBody",
     "ExportBody",
     "FindingReference",
     "ImagePromptReference",
+    "InferenceBody",
+    "LicenseBody",
     "MarkBody",
     "MarkRemovalBody",
     "ModelSelectionBody",
@@ -58,7 +60,7 @@ __all__ = [
     "ProfilesBody",
     "ReferenceBoxesBody",
     "RemoveClassesBody",
-    "RunMediaBody",
+    "RunAllBody",
     "SamplingBody",
     "ShowBody",
     "SuppressionBody",

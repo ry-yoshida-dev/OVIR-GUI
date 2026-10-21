@@ -9,6 +9,7 @@ from ..prompting import QueryKind
 from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
+from .licensed_dependency import LicensedDependency
 from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
@@ -123,6 +124,11 @@ class DetectionModel(RecognitionModel):
     @property
     def supported_query_kinds(self) -> frozenset[QueryKind]:
         return self.query_kinds_of(self._settings.backend)
+
+    @property
+    def licensed_dependencies(self) -> frozenset[LicensedDependency]:
+        dependency: LicensedDependency | None = LicensedDependency.of_detector_backend(self._settings.backend)
+        return frozenset() if dependency is None else frozenset({dependency})
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:

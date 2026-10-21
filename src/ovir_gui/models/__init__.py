@@ -4,6 +4,8 @@ from .compute_precision import ComputePrecision
 from .concept_tracking_model import ConceptTrackingModel
 from .detection_model import DetectionModel
 from .device_availability import DeviceAvailability
+from .license_consent import LicenseConsent
+from .licensed_dependency import LicensedDependency
 from .mask_generation_model import MaskGenerationModel
 from .model_preset import ModelPreset
 from .model_profile import ModelProfile
@@ -28,6 +30,8 @@ __all__ = [
     "ConceptTrackingModel",
     "DetectionModel",
     "DeviceAvailability",
+    "LicenseConsent",
+    "LicensedDependency",
     "MaskGenerationModel",
     "ModelPreset",
     "ModelProfile",

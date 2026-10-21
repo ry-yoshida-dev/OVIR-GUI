@@ -1,7 +1,6 @@
 from .action_reply import ActionReply
 from .action_status import ActionStatus
 from .background_planner import BackgroundPlanner
-from .background_scope import BackgroundScope
 from .class_workbench import ClassWorkbench
 from .deferred_save import DeferredSave
 from .export_plan import ExportPlan
@@ -9,6 +8,7 @@ from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
 from .inference_job import InferenceJob
 from .inference_listener import InferenceListener
+from .inference_mode import InferenceMode
 from .job_control import JobControl
 from .job_purpose import JobPurpose
 from .job_summary import JobSummary
@@ -32,7 +32,6 @@ __all__ = [
     "ActionReply",
     "ActionStatus",
     "BackgroundPlanner",
-    "BackgroundScope",
     "ClassWorkbench",
     "DeferredSave",
     "ExportPlan",
@@ -40,6 +39,7 @@ __all__ = [
     "InferenceEngine",
     "InferenceJob",
     "InferenceListener",
+    "InferenceMode",
     "JobControl",
     "JobPurpose",
     "JobSummary",

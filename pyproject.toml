@@ -24,17 +24,17 @@ dependencies = [
     "omegaconf",
     "pydantic>=2",
     "fastapi",
-    "uvicorn",
+    "uvicorn[standard]",
     "python-multipart",
     "dataclass-initializer @ git+https://github.com/ry-yoshida-dev/DataclassInitializer.git@60ed88a29184474aed069ab9253070923b5dcff0",
     "geometry @ git+https://github.com/ry-yoshida-dev/Geometry.git@7a019d2696877c2beff959d8bb4b2e1efc9880c1",
     "object-detection-format @ git+https://github.com/ry-yoshida-dev/ObjectDetectionFormat.git@f5edaa53c41c5b9b3db1ed9bbee49af8d14853ce",
     "segmentation-format @ git+https://github.com/ry-yoshida-dev/SegmentationFormat.git@5fa833f0b8c143e9fddb84d1ab932bfa38855c82",
     "video-handler @ git+https://github.com/ry-yoshida-dev/VideoHandler.git@8e9b5c0c133162b610b15b24f6f7e572eb3873bf",
-    "time-series-iterator @ git+https://github.com/ry-yoshida-dev/TimeSeriesIterator.git@811968acc9136eebe2f386d29e5291f4de43f305",
+    "time-series-iterator @ git+https://github.com/ry-yoshida-dev/TimeSeriesIterator.git@ddbe88a0861d8229b5acb0a201c891fad9926b3c",
     "open-vocabulary-classification @ git+https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git@361ce2c41b6701a2dc9e7bea14ee2d60fab8c91f",
     "open-vocabulary-detector @ git+https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git@6e2300c7e7cc75c97b09e34cda9eefef71b6029e",
-    "open-vocabulary-segmentation @ git+https://github.com/ry-yoshida-dev/OpenVocabularySegmentation.git@3d22b6f57f84bec86af94ecda753c23548955f79",
+    "open-vocabulary-segmentation @ git+https://github.com/ry-yoshida-dev/OpenVocabularySegmentation.git@a08eea4103d2d9fbd06f7d01c34b1a92022d24bd",
 ]
 
 [project.scripts]
@@ -46,6 +46,9 @@ Homepage = "https://github.com/ry-yoshida-dev/OVIR-GUI"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx", "mypy", "basedpyright", "ruff"]
+ultralytics = [
+    "open-vocabulary-detector[ultralytics] @ git+https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git@6e2300c7e7cc75c97b09e34cda9eefef71b6029e",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

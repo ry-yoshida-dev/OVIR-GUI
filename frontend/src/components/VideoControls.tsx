@@ -9,12 +9,8 @@ interface VideoControlsProps {
   timeline: TimelinePayload | null;
   frameStep: number;
   isClassification: boolean;
-  isBusy: boolean;
   isPlaybackShown: boolean;
   onSeek: (frame: number, isFinal: boolean) => void;
-  onFrameStepChange: (frameStep: number) => void;
-  onRunVideo: () => void;
-  onRunLive: (() => void) | null;
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
@@ -31,12 +27,8 @@ export function VideoControls({
   timeline,
   frameStep,
   isClassification: isTopClassBanded,
-  isBusy,
   isPlaybackShown,
   onSeek,
-  onFrameStepChange,
-  onRunVideo,
-  onRunLive,
 }: VideoControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -112,27 +104,6 @@ export function VideoControls({
         <span className="small muted">/ {lastFrame}</span>
       </div>
       )}
-      <div className="row">
-        <label className="sampling-label" title="Inference runs on every Nth frame only; frames in between show the previous result">
-          Inference interval
-        </label>
-        <NumberField value={frameStep} minimum={1} maximum={100000} step={1} width={60} onCommit={(value) => onFrameStepChange(Math.round(value))} />
-        <span className="small">frames</span>
-        <span className="row-spacer" />
-        <button className="small" disabled={isBusy} onClick={onRunVideo} title="Run inference on every sampled frame of this video now">
-          Run Video
-        </button>
-        {onRunLive !== null && (
-          <button
-            className="small primary"
-            disabled={isBusy}
-            onClick={onRunLive}
-            title="Run inference from the shown frame onward and play the video as results arrive; playback slows down to stay behind inference"
-          >
-            ▶ Run Live
-          </button>
-        )}
-      </div>
     </div>
   );
 }

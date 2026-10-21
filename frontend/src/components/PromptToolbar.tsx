@@ -12,7 +12,7 @@ function hintOf(editor: PicturePromptEditor, frameStep: number): string {
   if (editor.kind === "exemplar") return "Drag a box around an example (+); right-drag or Ctrl-drag around a look-alike to exclude (−).";
   if (!editor.isPointSupported) return "Drag a box around each object.";
   const sampling = frameStep > 1 ? ` Tracking reads every ${frameStep}th frame; sample every frame for smooth tracks.` : "";
-  const tail = editor.isSequential ? ` Mark again on a later frame to correct it, then Run Video.${sampling}` : "";
+  const tail = editor.isSequential ? ` Mark again on a later frame to correct it, then infer every sampled frame.${sampling}` : "";
   return `Click on an object, right-click to exclude a spot, or drag a box.${tail}`;
 }
 

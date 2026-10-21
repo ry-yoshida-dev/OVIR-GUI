@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import type { ClassEntry, ClassSetState, ReferenceEntry } from "../api/types";
 import { useDialogs } from "./DialogHost";
-import { useMenu } from "./Menu";
+import { type MenuEntry, useMenu } from "./Menu";
 import { SaveGlyph } from "./SaveGlyph";
 import { TrashGlyph } from "./TrashGlyph";
 
@@ -126,8 +126,6 @@ export function ClassEditor({
         (parsed.kind === "reference" && entry.references.some((reference) => reference.digest === parsed.digest)));
     if (!isValid) setSelected(null);
   }, [classes, selected]);
-
-  const selectedClassIndex = selected === null ? null : parseKey(selected).classIndex;
 
   const run = async (action: () => Promise<unknown>): Promise<boolean> => {
     try {
@@ -306,6 +304,25 @@ export function ClassEditor({
     if (isConfirmed) await run(api.clearClasses);
   };
 
+  const promptEntries = (entry: ClassEntry, classIndex: number): MenuEntry[] => [
+    {
+      label: "Text Prompt",
+      onSelect: () => {
+        expand(entry.name);
+        setSelected(classKey(classIndex));
+        setEditing({ kind: "new-phrase", classIndex, position: entry.phrases.length });
+      },
+    },
+    {
+      label: isImagePromptSupported ? "Image Prompt…" : "Image Prompt… (needs OWL-ViT or YOLOE)",
+      isDisabled: !isImagePromptSupported,
+      onSelect: () => {
+        setSelected(classKey(classIndex));
+        onAddImagePrompt(classIndex);
+      },
+    },
+  ];
+
   const rows = useMemo(() => classes.map((entry, classIndex) => ({ entry, classIndex })), [classes]);
 
   const renderEditing = (placeholder: string, initialValue = "") => (
@@ -362,23 +379,6 @@ export function ClassEditor({
         >
           <SaveGlyph />
         </button>
-      </div>
-      <div className="row">
-        <button onClick={startNewRow} title="Add a class, or a phrase next to the selected phrase">
-          + Text
-        </button>
-        <button
-          onClick={() => selectedClassIndex !== null && onAddImagePrompt(selectedClassIndex)}
-          disabled={selectedClassIndex === null || !isImagePromptSupported}
-          title={
-            isImagePromptSupported
-              ? "Add example images to the selected class"
-              : "Image prompts need OWL-ViT or YOLOE"
-          }
-        >
-          + Image
-        </button>
-        <span className="grow" />
         <button className="ghost icon" onClick={() => void removeSelection()} disabled={selected === null} title="Remove (Delete)">
           <TrashGlyph />
         </button>
@@ -425,7 +425,6 @@ export function ClassEditor({
       >
         {rows.map(({ entry, classIndex }) => {
           const isExpanded = expanded.has(entry.name);
-          const hasChildren = entry.phrases.length > 0 || entry.references.length > 0;
           const isReferenceOnly = entry.phrases.length === 0 && entry.references.length > 0;
           return (
             <div key={`${classIndex}:${entry.name}`}>
@@ -445,18 +444,7 @@ export function ClassEditor({
                   setSelected(classKey(classIndex));
                   menu.open(event.clientX, event.clientY, [
                     { label: "Rename", shortcut: "F2", onSelect: () => setEditing({ kind: "rename-class", classIndex }) },
-                    {
-                      label: "New Phrase",
-                      onSelect: () => {
-                        expand(entry.name);
-                        setEditing({ kind: "new-phrase", classIndex, position: entry.phrases.length });
-                      },
-                    },
-                    {
-                      label: "Add Image Prompt…",
-                      isDisabled: !isImagePromptSupported,
-                      onSelect: () => onAddImagePrompt(classIndex),
-                    },
+                    ...promptEntries(entry, classIndex),
                     { label: "New Class Below", onSelect: () => setEditing({ kind: "new-class", position: classIndex + 1 }) },
                     { isSeparator: true, label: "" },
                     {
@@ -485,7 +473,7 @@ export function ClassEditor({
                     });
                   }}
                 >
-                  {hasChildren ? (isExpanded ? "▾" : "▸") : ""}
+                  {isExpanded ? "▾" : "▸"}
                 </span>
                 <span className="swatch" style={{ background: entry.color }} />
                 {editing?.kind === "rename-class" && editing.classIndex === classIndex ? (
@@ -499,7 +487,7 @@ export function ClassEditor({
                       {[
                         entry.phrases.length === 1 && entry.phrases[0] === entry.name
                           ? ""
-                          : `${entry.phrases.length} phrase${entry.phrases.length === 1 ? "" : "s"}`,
+                          : `${entry.phrases.length} prompt${entry.phrases.length === 1 ? "" : "s"}`,
                         entry.references.length > 0
                           ? `${entry.references.length} image${entry.references.length === 1 ? "" : "s"}`
                           : "",
@@ -617,10 +605,38 @@ export function ClassEditor({
                     </span>
                   </div>
                 ))}
+              {isExpanded &&
+                !(
+                  editing?.kind === "new-phrase" &&
+                  editing.classIndex === classIndex &&
+                  editing.position >= entry.phrases.length
+                ) && (
+                  <div className="tree-row child tree-add-prompt">
+                    <button
+                      className="ghost"
+                      onClick={(event) => menu.openBelow(event.currentTarget, promptEntries(entry, classIndex))}
+                      title={`Add a text or image prompt to ${entry.name}`}
+                    >
+                      + Add Prompt
+                    </button>
+                  </div>
+                )}
             </div>
           );
         })}
         {newClassRow(classes.length)}
+        {!(editing?.kind === "new-class" && editing.position === classes.length) && (
+          <button
+            className="ghost tree-add-class"
+            onClick={() => {
+              setSelected(null);
+              setEditing({ kind: "new-class", position: classes.length });
+            }}
+            title="Add a class; write 'class: phrase, phrase' to give it several phrases"
+          >
+            + Add Class
+          </button>
+        )}
         <div
           className={`tree-drop-end${dropTarget?.kind === "end" ? " drop-before" : ""}`}
           onDragOver={(event) => onDragOver(event, { kind: "end" })}

@@ -18,6 +18,7 @@ from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
 from .detection_model import DetectionModel
+from .licensed_dependency import LicensedDependency
 from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
@@ -34,12 +35,12 @@ class SegmentationModel(RecognitionModel):
 
     SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector
     of the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases
-    themselves, and SAM 3 also of the exemplar boxes drawn on each picture. Masks and boxes are kept down to the
+    themselves, and SAM 3 also of reference images and of the exemplar boxes drawn on each picture. Masks and boxes are kept down to the
     confidence floor of ``DetectionModel``, so the minimum confidence is tuned afterwards through the class minimums
     without recognizing again. NMS thresholds are read at inference time.
 
-    A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases and exemplar boxes, and the
-    others phrases only.
+    A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases, reference images and exemplar
+    boxes, and the others phrases only.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
@@ -208,8 +209,16 @@ class SegmentationModel(RecognitionModel):
         if box_detector is not None:
             return DetectionModel.query_kinds_of(box_detector.backend)
         if self._settings.backend is SegmenterBackend.SAM3:
-            return frozenset({QueryKind.TEXT, QueryKind.EXEMPLAR})
+            return frozenset({QueryKind.TEXT, QueryKind.VISUAL, QueryKind.EXEMPLAR})
         return frozenset({QueryKind.TEXT})
+
+    @property
+    def licensed_dependencies(self) -> frozenset[LicensedDependency]:
+        box_detector: DetectorSettings | None = self._settings.box_detector
+        if box_detector is None:
+            return frozenset()
+        dependency: LicensedDependency | None = LicensedDependency.of_detector_backend(box_detector.backend)
+        return frozenset() if dependency is None else frozenset({dependency})
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:

@@ -45,7 +45,7 @@ class TestPicturePromptRoutes:
         ).build()
         with TestClient(application) as client:
             _ = client.get(f"/?token={ACCESS_TOKEN}")
-            assert client.put("/api/background", json={"scope": "off"}).status_code == 200
+            assert client.put("/api/inference", json={"mode": "shown", "is_auto": False}).status_code == 200
             paths: list[str] = [str(media_directory / "first.png"), str(media_directory / "second.png")]
             assert client.post("/api/media/open", json={"paths": paths}).status_code == 200
             yield client

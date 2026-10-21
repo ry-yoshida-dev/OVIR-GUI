@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../api/types";
 import { useDialogs } from "./DialogHost";
 import { ProfilesGlyph } from "./ProfilesGlyph";
+import { Section } from "./Section";
 import { TrashGlyph } from "./TrashGlyph";
 
 interface ProfileTableProps {
@@ -9,6 +10,8 @@ interface ProfileTableProps {
   shownKey: string | null;
   comparedKey: string | null;
   isBusy: boolean;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
   onSelect: (key: string) => void;
   onRemove: (keys: string[]) => void;
   onUpdateOutdated: () => void;
@@ -58,6 +61,8 @@ export function ProfileTable({
   shownKey,
   comparedKey,
   isBusy,
+  isCollapsed,
+  onToggleCollapsed,
   onSelect,
   onRemove,
   onUpdateOutdated,
@@ -102,14 +107,15 @@ export function ProfileTable({
     setCheckedKeys(new Set());
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
-      <div className="section-header">
-        <span className="section-icon">
-          <ProfilesGlyph />
-        </span>
-        <span className="section-title">Models</span>
-        <span className="section-count">{profiles.length}</span>
-        <span className="grow" />
+    <Section
+      title="Models"
+      icon={<ProfilesGlyph />}
+      count={profiles.length}
+      isCollapsed={isCollapsed}
+      onToggle={onToggleCollapsed}
+      isStretched
+      isFlush
+      actions={
         <button
           className="section-action"
           disabled={checked.length === 0}
@@ -119,7 +125,8 @@ export function ProfileTable({
         >
           <TrashGlyph />
         </button>
-      </div>
+      }
+    >
       <div
         className="table-wrap"
         tabIndex={0}
@@ -221,6 +228,6 @@ export function ProfileTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </Section>
   );
 }

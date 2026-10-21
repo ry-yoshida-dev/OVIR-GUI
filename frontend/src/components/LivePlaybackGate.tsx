@@ -27,8 +27,8 @@ const RESUME_LEAD_SECONDS = 0.5;
 const RATE_TOLERANCE = 0.02;
 
 /**
- * Plays a video while it is being recognized: playback never passes the last recognized frame, and its rate follows
- * the recognition speed so it rarely has to stop.
+ * Keeps playback behind recognition while a video is being recognized: playback never passes the last recognized
+ * frame, and its rate follows the recognition speed so it rarely has to stop.
  */
 export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }: LivePlaybackGateProps) {
   const controller: PlayerController = usePlayerController();
@@ -94,7 +94,6 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
   useEffect(() => {
     if (live === null) return;
     pace.current.reset();
-    isGatePaused.current = true;
     evaluate();
   }, [live?.serial, evaluate]);
 

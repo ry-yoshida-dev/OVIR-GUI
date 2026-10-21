@@ -67,14 +67,18 @@ class SessionStore:
             frame_value: JsonValue = content.get("frame")
             task_value: JsonValue = content.get("task")
             step_value: JsonValue = content.get("frame_step")
-            scope_value: JsonValue = content.get("background")
+            mode_value: JsonValue = content.get("inference_mode")
+            auto_value: JsonValue = content.get("is_auto_inference")
             return Session(
                 media_paths=media_paths,
                 current_path=current_path,
                 current_frame_index=None if frame_value is None else JsonFields.integer_of(frame_value, "frame"),
                 task=None if task_value is None else RecognitionTask(JsonFields.string_of(task_value, "task")),
                 frame_step=None if step_value is None else JsonFields.integer_of(step_value, "frame_step"),
-                background_scope=None if scope_value is None else JsonFields.string_of(scope_value, "background"),
+                inference_mode=None if mode_value is None else JsonFields.string_of(mode_value, "inference_mode"),
+                is_auto_inference=(
+                    None if auto_value is None else JsonFields.boolean_of(auto_value, "is_auto_inference")
+                ),
                 selections=self._selections_of(content.get("selections", [])),
             )
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
@@ -100,7 +104,8 @@ class SessionStore:
             "frame": session.current_frame_index,
             "task": None if session.task is None else session.task.value,
             "frame_step": session.frame_step,
-            "background": session.background_scope,
+            "inference_mode": session.inference_mode,
+            "is_auto_inference": session.is_auto_inference,
             "selections": [self._selection_content(selection) for selection in session.selections.values()],
         }
         self._root_directory.mkdir(parents=True, exist_ok=True)

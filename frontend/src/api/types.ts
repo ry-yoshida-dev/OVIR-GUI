@@ -45,6 +45,23 @@ export interface CurrentPicture {
 export interface PresetEntry {
   name: string;
   label: string;
+  licenses: string[];
+}
+
+export interface BoxDetectorEntry {
+  label: string;
+  licenses: string[];
+}
+
+export interface LicenseEntry {
+  value: string;
+  title: string;
+  license_name: string;
+  license_url: string;
+  notice: string;
+  install_command: string;
+  is_installed: boolean;
+  is_accepted: boolean;
 }
 
 export interface BackendEntry {
@@ -110,7 +127,8 @@ export interface ModelState {
   tuning: ModelTuning;
   devices: DeviceEntry[];
   precisions: PrecisionEntry[];
-  box_detectors: string[];
+  box_detectors: BoxDetectorEntry[];
+  licenses: LicenseEntry[];
   selection: ModelSelection;
   is_image_prompt_supported: boolean;
   query_kinds: QueryKindValue[];
@@ -192,10 +210,13 @@ export interface ExportSummary {
   file_count: number;
 }
 
-export interface BackgroundState {
-  scope: string;
-  scopes: { value: string; label: string }[];
-  is_paused: boolean;
+export type InferenceModeValue = "shown" | "all";
+
+export interface InferenceState {
+  mode: InferenceModeValue;
+  is_auto: boolean;
+  modes: { value: InferenceModeValue; label: string }[];
+  pause_reason: string | null;
 }
 
 export interface ExemplarEntry {
@@ -248,8 +269,9 @@ export interface WorkspaceState {
   activity: string;
   summary: string;
   progress: Progress | null;
+  background_progress: Progress | null;
   is_busy: boolean;
-  background: BackgroundState;
+  inference: InferenceState;
   sampling: { frame_step: number };
   last_export: ExportSummary | null;
   palette: string[];

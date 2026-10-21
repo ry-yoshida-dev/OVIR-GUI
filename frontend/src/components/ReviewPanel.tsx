@@ -6,7 +6,6 @@ import type {
   Thresholds,
 } from "../api/types";
 import { ConfidenceOverview } from "../lib/confidenceOverview";
-import type { BelowMinimumStyle } from "../lib/displayOptions";
 import { FALLBACK_CLASS_COLOR } from "../lib/frameView";
 import { OverlapOverview } from "../lib/overlapOverview";
 import {
@@ -15,6 +14,7 @@ import {
   reviewModeOf,
 } from "../lib/reviewModes";
 import type { ReviewFilter } from "../lib/reviewFilter";
+import { ResetGlyph } from "./ResetGlyph";
 import { ResultsHeading } from "./ResultsHeading";
 import { ScoreChartRow } from "./ScoreChartRow";
 
@@ -27,12 +27,10 @@ interface ReviewPanelProps {
   standardMinimum: number;
   standardOverlap: number;
   isOverlapAvailable: boolean;
-  belowMinimum: BelowMinimumStyle;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
   onThresholdsChange: (thresholds: Thresholds) => void;
   onSuppressionChange: (suppression: DuplicateSuppression) => void;
-  onBelowMinimumChange: (belowMinimum: BelowMinimumStyle) => void;
 }
 
 const OVERALL_COLOR = "var(--accent)";
@@ -58,12 +56,10 @@ export function ReviewPanel({
   standardMinimum,
   standardOverlap,
   isOverlapAvailable,
-  belowMinimum,
   isCollapsed,
   onToggleCollapsed,
   onThresholdsChange,
   onSuppressionChange,
-  onBelowMinimumChange,
 }: ReviewPanelProps) {
   const [modeValue, setModeValue] = useState<ReviewModeValue>("confidence");
   const [expandedClasses, setExpandedClasses] = useState<ReadonlySet<string>>(
@@ -134,6 +130,35 @@ export function ReviewPanel({
           ? withoutKey(suppression.class_overlap_thresholds, className)
           : { ...suppression.class_overlap_thresholds, [className]: overlap },
     });
+
+  const isConfidenceDeparted =
+    !isSameValue(thresholds.default_minimum, standardMinimum, mode.step) ||
+    Object.keys(thresholds.class_minimums).length > 0 ||
+    Object.keys(thresholds.phrase_minimums).length > 0;
+  const isOverlapDeparted =
+    !isSameValue(suppression.overlap_threshold, standardOverlap, mode.step) ||
+    Object.keys(suppression.class_overlap_thresholds).length > 0;
+  const isShownModeDeparted =
+    shownModeValue === "overlap" ? isOverlapDeparted : isConfidenceDeparted;
+
+  const resetShownMode = () => {
+    switch (shownModeValue) {
+      case "confidence":
+        onThresholdsChange({
+          default_minimum: standardMinimum,
+          class_minimums: {},
+          phrase_minimums: {},
+        });
+        break;
+      case "overlap":
+        onSuppressionChange({
+          ...suppression,
+          overlap_threshold: standardOverlap,
+          class_overlap_thresholds: {},
+        });
+        break;
+    }
+  };
 
   const confidenceRows = () => {
     const isDeparted = !isSameValue(
@@ -375,22 +400,18 @@ export function ReviewPanel({
             Remove duplicates
           </label>
         )}
-        <button
-          type="button"
-          className="ghost small"
-          title={
-            belowMinimum === "dim"
-              ? "Findings below their threshold or removed as duplicates are dimmed; click to hide them"
-              : "Findings below their threshold or removed as duplicates are hidden; click to dim them instead"
-          }
-          onClick={() =>
-            onBelowMinimumChange(belowMinimum === "dim" ? "hide" : "dim")
-          }
-        >
-          {belowMinimum === "dim"
-            ? "Filtered out: Dimmed"
-            : "Filtered out: Hidden"}
-        </button>
+        {!isCollapsed && (
+          <button
+            type="button"
+            className="ghost small labeled-action"
+            title={`Reset every ${mode.title} threshold to its default`}
+            disabled={!isShownModeDeparted}
+            onClick={resetShownMode}
+          >
+            <ResetGlyph />
+            Reset
+          </button>
+        )}
         <span className="muted small">{confidences.overallKeptCount} kept</span>
       </ResultsHeading>
       {!isCollapsed && (

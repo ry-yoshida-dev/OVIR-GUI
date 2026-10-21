@@ -45,35 +45,12 @@ export function ScoreHistogramChart({
   onEditingChange,
 }: ScoreHistogramChartProps) {
   const area = useRef<HTMLDivElement>(null);
-  const latest = useRef({ mode, threshold, onChange, isDisabled });
-  latest.current = { mode, threshold, onChange, isDisabled };
   const [isDragging, setIsDragging] = useState(false);
   const [text, setText] = useState(threshold.toFixed(2));
 
   useEffect(() => {
     if (isEditing) setText(threshold.toFixed(2));
   }, [isEditing, threshold]);
-
-  useEffect(() => {
-    const element = area.current;
-    if (element === null) return;
-    const handleWheel = (event: WheelEvent) => {
-      const current = latest.current;
-      if (current.isDisabled) return;
-      const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
-      if (delta === 0) return;
-      event.preventDefault();
-      const step =
-        current.mode.step * (event.shiftKey ? COARSE_STEP_FACTOR : 1);
-      const next = snappedValue(
-        current.mode,
-        current.threshold - Math.sign(delta) * step,
-      );
-      if (next !== current.threshold) current.onChange(next);
-    };
-    element.addEventListener("wheel", handleWheel, { passive: false });
-    return () => element.removeEventListener("wheel", handleWheel);
-  }, []);
 
   const valueAt = (clientX: number): number => {
     const bounds = area.current?.getBoundingClientRect();
@@ -186,7 +163,7 @@ export function ScoreHistogramChart({
         ref={area}
         className="score-chart-area"
         style={{ height }}
-        title={`${mode.valueHint}\nDrag or scroll to move it (Shift for larger steps); double-click to reset.`}
+        title={`${mode.valueHint}\nDrag to move it, or use the arrow keys (Shift for larger steps); double-click to reset.`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}

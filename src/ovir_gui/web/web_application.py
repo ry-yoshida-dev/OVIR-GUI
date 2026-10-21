@@ -105,7 +105,7 @@ class WebApplication:
         application: FastAPI = FastAPI(title="OVIR GUI", lifespan=self._lifespan)
         application.add_middleware(AccessGuard, token=self._access_token, cookie_name=self._cookie_name)
         application.add_middleware(FramingHeaders, policy=self._embedding_policy)
-        for error_type in (ValueError, KeyError, IndexError, OSError):
+        for error_type in (ValueError, KeyError, IndexError, OSError, ModuleNotFoundError):
             application.add_exception_handler(error_type, self._client_error)
         for routes in (
             MediaRoutes(self._context),

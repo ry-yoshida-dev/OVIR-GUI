@@ -26,6 +26,11 @@ export function ModelPanel({
   const modeBackends = model.backends.filter(
     (entry) => entry.mode === model.mode,
   );
+  const isPhrasesOnly =
+    model.prompt_mode !== "automatic" &&
+    !model.is_sequential &&
+    model.query_kinds.length === 1 &&
+    model.query_kinds[0] === "text";
   const selectFirstPreset = (entry: BackendEntry | undefined) => {
     const firstPreset = entry?.presets[0];
     if (entry !== undefined && firstPreset !== undefined)
@@ -102,14 +107,22 @@ export function ModelPanel({
             />
           </>
         )}
-        <span>Inputs</span>
-        <div className="input-tags">
-          {promptInputsOf(model).map((input) => (
-            <span key={input.label} className="input-tag" title={input.hint}>
-              {input.label}
-            </span>
-          ))}
-        </div>
+        {!isPhrasesOnly && (
+          <>
+            <span>Inputs</span>
+            <div className="input-tags">
+              {promptInputsOf(model).map((input) => (
+                <span
+                  key={input.label}
+                  className="input-tag"
+                  title={input.hint}
+                >
+                  {input.label}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

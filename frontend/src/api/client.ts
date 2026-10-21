@@ -7,6 +7,7 @@ import type {
   DuplicateSuppression,
   ExportPlan,
   FramePayload,
+  InferenceModeValue,
   MarkEntry,
   ModelSelection,
   ObjectDocument,
@@ -91,7 +92,9 @@ export const api = {
     post("/api/media/show", { path, frame }),
   setSampling: (frameStep: number) =>
     put("/api/sampling", { frame_step: frameStep }),
-  setBackground: (scope: string) => put("/api/background", { scope }),
+  setInference: (mode: InferenceModeValue, isAuto: boolean) =>
+    put("/api/inference", { mode, is_auto: isAuto }),
+  retryInference: () => post("/api/inference/retry", {}),
   preparePlayback: (path: string) => post("/api/media/playback", { path }),
   upload: (files: { file: File; name: string }[], isFirstShown: boolean) => {
     const form = new FormData();
@@ -118,16 +121,14 @@ export const api = {
   selectModel: (selection: ModelSelection) => put("/api/model", selection),
   selectPreset: (backend: string, presetName: string) =>
     put("/api/model/preset", { backend, preset_name: presetName }),
+  acceptLicense: (dependency: string) =>
+    post("/api/licenses/accept", { dependency }),
   run: (isSkippingApproved = false) =>
     post<ActionReply>("/api/run", { is_skipping_approved: isSkippingApproved }),
-  runMedia: (isSkippingApproved = false, startFrame: number | null = null) =>
-    post<ActionReply>("/api/run-media", {
-      is_skipping_approved: isSkippingApproved,
-      start_frame: startFrame,
-    }),
-  runAll: (isSkippingApproved = false) =>
+  runAll: (isSkippingApproved = false, startFrame: number | null = null) =>
     post<ActionReply>("/api/run-all", {
       is_skipping_approved: isSkippingApproved,
+      start_frame: startFrame,
     }),
   updateOutdated: (isSkippingApproved = false) =>
     post<ActionReply>("/api/update-outdated", {

@@ -1,13 +1,11 @@
-import type { BackgroundState, ModelSelection, ModelState, TaskValue } from "../api/types";
+import type { ModelSelection, ModelState, TaskValue } from "../api/types";
 import { taskViewOf } from "../lib/taskViews";
 import { NumberField } from "./NumberField";
 
 interface InferenceSettingsProps {
   model: ModelState;
   task: TaskValue;
-  background: BackgroundState;
   isDisabled: boolean;
-  onBackgroundChange: (scope: string) => void;
   onChange: (selection: ModelSelection) => void;
 }
 
@@ -16,9 +14,7 @@ const TILING_CHOICES = [null, 2, 3, 4];
 export function InferenceSettings({
   model,
   task,
-  background,
   isDisabled,
-  onBackgroundChange,
   onChange,
 }: InferenceSettingsProps) {
   const selection = model.selection;
@@ -28,26 +24,6 @@ export function InferenceSettings({
   const confidenceLabel = model.tuning.confidence_label;
   return (
     <div className="form-grid">
-      <span>Auto run</span>
-      <div className="row">
-        <select
-          className="grow"
-          value={background.scope}
-          title="Which images get inference automatically while you work; videos get it when you run them"
-          onChange={(event) => onBackgroundChange(event.target.value)}
-        >
-          {background.scopes.map((scope) => (
-            <option key={scope.value} value={scope.value}>
-              {scope.label}
-            </option>
-          ))}
-        </select>
-        {background.is_paused && (
-          <span className="paused-text" title="Background inference paused after an error; any action resumes it.">
-            paused
-          </span>
-        )}
-      </div>
       <span>Device</span>
       <select value={selection.device} disabled={isDisabled} onChange={(event) => change({ device: event.target.value })}>
         {model.devices.map((entry) => (
@@ -142,9 +118,9 @@ export function InferenceSettings({
             onChange={(event) => change({ box_detector_label: event.target.value === "" ? null : event.target.value })}
           >
             <option value="">Preset detector</option>
-            {model.box_detectors.map((label) => (
-              <option key={label} value={label}>
-                {label}
+            {model.box_detectors.map((entry) => (
+              <option key={entry.label} value={entry.label}>
+                {entry.label}
               </option>
             ))}
           </select>

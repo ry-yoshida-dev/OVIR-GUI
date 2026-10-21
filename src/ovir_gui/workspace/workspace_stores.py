@@ -6,6 +6,7 @@ from ..storage import (
     ClassSetStore,
     ClassThresholdStore,
     DuplicateSuppressionStore,
+    LicenseConsentStore,
     PicturePromptStore,
     ResultsStore,
     SessionStore,
@@ -27,6 +28,7 @@ class WorkspaceStores:
     ├── results.ovirresults     # results of every model profile
     ├── class_thresholds.json   # minimum confidence per task, class and phrase
     ├── duplicate_suppression.json  # review suppression of overlapping boxes per task
+    ├── license_consent.json    # licenses of optional modules the user accepted
     ├── picture_prompts.json    # exemplar boxes and object marks drawn on pictures
     ├── session.json            # open media, shown picture, task, sampling, model choices
     ├── uploads/                # files uploaded from a browser
@@ -47,6 +49,8 @@ class WorkspaceStores:
         Minimum confidence of each class per task.
     duplicate_suppression_store : DuplicateSuppressionStore
         Review suppression of overlapping boxes per task.
+    license_consent_store : LicenseConsentStore
+        Licenses of optional modules the user accepted.
     picture_prompt_store : PicturePromptStore
         Exemplar boxes and object marks drawn on pictures.
     session_store : SessionStore
@@ -65,6 +69,7 @@ class WorkspaceStores:
     results_store: ResultsStore
     class_threshold_store: ClassThresholdStore
     duplicate_suppression_store: DuplicateSuppressionStore
+    license_consent_store: LicenseConsentStore
     picture_prompt_store: PicturePromptStore
     session_store: SessionStore
     upload_store: UploadStore
@@ -92,6 +97,7 @@ class WorkspaceStores:
             results_store=ResultsStore(root_directory),
             class_threshold_store=ClassThresholdStore(root_directory),
             duplicate_suppression_store=DuplicateSuppressionStore(root_directory),
+            license_consent_store=LicenseConsentStore(root_directory),
             picture_prompt_store=PicturePromptStore(root_directory),
             session_store=SessionStore(root_directory),
             upload_store=UploadStore(root_directory),

@@ -276,7 +276,12 @@ class ModelSelector:
             case DetectionModel():
                 return base.customized(selection)
             case SegmentationModel():
-                return base.customized(selection, self._box_model_of(selection.box_detector_label))
+                box_model: DetectionModel | None = (
+                    None
+                    if selection.box_detector_label is None
+                    else self.box_detector_model(selection.box_detector_label)
+                )
+                return base.customized(selection, box_model)
             case PromptableSegmentationModel() | MaskGenerationModel() | ObjectTrackingModel() | ConceptTrackingModel():
                 return base.customized(selection)
             case _:
@@ -357,9 +362,27 @@ class ModelSelector:
             case SegmentationMode.CONCEPT_TRACKING:
                 return ConceptTrackingModel.from_preset(preset)
 
-    def _box_model_of(self, label: str | None) -> DetectionModel | None:
-        if label is None:
-            return None
+    def box_detector_model(self, label: str) -> DetectionModel:
+        """
+        Detection preset finding the boxes a segmenter masks.
+
+        Parameters
+        ----------
+        label : str
+            ``"<backend>/<name>"`` of a detection preset.
+
+        Returns
+        -------
+        DetectionModel
+            Model of the preset as written in its file.
+
+        Raises
+        ------
+        KeyError
+            If the label is malformed or no such preset exists.
+        TypeError
+            If the preset is not a detection preset.
+        """
         backend, separator, preset_name = label.partition("/")
         if not separator:
             raise KeyError(f"box detector must be written <backend>/<preset>. got {label!r}")

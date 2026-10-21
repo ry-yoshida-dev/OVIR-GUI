@@ -10,13 +10,14 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | --- | --- |
 | [acceptance_body.py](./acceptance_body.py) | `AcceptanceBody` lists findings of the shown results to keep or reject. |
 | [approval_body.py](./approval_body.py) | `ApprovalBody` is a request that may need the user's approval to leave out classes. |
-| [background_body.py](./background_body.py) | `BackgroundBody` chooses what is recognized in the background. |
 | [class_row_body.py](./class_row_body.py) | `ClassRowBody` carries a class, or phrases of a class, typed by the user. |
 | [exemplar_body.py](./exemplar_body.py) | `ExemplarBody` carries an exemplar box drawn on a picture. |
 | [exemplar_removal_body.py](./exemplar_removal_body.py) | `ExemplarRemovalBody` names an exemplar box to remove from a picture. |
 | [export_body.py](./export_body.py) | `ExportBody` describes the export chosen in the export dialog. |
 | [finding_reference.py](./finding_reference.py) | `FindingReference` identifies one finding of the shown results. |
 | [image_prompt_reference.py](./image_prompt_reference.py) | `ImagePromptReference` identifies one reference image of a class. |
+| [inference_body.py](./inference_body.py) | `InferenceBody` chooses which pictures are inferred and whether automatically. |
+| [license_body.py](./license_body.py) | `LicenseBody` names the licensed module whose license the user accepted. |
 | [mark_body.py](./mark_body.py) | `MarkBody` carries the points and box marking one object on a picture. |
 | [mark_removal_body.py](./mark_removal_body.py) | `MarkRemovalBody` names an object to unmark on one picture or on its whole file. |
 | [model_selection_body.py](./model_selection_body.py) | `ModelSelectionBody` carries the preset and overrides chosen in the model settings. |
@@ -33,7 +34,7 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | [profiles_body.py](./profiles_body.py) | `ProfilesBody` names stored model profiles removed at once. |
 | [reference_boxes_body.py](./reference_boxes_body.py) | `ReferenceBoxesBody` carries the boxes drawn on a reference draft for one class. |
 | [remove_classes_body.py](./remove_classes_body.py) | `RemoveClassesBody` lists classes, phrases and reference images removed at once. |
-| [run_media_body.py](./run_media_body.py) | `RunMediaBody` runs the sampled frames of the shown video, optionally from a given frame onward. |
+| [run_all_body.py](./run_all_body.py) | `RunAllBody` runs every picture lacking a result, the shown video optionally from a given frame onward. |
 | [sampling_body.py](./sampling_body.py) | `SamplingBody` sets the sampling of video frames. |
 | [show_body.py](./show_body.py) | `ShowBody` names the picture to show. |
 | [table_body.py](./table_body.py) | `TableBody` lists the findings of the result table, in display order. |
