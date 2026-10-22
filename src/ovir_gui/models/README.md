@@ -25,7 +25,7 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | [mask_generation_recognizer.py](./mask_generation_recognizer.py) | `MaskGenerationRecognizer` wraps a loaded automatic mask generator. |
 | [model_preset.py](./model_preset.py) | `ModelPreset` describes the YAML preset of one model shipped with a model library. |
 | [model_profile.py](./model_profile.py) | `ModelProfile` identifies the model and options a result was recognized with. |
-| [model_selection.py](./model_selection.py) | `ModelSelection` holds the preset chosen in the model settings with its overrides. |
+| [model_selection.py](./model_selection.py) | `ModelSelection` holds the preset chosen in the model settings with its overrides, including the batch size. |
 | [model_selector.py](./model_selector.py) | `ModelSelector` lists the presets of every task and builds the model of a chosen preset with overrides applied. |
 | [object_prompt_builder.py](./object_prompt_builder.py) | `ObjectPromptBuilder` turns an `ObjectMark` into the `ObjectPrompt` of `open_vocabulary_segmentation`, keeping the elements the model takes. |
 | [object_tracking_model.py](./object_tracking_model.py) | `ObjectTrackingModel` holds the settings of a video object tracker (SAM 2, SAM 3 tracker, EdgeTAM). |

@@ -193,6 +193,17 @@ export function App() {
     serial: number;
     isBusySeen: boolean;
   } | null>(null);
+  const [followRequest, setFollowRequest] = useState<{
+    path: string;
+    serial: number;
+    isFollowed: boolean;
+  } | null>(null);
+  const liveSerial = useRef(0);
+  const isAutoInferenceRunning =
+    (state?.inference.is_auto ?? false) &&
+    state?.inference.pause_reason === null;
+  const isAutoInferenceRunningRef = useRef(isAutoInferenceRunning);
+  isAutoInferenceRunningRef.current = isAutoInferenceRunning;
   const videoResultsRef = useRef(videoResults);
   videoResultsRef.current = videoResults;
   const [unplayableSources, setUnplayableSources] = useState<
@@ -421,17 +432,38 @@ export function App() {
   const playbackPosition = useMemo(() => new PlaybackPosition(), [currentPath]);
   const isRecognitionRunning = state?.is_busy ?? false;
   const frameStep = state?.sampling.frame_step ?? 1;
-  const isLiveRunning =
+  const isInferAllLive =
     liveRequest !== null &&
     liveRequest.path === currentPath &&
     (isRecognitionRunning || !liveRequest.isBusySeen);
-  const live = useMemo(
-    () =>
-      liveRequest === null || liveRequest.path !== currentPath
-        ? null
-        : { serial: liveRequest.serial, isRunning: isLiveRunning, frameStep },
-    [liveRequest, currentPath, isLiveRunning, frameStep],
-  );
+  const isPlaybackFollowed =
+    followRequest !== null &&
+    followRequest.path === currentPath &&
+    followRequest.isFollowed &&
+    isAutoInferenceRunning;
+  const isLiveRunning = isInferAllLive || isPlaybackFollowed;
+  const live = useMemo(() => {
+    if (liveRequest !== null && liveRequest.path === currentPath)
+      return {
+        serial: liveRequest.serial,
+        isRunning: isInferAllLive,
+        frameStep,
+      };
+    if (followRequest !== null && followRequest.path === currentPath)
+      return {
+        serial: followRequest.serial,
+        isRunning: isPlaybackFollowed,
+        frameStep,
+      };
+    return null;
+  }, [
+    liveRequest,
+    followRequest,
+    currentPath,
+    isInferAllLive,
+    isPlaybackFollowed,
+    frameStep,
+  ]);
 
   useEffect(() => {
     setLiveRequest((request) => {
@@ -444,6 +476,9 @@ export function App() {
 
   useEffect(() => {
     setLiveRequest((request) =>
+      request !== null && request.path !== currentPath ? null : request,
+    );
+    setFollowRequest((request) =>
       request !== null && request.path !== currentPath ? null : request,
     );
   }, [currentPath]);
@@ -512,12 +547,14 @@ export function App() {
     const isStarted = await runAction((isSkippingApproved) =>
       api.runAll(isSkippingApproved, startFrame),
     );
-    if (isStarted && isVideo && path !== null)
-      setLiveRequest((request) => ({
+    if (isStarted && isVideo && path !== null) {
+      liveSerial.current += 1;
+      setLiveRequest({
         path,
-        serial: (request?.serial ?? 0) + 1,
+        serial: liveSerial.current,
         isBusySeen: false,
-      }));
+      });
+    }
   }, [currentPath, isVideo, current?.frame, playbackPosition, runAction]);
 
   const show = useCallback(
@@ -530,23 +567,56 @@ export function App() {
     [call],
   );
 
+  const showThrottled = useCallback(
+    (path: string, frame: number, isPlaying: boolean, isFinal: boolean) => {
+      setPendingFrame({ path, frame });
+      window.clearTimeout(showTimer.current);
+      const send = () => {
+        lastShowAt.current = Date.now();
+        void call(async () => {
+          const reply = await api.show(path, frame, isPlaying);
+          if (!isPlaying) return;
+          setFollowRequest((request) =>
+            request !== null && request.path === path
+              ? { ...request, isFollowed: reply.is_following_playback }
+              : request,
+          );
+        });
+      };
+      const elapsed = Date.now() - lastShowAt.current;
+      if (isFinal || elapsed >= SHOW_THROTTLE_MILLISECONDS) send();
+      else
+        showTimer.current = window.setTimeout(
+          send,
+          SHOW_THROTTLE_MILLISECONDS - elapsed,
+        );
+    },
+    [call],
+  );
+
   const seek = useCallback(
     (frame: number, isFinal: boolean) => {
       if (currentPath === null) return;
-      setPendingFrame({ path: currentPath, frame });
-      window.clearTimeout(showTimer.current);
-      const elapsed = Date.now() - lastShowAt.current;
-      if (isFinal || elapsed >= SHOW_THROTTLE_MILLISECONDS) {
-        lastShowAt.current = Date.now();
-        void call(() => api.show(currentPath, frame));
-      } else {
-        showTimer.current = window.setTimeout(() => {
-          lastShowAt.current = Date.now();
-          void call(() => api.show(currentPath, frame));
-        }, SHOW_THROTTLE_MILLISECONDS - elapsed);
-      }
+      setFollowRequest(null);
+      showThrottled(currentPath, frame, false, isFinal);
     },
-    [currentPath, call],
+    [currentPath, showThrottled],
+  );
+
+  const follow = useCallback(
+    (frame: number, isStart: boolean) => {
+      if (currentPath === null) return;
+      const path = currentPath;
+      liveSerial.current += 1;
+      const serial = liveSerial.current;
+      setFollowRequest((request) =>
+        request !== null && request.path === path
+          ? request
+          : { path, serial, isFollowed: isAutoInferenceRunningRef.current },
+      );
+      showThrottled(path, frame, true, isStart);
+    },
+    [currentPath, showThrottled],
   );
 
   const hasImages =
@@ -991,7 +1061,7 @@ export function App() {
                       <PopoverButton
                         className="section-action runtime-button"
                         label="Runtime settings"
-                        title="Runtime settings: device, precision"
+                        title="Runtime settings: device, precision, batch size"
                         trigger={<GearGlyph />}
                       >
                         <div className="popover-title">Runtime</div>
@@ -1201,6 +1271,7 @@ export function App() {
                       onClearSelection={() => setSelectedRowKey(null)}
                       onNavigate={navigate}
                       onSeek={seek}
+                      onFollow={follow}
                       onStepFrame={stepFrame}
                       onVideoPlayerFailed={(error) => {
                         if (currentPath === null) return;

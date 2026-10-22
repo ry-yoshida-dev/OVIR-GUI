@@ -39,11 +39,15 @@ class ModelSelection:
     text_templates : tuple[str, ...] | None
         Sentences with one ``{}`` every phrase of a classifier is filled into; ``("{}",)`` uses the phrase as it is
         and ``None`` keeps the templates of the preset.
+    batch_size : int | None
+        Pictures per forward pass, a power of two; ``None`` keeps the preset's, and models running one picture at a
+        time ignore it.
 
     Raises
     ------
     ValueError
-        If a threshold is outside ``[0, 1]``, the tiling grid is smaller than 2 or no text template is given.
+        If a threshold is outside ``[0, 1]``, the tiling grid is smaller than 2, no text template is given or the
+        batch size is not a positive power of two.
     """
 
     task: RecognitionTask
@@ -57,6 +61,7 @@ class ModelSelection:
     box_detector_label: str | None = None
     tiling_grid_size: int | None = None
     text_templates: tuple[str, ...] | None = None
+    batch_size: int | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -69,6 +74,8 @@ class ModelSelection:
             raise ValueError(f"tiling_grid_size must be at least 2. got {self.tiling_grid_size}")
         if self.text_templates is not None and not self.text_templates:
             raise ValueError("text_templates must hold at least one template; use ('{}',) for the phrase as it is.")
+        if self.batch_size is not None and (self.batch_size < 1 or self.batch_size & (self.batch_size - 1)):
+            raise ValueError(f"batch_size must be a positive power of two. got {self.batch_size}")
 
     @property
     def preset_label(self) -> str:

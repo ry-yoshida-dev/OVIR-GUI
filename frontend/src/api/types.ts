@@ -109,6 +109,7 @@ export interface ModelSelection {
   box_detector_label: string | null;
   tiling_grid_size: number | null;
   text_templates: string[] | null;
+  batch_size: number | null;
 }
 
 export interface TaskState {
@@ -217,6 +218,7 @@ export interface InferenceState {
   is_auto: boolean;
   modes: { value: InferenceModeValue; label: string }[];
   pause_reason: string | null;
+  is_following_playback: boolean;
 }
 
 export interface ExemplarEntry {
@@ -382,6 +384,10 @@ export interface TimelinePayload {
 }
 
 export type ActionStatus = "done" | "rejected" | "needs_approval";
+
+export interface ShowReply {
+  is_following_playback: boolean;
+}
 
 export interface ActionReply {
   status: ActionStatus;

@@ -27,6 +27,8 @@ class ModelSelectionBody(BaseModel):
         Tiles along each side a classifier also scores; ``None`` scores the whole picture only.
     text_templates : list[str] | None
         Sentences every phrase of a classifier is filled into; ``None`` keeps the preset's own.
+    batch_size : int | None
+        Pictures per forward pass, a power of two; ``None`` keeps the preset's own.
     """
 
     backend: str
@@ -39,3 +41,4 @@ class ModelSelectionBody(BaseModel):
     box_detector_label: str | None = None
     tiling_grid_size: int | None = None
     text_templates: list[str] | None = None
+    batch_size: int | None = None

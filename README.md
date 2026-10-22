@@ -8,11 +8,13 @@ drawn as reference boxes on example images, and every model shipped as a preset 
 [OpenVocabularyClassification](https://github.com/ry-yoshida-dev/OpenVocabularyClassification),
 [OpenVocabularyDetector](https://github.com/ry-yoshida-dev/OpenVocabularyDetector) and
 [OpenVocabularySegmentation](https://github.com/ry-yoshida-dev/OpenVocabularySegmentation) can be selected, with its
-device, precision, thresholds and, for classifiers, the text templates phrases are written into.
+device, precision, batch size, thresholds and, for classifiers, the text templates phrases are written into.
 
 - **Images and videos**: videos are recognized on every Nth frame and played in the browser with the frame-accurate
   [VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) player; boxes and masks are drawn only on the recognized
-  frames, or interpolated between adjacent recognized frames when interpolation is on. Videos the browser cannot decode fall back to frames decoded by the server.
+  frames, or interpolated between adjacent recognized frames when interpolation is on. With automatic inference on,
+  playing a video infers the frames just ahead of playback, slowing or pausing playback so every shown frame has its
+  findings. Videos the browser cannot decode fall back to frames decoded by the server.
 - **Segmentation modes**: besides phrases, SAM 3 takes reference images and positive and negative exemplar boxes
   drawn on each picture; SAM, SAM 2, the SAM 3 tracker, EdgeTAM and Florence-2 segment objects marked by clicks and
   boxes, refined click by click; automatic mask generation segments every region; video trackers follow marked
@@ -104,12 +106,11 @@ host page opening the interface in a movable window.
 
 ## Development
 
-The built frontend is committed, so running the server needs no Node.js. To change the frontend, check out
-[VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) next to this repository and build it first; the
-frontend depends on its packages by relative path.
+The built frontend is committed, so running the server needs no Node.js. The frontend takes the
+[VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) packages from the tarballs of one of its GitHub
+releases; to update them, point both `@video-player-ui` dependencies of `frontend/package.json` at a newer release.
 
 ```bash
-(cd ../VideoPlayerUI && npm install && npm run build)
 cd frontend && npm install
 npm run dev        # Vite dev server proxying /api to OVIR_GUI_BACKEND (default http://127.0.0.1:8000)
 npm run build      # writes src/ovir_gui/web/static

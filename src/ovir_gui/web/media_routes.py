@@ -59,8 +59,8 @@ class MediaRoutes:
 
         @router.post("/media/show")
         async def show(body: ShowBody) -> JsonObject:
-            context.workspace.show(Path(body.path), body.frame)
-            return {}
+            context.workspace.show(Path(body.path), body.frame, body.is_playing)
+            return {"is_following_playback": context.workspace.is_following_playback}
 
         @router.put("/sampling")
         async def set_sampling(body: SamplingBody) -> JsonObject:

@@ -148,6 +148,7 @@ class MaskGenerationModel(RecognitionModel):
             precision=self.precision,
             confidence_threshold=self._settings.options.predicted_iou_threshold,
             nms_iou_threshold=self._nms_threshold,
+            batch_size=self._settings.segmenter.batch_size,
         )
 
     def customized(self, selection: ModelSelection) -> "MaskGenerationModel":
@@ -157,7 +158,8 @@ class MaskGenerationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, minimum predicted IoU and box NMS threshold to use; NMS off keeps overlapping masks.
+            Device, precision, minimum predicted IoU, box NMS threshold and batch size to use; NMS off keeps
+            overlapping masks.
 
         Returns
         -------
@@ -179,6 +181,7 @@ class MaskGenerationModel(RecognitionModel):
             self._settings.segmenter,
             device=Device(selection.device.value),
             precision=Precision(selection.precision.value),
+            batch_size=(self._settings.segmenter.batch_size if selection.batch_size is None else selection.batch_size),
         )
         return MaskGenerationModel(self.preset, replace(self._settings, segmenter=segmenter, options=options))
 

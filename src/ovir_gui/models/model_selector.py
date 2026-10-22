@@ -208,7 +208,8 @@ class ModelSelector:
         -------
         ModelSelection
             ``selection`` with a precision the device or library cannot run replaced by float32, and the thresholds the
-            class minimums take over cleared.
+            class minimums take over and the batch size of models running one picture at a time cleared; a missing
+            batch size is filled in with the preset's.
 
         Raises
         ------
@@ -221,6 +222,8 @@ class ModelSelector:
         if not self._device_availability.is_available(selection.device):
             raise ValueError(f"The device {selection.device.value} is not available on this machine.")
         validated: ModelSelection = selection
+        if selection.batch_size is None:
+            validated = replace(validated, batch_size=base.as_selection().batch_size)
         if selection.precision not in base.supported_precisions or not self._device_availability.is_precision_supported(
             selection.device, selection.precision
         ):
@@ -243,7 +246,7 @@ class ModelSelector:
                     validated, confidence_threshold=None, nms_iou_threshold=None, box_detector_label=None
                 )
             case ObjectTrackingModel() | ConceptTrackingModel():
-                validated = replace(validated, nms_iou_threshold=None, box_detector_label=None)
+                validated = replace(validated, nms_iou_threshold=None, box_detector_label=None, batch_size=None)
             case MaskGenerationModel():
                 validated = replace(validated, box_detector_label=None)
             case _:

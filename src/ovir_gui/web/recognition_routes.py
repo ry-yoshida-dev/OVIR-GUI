@@ -102,6 +102,7 @@ class RecognitionRoutes:
                     box_detector_label=body.box_detector_label,
                     tiling_grid_size=body.tiling_grid_size,
                     text_templates=None if body.text_templates is None else tuple(body.text_templates),
+                    batch_size=body.batch_size,
                 )
             )
             return {}

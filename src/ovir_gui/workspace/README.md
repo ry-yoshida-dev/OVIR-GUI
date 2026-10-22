@@ -10,7 +10,7 @@ User-interface-independent application core. `Workspace` holds everything the us
 | --- | --- |
 | [action_reply.py](./action_reply.py) | `ActionReply` is the answer of the workspace to a request such as Detect, Detect All or Export. |
 | [action_status.py](./action_status.py) | `ActionStatus` enumerates how the workspace answered a request of the user. |
-| [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses what to recognize next in the background for the inference mode and remembers what failed. |
+| [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses what to recognize next in the background for the inference mode, frames ahead of a playing video first, and remembers what failed. |
 | [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set. |
 | [deferred_save.py](./deferred_save.py) | `DeferredSave` writes one piece of workspace state shortly after it changes, off the owning thread. |
 | [export_plan.py](./export_plan.py) | `ExportPlan` describes what an export would write now. |

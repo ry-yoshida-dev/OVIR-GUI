@@ -4,7 +4,9 @@ import pytest
 
 from ovir_gui.models import (
     ComputePrecision,
+    DeviceAvailability,
     ModelPreset,
+    ModelSelection,
     ModelSelector,
     PresetCatalog,
     RecognitionModel,
@@ -69,3 +71,29 @@ class TestModelPresets:
         customized: SegmentationModel = model.customized(replace(model.as_selection(), precision=precision), None)
         assert customized.precision is precision
         assert customized.settings.precision.value == precision.value
+
+    @pytest.mark.parametrize("preset", CATALOG.presets, ids=lambda preset: preset.label)
+    def test_batch_size_is_applied_without_changing_profile(self, preset: ModelPreset) -> None:
+        selector: ModelSelector = ModelSelector(CATALOG, DeviceAvailability.detect())
+        base: RecognitionModel = ModelSelector.read_preset(preset)
+        selection: ModelSelection = base.as_selection()
+        if selection.batch_size is None:
+            assert base.batch_size == 1
+            return
+        customized: RecognitionModel = selector.model_of(replace(selection, batch_size=1))
+        assert customized.batch_size == 1
+        assert customized.as_selection().batch_size == 1
+        assert customized.profile() == selector.model_of(selection).profile()
+
+    @pytest.mark.parametrize("batch_size", [0, 3, 6])
+    def test_batch_size_must_be_power_of_two(self, batch_size: int) -> None:
+        selection: ModelSelection = ModelSelector.read_preset(CATALOG.presets[0]).as_selection()
+        with pytest.raises(ValueError, match="power of two"):
+            _ = replace(selection, batch_size=batch_size)
+
+    @pytest.mark.parametrize("preset", CATALOG.presets, ids=lambda preset: preset.label)
+    def test_missing_batch_size_is_filled_with_preset_value(self, preset: ModelPreset) -> None:
+        selector: ModelSelector = ModelSelector(CATALOG, DeviceAvailability.detect())
+        selection: ModelSelection = ModelSelector.read_preset(preset).as_selection()
+        validated: ModelSelection = selector.validated(replace(selection, batch_size=None))
+        assert validated.batch_size == selection.batch_size

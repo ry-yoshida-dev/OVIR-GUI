@@ -80,6 +80,19 @@ class TestMediaRoutes:
         assert response.status_code == 200
         assert response.json() == {"path": str(video_path), "frames": []}
 
+    def test_playing_video_is_followed_by_automatic_inference(self, client: TestClient, media_directory: Path) -> None:
+        video_path: str = str(media_directory / "clip.mp4")
+        playing: Response = client.post("/api/media/show", json={"path": video_path, "frame": 2, "is_playing": True})
+        assert playing.json() == {"is_following_playback": True}
+        assert client.get("/api/state").json()["inference"]["is_following_playback"] is True
+        paused: Response = client.post("/api/media/show", json={"path": video_path, "frame": 4})
+        assert paused.json() == {"is_following_playback": False}
+        assert client.get("/api/state").json()["inference"]["is_following_playback"] is False
+
+    def test_playing_is_ignored_for_images(self, client: TestClient, media_directory: Path) -> None:
+        _ = client.post("/api/media/show", json={"path": str(media_directory / "still.png"), "is_playing": True})
+        assert client.get("/api/state").json()["inference"]["is_following_playback"] is False
+
     def test_requests_without_token_are_refused(self, media_directory: Path, client: TestClient) -> None:
         client.cookies.clear()
         response: Response = client.get("/api/media/video", params={"path": str(media_directory / "clip.mp4")})

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlaybackState, type PlayerController } from "@video-player-ui/core";
+import { PlaybackState, type PlayerController, type ReleaseHold } from "@video-player-ui/core";
 import { usePlayerController } from "@video-player-ui/web";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
 import { LivePace } from "../lib/livePace";
@@ -28,13 +28,15 @@ const RATE_TOLERANCE = 0.02;
 
 /**
  * Keeps playback behind recognition while a video is being recognized: playback never passes the last recognized
- * frame, and its rate follows the recognition speed so it rarely has to stop.
+ * frame, and its rate follows the recognition speed so it rarely has to stop. Waiting holds the player in its playing
+ * state, so pausing stops it as during normal playback; pausing also ends the hold.
  */
 export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }: LivePlaybackGateProps) {
   const controller: PlayerController = usePlayerController();
   const pace = useRef(new LivePace());
-  const isGatePaused = useRef(false);
   const appliedRate = useRef(1);
+  const releaseHold = useRef<ReleaseHold | null>(null);
+  const isEvaluating = useRef(false);
   const latest = useRef({ live, results, framesPerSecond, frameCount });
   latest.current = { live, results, framesPerSecond, frameCount };
   const [status, setStatus] = useState<LiveStatus | null>(null);
@@ -48,15 +50,19 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
     [controller],
   );
 
-  const evaluate = useCallback(() => {
+  const release = useCallback(() => {
+    const releaseGateHold = releaseHold.current;
+    releaseHold.current = null;
+    if (releaseGateHold !== null) void releaseGateHold();
+  }, []);
+
+  const update = useCallback(() => {
     const { live: run, results: index, framesPerSecond: fps, frameCount: count } = latest.current;
     const snapshot = controller.getSnapshot();
     const timeId = snapshot.timeId;
+    if (!snapshot.isHeld) releaseHold.current = null;
     if (run === null || !run.isRunning || index === null) {
-      if (isGatePaused.current) {
-        isGatePaused.current = false;
-        void controller.play();
-      }
+      release();
       applyRate(1);
       setStatus(null);
       return;
@@ -68,26 +74,37 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
     const rate = isComplete ? 1 : (pace.current.rateFor(fps) ?? 1);
     applyRate(rate);
     if (snapshot.state === PlaybackState.PLAYING) {
-      if (!isComplete && lead <= 0) {
-        isGatePaused.current = true;
-        controller.pause();
-      }
-    } else if (isGatePaused.current) {
-      const resumeLead = Math.max(2 * run.frameStep, Math.round(fps * RESUME_LEAD_SECONDS * rate));
-      if (isComplete || lead >= resumeLead) {
-        isGatePaused.current = false;
-        void controller.play();
+      if (releaseHold.current === null) {
+        if (!isComplete && lead <= 0) releaseHold.current = controller.hold();
+      } else {
+        const resumeLead = Math.max(2 * run.frameStep, Math.round(fps * RESUME_LEAD_SECONDS * rate));
+        if (isComplete || lead >= resumeLead) release();
       }
     }
     setStatus((previous) => {
-      const isWaiting = isGatePaused.current;
+      const isWaiting = releaseHold.current !== null;
       const roundedRate = Math.round(appliedRate.current * 100) / 100;
-      if (previous !== null && previous.isWaiting === isWaiting && previous.frontier === frontier && previous.rate === roundedRate) {
+      if (
+        previous !== null &&
+        previous.isWaiting === isWaiting &&
+        previous.frontier === frontier &&
+        previous.rate === roundedRate
+      ) {
         return previous;
       }
       return { isWaiting, frontier, rate: roundedRate };
     });
-  }, [controller, applyRate]);
+  }, [controller, applyRate, release]);
+
+  const evaluate = useCallback(() => {
+    if (isEvaluating.current) return;
+    isEvaluating.current = true;
+    try {
+      update();
+    } finally {
+      isEvaluating.current = false;
+    }
+  }, [update]);
 
   useEffect(() => controller.subscribe(evaluate), [controller, evaluate]);
 
@@ -110,15 +127,22 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
 
   useEffect(
     () => () => {
+      release();
       controller.setPlaybackRate(1);
     },
-    [controller],
+    [controller, release],
   );
 
   if (status === null) return null;
   return (
-    <div className={`live-badge${status.isWaiting ? " waiting" : ""}`}>
-      {status.isWaiting ? "◌ Inferring ahead…" : "● LIVE"}
+    <div className={`live-badge${status.isWaiting ? " waiting" : ""}`} role="status">
+      {status.isWaiting ? (
+        <>
+          <span className="spinner" /> Inferring ahead…
+        </>
+      ) : (
+        "● LIVE"
+      )}
       <span className="muted">
         {status.frontier === null ? " · waiting for the first result" : ` · inferred to #${status.frontier}`}
         {status.rate < 1 ? ` · ×${status.rate.toFixed(2)}` : ""}

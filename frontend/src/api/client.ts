@@ -15,6 +15,7 @@ import type {
   PictureKey,
   ReferenceDraft,
   ResultsPayload,
+  ShowReply,
   StatisticsPayload,
   Thresholds,
   TimelinePayload,
@@ -88,8 +89,8 @@ export const api = {
 
   openPaths: (paths: string[]) => post("/api/media/open", { paths }),
   closeMedia: (paths: string[]) => post("/api/media/close", { paths }),
-  show: (path: string, frame: number | null) =>
-    post("/api/media/show", { path, frame }),
+  show: (path: string, frame: number | null, isPlaying = false) =>
+    post<ShowReply>("/api/media/show", { path, frame, is_playing: isPlaying }),
   setSampling: (frameStep: number) =>
     put("/api/sampling", { frame_step: frameStep }),
   setInference: (mode: InferenceModeValue, isAuto: boolean) =>

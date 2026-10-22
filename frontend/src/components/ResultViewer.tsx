@@ -35,6 +35,7 @@ interface ResultViewerProps {
   onClearSelection: () => void;
   onNavigate: (step: number) => void;
   onSeek: (frame: number, isFinal: boolean) => void;
+  onFollow: (frame: number, isStart: boolean) => void;
   onStepFrame: (step: number) => void;
   onVideoPlayerFailed: (error: Error) => void;
   onUploadRequested: () => void;
@@ -68,6 +69,7 @@ export function ResultViewer({
   onClearSelection,
   onNavigate,
   onSeek,
+  onFollow,
   onStepFrame,
   onVideoPlayerFailed,
   onUploadRequested,
@@ -89,6 +91,7 @@ export function ResultViewer({
           position={position}
           live={live}
           onSeek={onSeek}
+          onFollow={onFollow}
           onSelectFinding={onSelectFinding}
           onNavigate={onNavigate}
           onError={onVideoPlayerFailed}

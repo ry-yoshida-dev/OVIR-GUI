@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IndexBase, PlaybackState, type PlayerController, type PlayerSnapshot } from "@video-player-ui/core";
-import { FrameCanvas, usePlayerController, usePlayerShortcut, VideoPlayer, type FrameDrawContext, type FramePointer } from "@video-player-ui/web";
+import {
+  FrameCanvas,
+  usePlayerController,
+  usePlayerShortcut,
+  VideoPlayer,
+  type FrameDrawContext,
+  type FramePointer,
+} from "@video-player-ui/web";
 import { api } from "../api/client";
 import type { CurrentPicture, FramePayload } from "../api/types";
 import type { DisplayOptions } from "../lib/displayOptions";
@@ -28,6 +35,7 @@ interface VideoResultPlayerProps {
   position: PlaybackPosition;
   live: LiveRun | null;
   onSeek: (frame: number, isFinal: boolean) => void;
+  onFollow: (frame: number, isStart: boolean) => void;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onNavigate: (step: number) => void;
   onError: (error: Error) => void;
@@ -38,6 +46,7 @@ interface FindingsOverlayProps extends Omit<VideoResultPlayerProps, "onError" | 
 }
 
 const PLAYBACK_REPORT_MILLISECONDS = 150;
+const PLAYBACK_JUMP_SECONDS = 1;
 const TIMELINE = { indexBase: IndexBase.ZERO };
 
 function shownResultOf(
@@ -51,7 +60,9 @@ function shownResultOf(
 }
 
 function isLoaded(snapshot: PlayerSnapshot): boolean {
-  return snapshot.timeline !== null && snapshot.state !== PlaybackState.IDLE && snapshot.state !== PlaybackState.LOADING;
+  return (
+    snapshot.timeline !== null && snapshot.state !== PlaybackState.IDLE && snapshot.state !== PlaybackState.LOADING
+  );
 }
 
 function FindingsOverlay({
@@ -63,6 +74,7 @@ function FindingsOverlay({
   options,
   classColors,
   onSeek,
+  onFollow,
   onSelectFinding,
   onNavigate,
   onShownFrame,
@@ -73,7 +85,11 @@ function FindingsOverlay({
   const lastReportAt = useRef(0);
   const width = current.width ?? 1;
   const height = current.height ?? 1;
-  const painter = useMemo(() => new FindingPainter(width, height, options, classColors), [width, height, options, classColors]);
+  const jumpFrames = Math.max(1, Math.round((current.fps ?? 30) * PLAYBACK_JUMP_SECONDS));
+  const painter = useMemo(
+    () => new FindingPainter(width, height, options, classColors),
+    [width, height, options, classColors],
+  );
 
   const sceneAt = useCallback(
     (timeId: number): FrameScene | null => {
@@ -111,6 +127,7 @@ function FindingsOverlay({
 
   useEffect(() => {
     let previousState: PlaybackState | null = null;
+    let playingFrame: number | null = null;
     let isPositioned = false;
     let isPositioning = false;
     let isDisposed = false;
@@ -143,8 +160,15 @@ function FindingsOverlay({
           lastReportAt.current = now;
           onShownFrame(timeId);
         }
+        const isJumped = playingFrame === null || timeId < playingFrame || timeId - playingFrame > jumpFrames;
+        playingFrame = timeId;
+        if (!wasPlaying || isJumped) {
+          reportedFrame.current = timeId;
+          onFollow(timeId, !wasPlaying);
+        }
         return;
       }
+      playingFrame = null;
       onShownFrame(timeId);
       if (timeId === reportedFrame.current && !wasPlaying) return;
       reportedFrame.current = timeId;
@@ -156,7 +180,7 @@ function FindingsOverlay({
       isDisposed = true;
       unsubscribe();
     };
-  }, [controller, onSeek, onShownFrame, position]);
+  }, [controller, onSeek, onFollow, onShownFrame, position, jumpFrames]);
 
   useEffect(() => {
     const target = current.frame;
@@ -184,7 +208,8 @@ function FindingsOverlay({
 }
 
 export function VideoResultPlayer(props: VideoResultPlayerProps) {
-  const { current, frame, results, listed, options, classColors, live, onSelectFinding, onError, ...overlayProps } = props;
+  const { current, frame, results, listed, options, classColors, live, onSelectFinding, onError, ...overlayProps } =
+    props;
   const [shownFrame, setShownFrame] = useState<number | null>(current.frame);
   const source = useMemo(
     () => api.videoUrl(current.path, current.version, current.playback),
@@ -192,7 +217,9 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
   );
   const shown = shownFrame === null ? null : shownResultOf(results, frame, shownFrame, options.isInterpolated);
   const listedIndices =
-    shown === null || listed === null ? null : (listed.get(pictureKeyOf(shown.path, shown.result_frame)) ?? new Set<number>());
+    shown === null || listed === null
+      ? null
+      : (listed.get(pictureKeyOf(shown.path, shown.result_frame)) ?? new Set<number>());
   const resultNote =
     shown === null || !shown.is_recognized
       ? "not inferred"

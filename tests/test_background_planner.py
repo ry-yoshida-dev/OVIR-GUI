@@ -84,6 +84,46 @@ class TestBackgroundPlanner:
         )
         assert keys == (video.key_at(2), video.key_at(4))
 
+    def test_playing_video_takes_frames_ahead_of_shown_frame(self, profile: ModelProfile, video: MediaItem) -> None:
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile, InferenceMode.SHOWN, video.key_at(3), [video], every_second_frame, lambda _: False, True
+        )
+        assert [key.frame_index for key in keys] == [2, 4]
+
+    def test_playing_video_skips_recognized_frames(self, profile: ModelProfile, video: MediaItem) -> None:
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile,
+            InferenceMode.SHOWN,
+            video.key_at(0),
+            [video],
+            every_second_frame,
+            lambda key: key == video.key_at(2),
+            True,
+        )
+        assert [key.frame_index for key in keys] == [0, 4]
+
+    def test_playing_video_falls_back_to_mode_when_recognized_ahead(
+        self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem]
+    ) -> None:
+        first, _ = images
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile,
+            InferenceMode.ALL,
+            video.key_at(4),
+            [video, first],
+            every_second_frame,
+            lambda key: key == video.key_at(4),
+            True,
+        )
+        assert [key.frame_index for key in keys] == [0, 2]
+
+    def test_playing_video_is_left_to_sequential_model(self, profile: ModelProfile, video: MediaItem) -> None:
+        sequential: ModelProfile = replace(profile, is_sequential=True)
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            sequential, InferenceMode.SHOWN, video.key_at(0), [video], every_second_frame, lambda _: False, True
+        )
+        assert keys == ()
+
     def test_sequential_model_skips_videos(
         self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem]
     ) -> None:

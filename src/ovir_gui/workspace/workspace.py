@@ -68,7 +68,9 @@ class Workspace:
     An image is recognized once; a video on its sampled frames (every ``VideoSampling.frame_step``-th frame), and any
     other frame on request. Results are kept per model profile, so switching tasks or models keeps every result.
     With auto inference on, pictures without an up-to-date result of the selected model are recognized in the background
-    as far as the inference mode allows: the shown picture only, or every picture with the shown media first. A foreground job (Infer,
+    as far as the inference mode allows: the shown picture only, or every picture with the shown media first. While the
+    shown video plays, its frames ahead of playback are recognized first, so the player can show them as it goes. A
+    foreground job (Infer,
     Infer All, Update Outdated, export) interrupts it after the current mini-batch. Editing the classes keeps every
     result and reports pictures recognized with other classes as outdated. Results are saved shortly after every
     change, the session whenever it changes.
@@ -118,6 +120,7 @@ class Workspace:
         )
         self._media: dict[Path, MediaItem] = {}
         self._current_key: FrameKey | None = None
+        self._is_playing: bool = False
         self._sampling: VideoSampling = VideoSampling()
         self._inference_mode: InferenceMode = InferenceMode.SHOWN
         self._is_auto_inference: bool = True
@@ -357,6 +360,27 @@ class Workspace:
             False when pictures are inferred only at the user's request.
         """
         return self._is_auto_inference
+
+    @property
+    def is_following_playback(self) -> bool:
+        """
+        Whether automatic inference recognizes the frames ahead of the playing video.
+
+        Returns
+        -------
+        bool
+            True while the shown video plays with automatic inference on and the selected model can run in the
+            background on it.
+        """
+        item: MediaItem | None = self.current_item
+        if not self._is_auto_inference or not self._is_playing or item is None or not item.is_video:
+            return False
+        model: RecognitionModel = self.current_model()
+        if model.is_sequential or self._planner.is_paused or self._planner.is_pinned:
+            return False
+        if model.prompt_mode.is_class_list_needed and not self._workbench.classes:
+            return False
+        return self._background_prompt(model) is not None
 
     @property
     def task(self) -> RecognitionTask:
@@ -926,6 +950,7 @@ class Workspace:
             self._media[item.path] = item
         if added and (is_first_shown or self._current_key is None):
             self._current_key = added[0].key_at(0)
+            self._is_playing = False
             self._summary = ""
         video_count: int = sum(1 for item in added if item.is_video)
         image_count: int = len(added) - video_count
@@ -976,6 +1001,7 @@ class Workspace:
         if self._current_key is not None and self._current_key.path in closed:
             following: Path | None = self._next_remaining_path(closed)
             self._current_key = None if following is None else self._media[following].key_at(0)
+            self._is_playing = False
             self._summary = ""
         for path in closed:
             del self._media[path]
@@ -985,7 +1011,7 @@ class Workspace:
         self._engine.interrupt_background()
         self._resume_background()
 
-    def show(self, path: Path, frame_index: int | None = None) -> None:
+    def show(self, path: Path, frame_index: int | None = None, is_playing: bool = False) -> None:
         """
         Show an open image, or a frame of an open video; it is recognized first when it has no up-to-date result.
 
@@ -995,6 +1021,8 @@ class Workspace:
             Open file.
         frame_index : int | None, optional
             Frame of a video, clamped to its frames; the first frame when ``None`` and the video was not shown.
+        is_playing : bool, optional
+            Whether the video plays from the frame, so automatic inference recognizes the frames ahead of it first.
 
         Raises
         ------
@@ -1005,15 +1033,23 @@ class Workspace:
         if frame_index is None and self._current_key is not None and self._current_key.path == path:
             frame_index = self._current_key.frame_index
         key: FrameKey = item.key_at(frame_index)
-        if key == self._current_key:
+        is_playing = is_playing and item.is_video
+        is_playing_changed: bool = is_playing != self._is_playing
+        if key == self._current_key and not is_playing_changed:
             return
         is_other_media: bool = self._current_key is None or self._current_key.path != path
-        self._current_key = key
-        if is_other_media:
-            self._summary = ""
-        self._save_session()
+        self._is_playing = is_playing
+        if key != self._current_key:
+            self._current_key = key
+            if is_other_media:
+                self._summary = ""
+            self._save_session()
         self._changed(WorkspaceTopic.STATE)
-        self._prioritize_shown()
+        if is_playing_changed:
+            self._engine.interrupt_background()
+            self._resume_background()
+        else:
+            self._prioritize_shown()
 
     def set_sampling(self, frame_step: int) -> None:
         """
@@ -1846,6 +1882,7 @@ class Workspace:
                 self.media,
                 self.expected_keys,
                 is_settled,
+                self._is_playing,
             )
         if not keys:
             return

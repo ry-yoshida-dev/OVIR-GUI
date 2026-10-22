@@ -22,6 +22,7 @@ export function InferenceSettings({
   const change = (update: Partial<ModelSelection>) => onChange({ ...selection, ...update });
   const taskView = taskViewOf(task);
   const confidenceLabel = model.tuning.confidence_label;
+  const batchSize = selection.batch_size;
   return (
     <div className="form-grid">
       <span>Device</span>
@@ -42,6 +43,35 @@ export function InferenceSettings({
           </option>
         ))}
       </select>
+      {batchSize !== null && (
+        <>
+          <span>Batch size</span>
+          <span
+            className="stepper-field"
+            title="Pictures inferred together; results appear once a whole batch is done, so 1 shows each result soonest on a slow machine, and too large a batch runs out of GPU memory"
+          >
+            <span className="stepper-value">{batchSize}</span>
+            <span className="stepper-buttons">
+              <button
+                type="button"
+                disabled={isDisabled}
+                onClick={() => change({ batch_size: batchSize * 2 })}
+                title="Double"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                disabled={isDisabled || batchSize <= 1}
+                onClick={() => change({ batch_size: batchSize / 2 })}
+                title="Halve"
+              >
+                ▼
+              </button>
+            </span>
+          </span>
+        </>
+      )}
       {taskView.isEmbeddingTuningShown && (
         <>
           <span>Pooling</span>

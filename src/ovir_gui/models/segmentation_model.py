@@ -260,6 +260,7 @@ class SegmentationModel(RecognitionModel):
             precision=self.precision,
             nms_iou_threshold=self._settings.thresholds.nms_iou_threshold,
             box_detector_label=self._box_detector_label,
+            batch_size=self._settings.batch_size,
         )
 
     def customized(self, selection: ModelSelection, box_model: DetectionModel | None) -> "SegmentationModel":
@@ -269,16 +270,17 @@ class SegmentationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision and NMS threshold to use.
+            Device, precision, NMS threshold and batch size to use.
         box_model : DetectionModel | None
             Detection preset replacing the preset's own box detector; ignored unless the model masks boxes.
 
         Returns
         -------
         SegmentationModel
-            Model with the overrides applied; the box detector runs on the same device and precision.
+            Model with the overrides applied; the box detector runs on the same device, precision and batch size.
         """
         device: Device = Device(selection.device.value)
+        batch_size: int = self._settings.batch_size if selection.batch_size is None else selection.batch_size
         box_detector: DetectorSettings | None = self._settings.box_detector
         box_label: str | None = None
         if box_detector is not None:
@@ -295,6 +297,7 @@ class SegmentationModel(RecognitionModel):
                     ),
                     nms_iou_threshold=box_detector.thresholds.nms_iou_threshold,
                 ),
+                batch_size=batch_size,
             )
         settings: SegmenterSettings = replace(
             self._settings,
@@ -307,6 +310,7 @@ class SegmentationModel(RecognitionModel):
                 nms_iou_threshold=selection.nms_iou_threshold,
             ),
             box_detector=box_detector,
+            batch_size=batch_size,
         )
         return SegmentationModel(self.preset, settings, box_label)
 

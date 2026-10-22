@@ -156,6 +156,7 @@ class PromptableSegmentationModel(RecognitionModel):
             preset_name=self.preset.name,
             device=self.device,
             precision=self.precision,
+            batch_size=self._settings.batch_size,
         )
 
     def customized(self, selection: ModelSelection) -> "PromptableSegmentationModel":
@@ -165,7 +166,7 @@ class PromptableSegmentationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device and precision to use.
+            Device, precision and batch size to use.
 
         Returns
         -------
@@ -173,7 +174,10 @@ class PromptableSegmentationModel(RecognitionModel):
             Model with the overrides applied.
         """
         settings: PromptableSegmenterSettings = replace(
-            self._settings, device=Device(selection.device.value), precision=Precision(selection.precision.value)
+            self._settings,
+            device=Device(selection.device.value),
+            precision=Precision(selection.precision.value),
+            batch_size=self._settings.batch_size if selection.batch_size is None else selection.batch_size,
         )
         return PromptableSegmentationModel(self.preset, settings)
 

@@ -111,6 +111,7 @@ class PayloadBuilder:
                 "is_auto": workspace.is_auto_inference,
                 "modes": [{"value": mode.value, "label": mode.label} for mode in InferenceMode],
                 "pause_reason": workspace.background_pause_reason if workspace.is_auto_inference else None,
+                "is_following_playback": workspace.is_following_playback,
             },
             "sampling": {"frame_step": workspace.sampling.frame_step},
             "last_export": self._export_report(workspace.last_export),
@@ -761,6 +762,7 @@ class PayloadBuilder:
             "box_detector_label": selection.box_detector_label,
             "tiling_grid_size": selection.tiling_grid_size,
             "text_templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
+            "batch_size": selection.batch_size,
         }
 
     @staticmethod

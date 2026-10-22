@@ -193,6 +193,7 @@ class ClassificationModel(RecognitionModel):
             image_pooling=self._settings.image_pooling.value,
             tiling_grid_size=None if self._tiling is None else self._tiling.grid_size,
             text_templates=self._settings.text_templates,
+            batch_size=self._settings.batch_size,
         )
 
     def customized(self, selection: ModelSelection) -> "ClassificationModel":
@@ -202,7 +203,7 @@ class ClassificationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, pooling, tiling and text templates to use.
+            Device, precision, pooling, tiling, text templates and batch size to use.
 
         Returns
         -------
@@ -227,6 +228,7 @@ class ClassificationModel(RecognitionModel):
                 text_templates=self._settings.text_templates
                 if selection.text_templates is None
                 else selection.text_templates,
+                batch_size=self._settings.batch_size if selection.batch_size is None else selection.batch_size,
             ),
             None if selection.tiling_grid_size is None else ImageTiling(grid_size=selection.tiling_grid_size),
         )

@@ -127,6 +127,7 @@ class SessionStore:
             "box_detector": selection.box_detector_label,
             "tiling": selection.tiling_grid_size,
             "templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
+            "batch_size": selection.batch_size,
         }
 
     @classmethod
@@ -169,4 +170,7 @@ class SessionStore:
                 JsonFields.string_of(template, "template")
                 for template in JsonFields.list_of(content.get("templates"), "templates")
             ),
+            batch_size=None
+            if content.get("batch_size") is None
+            else JsonFields.integer_of(content.get("batch_size"), "batch_size"),
         )

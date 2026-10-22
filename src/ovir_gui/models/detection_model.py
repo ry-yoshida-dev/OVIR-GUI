@@ -151,6 +151,7 @@ class DetectionModel(RecognitionModel):
             device=self.device,
             precision=self.precision,
             nms_iou_threshold=self._settings.thresholds.nms_iou_threshold,
+            batch_size=self._settings.batch_size,
         )
 
     def customized(self, selection: ModelSelection) -> "DetectionModel":
@@ -160,7 +161,7 @@ class DetectionModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision and NMS threshold to use.
+            Device, precision, NMS threshold and batch size to use.
 
         Returns
         -------
@@ -178,6 +179,7 @@ class DetectionModel(RecognitionModel):
                 device=Device(selection.device.value),
                 is_half_precision_enabled=selection.precision is ComputePrecision.FLOAT16,
                 thresholds=thresholds,
+                batch_size=self._settings.batch_size if selection.batch_size is None else selection.batch_size,
             ),
         )
 

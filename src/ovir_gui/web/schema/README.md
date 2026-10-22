@@ -36,7 +36,7 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | [remove_classes_body.py](./remove_classes_body.py) | `RemoveClassesBody` lists classes, phrases and reference images removed at once. |
 | [run_all_body.py](./run_all_body.py) | `RunAllBody` runs every picture lacking a result, the shown video optionally from a given frame onward. |
 | [sampling_body.py](./sampling_body.py) | `SamplingBody` sets the sampling of video frames. |
-| [show_body.py](./show_body.py) | `ShowBody` names the picture to show. |
+| [show_body.py](./show_body.py) | `ShowBody` names the picture to show and whether its video plays. |
 | [table_body.py](./table_body.py) | `TableBody` lists the findings of the result table, in display order. |
 | [task_body.py](./task_body.py) | `TaskBody` names the task to switch to. |
 | [suppression_body.py](./suppression_body.py) | `SuppressionBody` sets the review suppression of overlapping boxes for the current task. |
