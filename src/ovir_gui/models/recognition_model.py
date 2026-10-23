@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
 from ..prompting import PromptMode, QueryKind
@@ -10,8 +11,10 @@ from .model_preset import ModelPreset
 from .model_profile import ModelProfile
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -187,6 +190,54 @@ class RecognitionModel(ABC):
         return frozenset()
 
     @property
+    def is_point_supported(self) -> bool:
+        """
+        Whether clicked points of a mark reach the model, rather than boxes only.
+
+        Returns
+        -------
+        bool
+            True unless a subclass takes boxes only.
+        """
+        return True
+
+    @property
+    def text_templates(self) -> tuple[str, ...] | None:
+        """
+        Templates every phrase is filled into.
+
+        Returns
+        -------
+        tuple[str, ...] | None
+            ``None`` unless a subclass fills phrases into templates.
+        """
+        return None
+
+    @property
+    def usage_description(self) -> str:
+        """
+        How the user tells the model what to recognize, shown next to the model settings.
+
+        Returns
+        -------
+        str
+            Empty unless a subclass needs explaining.
+        """
+        return ""
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        """
+        Threshold settings the model reads, shown with the model settings.
+
+        Returns
+        -------
+        ThresholdControls
+            No threshold unless a subclass reads some.
+        """
+        return ThresholdControls(confidence_label=None, is_nms_shown=False, is_minimum_confidence_shown=False)
+
+    @property
     @abstractmethod
     def options(self) -> tuple[ProfileOption, ...]:
         """
@@ -220,14 +271,55 @@ class RecognitionModel(ABC):
             Preset with every override set to the current value.
         """
 
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        """
+        Selection of this model with the options it does not take cleared.
+
+        Parameters
+        ----------
+        selection : ModelSelection
+            Selection of the preset of this model.
+
+        Returns
+        -------
+        ModelSelection
+            ``selection`` unless a subclass ignores some of its options.
+
+        Raises
+        ------
+        ValueError
+            If a subclass does not offer an option of the selection.
+        """
+        return selection
+
     @abstractmethod
-    def build_recognizer(self) -> "Recognizer":
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "RecognitionModel":
+        """
+        Same preset with the overrides of a selection.
+
+        Parameters
+        ----------
+        selection : ModelSelection
+            Overrides to apply.
+        box_detector_of : Callable[[str], DetectionModel]
+            Detection preset of a box detector label, read only by models masking the boxes of a detector.
+
+        Returns
+        -------
+        RecognitionModel
+            Model with the overrides applied.
+        """
+
+    @abstractmethod
+    def build_recognizer(self) -> "Recognizer[RecognitionModel]":
         """
         Load the model.
 
         Returns
         -------
-        Recognizer
+        Recognizer[RecognitionModel]
             Loaded model ready to recognize.
         """
 

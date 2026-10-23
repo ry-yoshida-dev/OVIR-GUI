@@ -9,9 +9,11 @@ import numpy as np
 
 from ..recognition.array_types import UInt8Array
 from ..results import ResultLibrary
-from .json_fields import JsonFields, JsonValue
+from .atomic_file import AtomicFile
+from .json_fields import JsonValue
 from .results_manifest_reader import ResultsManifestReader
 from .results_snapshot import ResultsSnapshot
+from .zip_manifest import ZipManifest
 
 
 class ResultsArchive:
@@ -25,7 +27,6 @@ class ResultsArchive:
 
     MANIFEST_NAME: ClassVar[str] = "manifest.json"
     MASKS_NAME: ClassVar[str] = "masks.npz"
-    PARTIAL_SUFFIX: ClassVar[str] = ".partial"
 
     def __init__(self, path: Path) -> None:
         """
@@ -64,21 +65,13 @@ class ResultsArchive:
         ValueError
             If the file is not a valid results archive.
         """
-        try:
-            with zipfile.ZipFile(self._path) as archive:
-                manifest: dict[str, JsonValue] = JsonFields.object_of(
-                    JsonFields.parse(archive.read(self.MANIFEST_NAME).decode("utf-8")), "manifest"
-                )
-                mask_bits: list[UInt8Array] = (
-                    self._read_masks(archive.read(self.MASKS_NAME)) if self.MASKS_NAME in archive.namelist() else []
-                )
-            return ResultsManifestReader(mask_bits).read(manifest)
-        except zipfile.BadZipFile as error:
-            raise ValueError(f"{self._path.name} is not a results archive: {error}") from error
-        except KeyError as error:
-            raise ValueError(f"{self._path.name} lacks an entry: {error}") from error
-        except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as error:
-            raise ValueError(f"{self._path.name} is malformed: {error}") from error
+        return ZipManifest(self._path, self.MANIFEST_NAME, "results archive").read_with(self._library_from)
+
+    def _library_from(self, archive: zipfile.ZipFile, manifest: dict[str, JsonValue]) -> ResultLibrary:
+        mask_bits: list[UInt8Array] = (
+            self._read_masks(archive.read(self.MASKS_NAME)) if self.MASKS_NAME in archive.namelist() else []
+        )
+        return ResultsManifestReader(mask_bits).read(manifest)
 
     def write(self, snapshot: ResultsSnapshot) -> None:
         """
@@ -94,16 +87,13 @@ class ResultsArchive:
         OSError
             If the file cannot be written.
         """
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        partial_path: Path = self._path.with_name(self._path.name + self.PARTIAL_SUFFIX)
-        try:
-            with zipfile.ZipFile(partial_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                archive.writestr(self.MANIFEST_NAME, json.dumps(snapshot.manifest, ensure_ascii=False))
-                if snapshot.mask_bits:
-                    archive.writestr(self.MASKS_NAME, self._masks_bytes(snapshot.mask_bits))
-            partial_path.replace(self._path)
-        finally:
-            partial_path.unlink(missing_ok=True)
+        with (
+            AtomicFile(self._path).replacing() as partial_path,
+            zipfile.ZipFile(partial_path, "w", compression=zipfile.ZIP_DEFLATED) as archive,
+        ):
+            archive.writestr(self.MANIFEST_NAME, json.dumps(snapshot.manifest, ensure_ascii=False))
+            if snapshot.mask_bits:
+                archive.writestr(self.MASKS_NAME, self._masks_bytes(snapshot.mask_bits))
 
     @staticmethod
     def _masks_bytes(mask_bits: tuple[UInt8Array, ...]) -> bytes:

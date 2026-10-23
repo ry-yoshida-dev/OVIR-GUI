@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -24,6 +25,7 @@ from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
     from .recognizer import Recognizer
@@ -263,22 +265,50 @@ class SegmentationModel(RecognitionModel):
             batch_size=self._settings.batch_size,
         )
 
-    def customized(self, selection: ModelSelection, box_model: DetectionModel | None) -> "SegmentationModel":
+    @property
+    def usage_description(self) -> str:
+        if self.is_box_prompted:
+            return f"Boxes from {self.box_detector_description}"
+        if QueryKind.EXEMPLAR in self.supported_query_kinds:
+            return (
+                "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "  # noqa: RUF001
+                + "a class without phrases is segmented from its boxes alone."
+            )
+        return ""
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label=None, is_nms_shown=True, is_minimum_confidence_shown=True)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(
+            selection,
+            confidence_threshold=None,
+            box_detector_label=selection.box_detector_label if self.is_box_prompted else None,
+        )
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], DetectionModel]
+    ) -> "SegmentationModel":
         """
         Same preset with the overrides of a selection, keeping masks and boxes down to the confidence floor.
 
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, NMS threshold and batch size to use.
-        box_model : DetectionModel | None
-            Detection preset replacing the preset's own box detector; ignored unless the model masks boxes.
+            Device, precision, NMS threshold, batch size and box detector label to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Detection preset of the box detector label of the selection, replacing the preset's own box detector;
+            ignored unless the model masks boxes.
 
         Returns
         -------
         SegmentationModel
             Model with the overrides applied; the box detector runs on the same device, precision and batch size.
         """
+        box_model: DetectionModel | None = (
+            None if selection.box_detector_label is None else box_detector_of(selection.box_detector_label)
+        )
         device: Device = Device(selection.device.value)
         batch_size: int = self._settings.batch_size if selection.batch_size is None else selection.batch_size
         box_detector: DetectorSettings | None = self._settings.box_detector
@@ -314,7 +344,7 @@ class SegmentationModel(RecognitionModel):
         )
         return SegmentationModel(self.preset, settings, box_label)
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[SegmentationModel]":
         from .segmenter_recognizer import SegmenterRecognizer
 
         return SegmenterRecognizer(self)

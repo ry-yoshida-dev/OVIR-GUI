@@ -115,4 +115,4 @@ class TestStoreRoundTrips:
         assert len(read_back.mask_bits) == len(written.mask_bits)
         for read_bits, written_bits in zip(read_back.mask_bits, written.mask_bits, strict=True):
             assert np.array_equal(read_bits, written_bits)
-        assert not store.path.with_name(store.path.name + ".partial").exists()
+        assert not store.path.with_name(f".{store.path.name}.partial").exists()

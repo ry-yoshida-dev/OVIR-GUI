@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -21,6 +22,7 @@ from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -196,7 +198,15 @@ class ClassificationModel(RecognitionModel):
             batch_size=self._settings.batch_size,
         )
 
-    def customized(self, selection: ModelSelection) -> "ClassificationModel":
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        poolings: tuple[str, ...] = self.image_poolings_of(self.backend)
+        if selection.image_pooling is not None and selection.image_pooling not in poolings:
+            raise ValueError(f"{self.backend} offers the poolings {', '.join(poolings)}.")
+        return selection
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "ClassificationModel":
         """
         Same preset with the overrides of a selection.
 
@@ -204,6 +214,8 @@ class ClassificationModel(RecognitionModel):
         ----------
         selection : ModelSelection
             Device, precision, pooling, tiling, text templates and batch size to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -233,7 +245,7 @@ class ClassificationModel(RecognitionModel):
             None if selection.tiling_grid_size is None else ImageTiling(grid_size=selection.tiling_grid_size),
         )
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[ClassificationModel]":
         from .classifier_recognizer import ClassifierRecognizer
 
         return ClassifierRecognizer(self)

@@ -8,11 +8,10 @@ from ..prompting import LabeledPrompt
 from ..recognition import FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance
 from .detection_model import DetectionModel
 from .detector_prompt_builder import DetectorPromptBuilder
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 
 
-class DetectorRecognizer(Recognizer):
+class DetectorRecognizer(Recognizer[DetectionModel]):
     """
     Loaded ``open_vocabulary_detector`` detector.
     """
@@ -26,20 +25,12 @@ class DetectorRecognizer(Recognizer):
         model : DetectionModel
             Settings to load.
         """
-        self._model: DetectionModel = model
+        super().__init__(model, DetectionModel)
         self._detector: OpenVocabularyDetector = model.settings.build()
         self._prompts: DetectorPromptBuilder = DetectorPromptBuilder()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, DetectionModel):
-            raise TypeError(f"a detector cannot run {model.task.value} settings.")
-        self.require_reusable(model)
-        self._model = model
-        self._detector.settings = model.settings
+    def _apply_model(self) -> None:
+        self._detector.settings = self._model.settings
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         library_prompt: Prompt = self._prompts.build(prompt)

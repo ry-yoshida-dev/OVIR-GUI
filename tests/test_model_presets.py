@@ -68,7 +68,10 @@ class TestModelPresets:
     @pytest.mark.parametrize("precision", list(ComputePrecision), ids=lambda precision: precision.value)
     def test_segmentation_precision_is_applied(self, preset: ModelPreset, precision: ComputePrecision) -> None:
         model: SegmentationModel = SegmentationModel.from_preset(preset)
-        customized: SegmentationModel = model.customized(replace(model.as_selection(), precision=precision), None)
+        selector: ModelSelector = ModelSelector(CATALOG, DeviceAvailability.detect())
+        customized: SegmentationModel = model.customized(
+            replace(model.as_selection(), precision=precision), selector.box_detector_model
+        )
         assert customized.precision is precision
         assert customized.settings.precision.value == precision.value
 

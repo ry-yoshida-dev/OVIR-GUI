@@ -9,10 +9,12 @@ from PIL import Image
 
 from ..prompting import ReferenceBox, ReferenceImage
 from ..vocabulary import ClassDefinition
+from .atomic_file import AtomicFile
 from .class_set import ClassSet
 from .class_set_summary import ClassSetSummary
 from .json_fields import JsonFields, JsonValue
 from .stored_reference_image import StoredReferenceImage
+from .zip_manifest import ZipManifest
 
 
 class ClassSetArchive:
@@ -42,7 +44,6 @@ class ClassSetArchive:
     FORMAT_VERSION: ClassVar[int] = 1
     MANIFEST_NAME: ClassVar[str] = "manifest.json"
     IMAGE_DIRECTORY: ClassVar[str] = "images"
-    PARTIAL_SUFFIX: ClassVar[str] = ".partial"
 
     def __init__(self, path: Path) -> None:
         """
@@ -118,24 +119,12 @@ class ClassSetArchive:
         """
         return self._read_with(self._summary_from)
 
-    def _read_with[T](self, reader: Callable[[zipfile.ZipFile, dict[str, JsonValue]], T]) -> T:
-        try:
-            with zipfile.ZipFile(self._path) as archive:
-                manifest: dict[str, JsonValue] = JsonFields.object_of(
-                    JsonFields.parse(archive.read(self.MANIFEST_NAME).decode("utf-8")), "manifest"
-                )
-                self._require_format(manifest)
-                return reader(archive, manifest)
-        except zipfile.BadZipFile as error:
-            raise ValueError(f"{self._path.name} is not a class set archive: {error}") from error
-        except KeyError as error:
-            raise ValueError(f"{self._path.name} lacks an entry: {error}") from error
-        except UnicodeDecodeError as error:
-            raise ValueError(f"{self.MANIFEST_NAME} of {self._path.name} is not UTF-8 text.") from error
-        except json.JSONDecodeError as error:
-            raise ValueError(f"{self.MANIFEST_NAME} of {self._path.name} is not valid JSON: {error}") from error
-        except TypeError as error:
-            raise ValueError(f"{self.MANIFEST_NAME} of {self._path.name} is malformed: {error}") from error
+    def _read_with[ContentT](self, reader: Callable[[zipfile.ZipFile, dict[str, JsonValue]], ContentT]) -> ContentT:
+        def checked_reader(archive: zipfile.ZipFile, manifest: dict[str, JsonValue]) -> ContentT:
+            self._require_format(manifest)
+            return reader(archive, manifest)
+
+        return ZipManifest(self._path, self.MANIFEST_NAME, "class set archive").read_with(checked_reader)
 
     def _summary_from(self, archive: zipfile.ZipFile, manifest: dict[str, JsonValue]) -> ClassSetSummary:
         classes: tuple[ClassDefinition, ...] = tuple(
@@ -201,24 +190,22 @@ class ClassSetArchive:
                 for box in class_set.reference_boxes
             ],
         }
-        partial_path: Path = self._path.with_name(self._path.name + self.PARTIAL_SUFFIX)
-        try:
-            with zipfile.ZipFile(partial_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                archive.writestr(self.MANIFEST_NAME, json.dumps(manifest, ensure_ascii=False, indent=2))
-                written_files: set[str] = set()
-                for image in reference_images:
-                    image_file: str = self._image_file_of(image)
-                    if image_file in written_files:
-                        continue
-                    archive.writestr(
-                        image_file,
-                        self._png_bytes_of(class_set.reference_pixels[image]),
-                        compress_type=zipfile.ZIP_STORED,
-                    )
-                    written_files.add(image_file)
-            partial_path.replace(self._path)
-        finally:
-            partial_path.unlink(missing_ok=True)
+        with (
+            AtomicFile(self._path).replacing() as partial_path,
+            zipfile.ZipFile(partial_path, "w", compression=zipfile.ZIP_DEFLATED) as archive,
+        ):
+            archive.writestr(self.MANIFEST_NAME, json.dumps(manifest, ensure_ascii=False, indent=2))
+            written_files: set[str] = set()
+            for image in reference_images:
+                image_file: str = self._image_file_of(image)
+                if image_file in written_files:
+                    continue
+                archive.writestr(
+                    image_file,
+                    self._png_bytes_of(class_set.reference_pixels[image]),
+                    compress_type=zipfile.ZIP_STORED,
+                )
+                written_files.add(image_file)
 
     def _require_format(self, manifest: dict[str, JsonValue]) -> None:
         if manifest.get("format") != self.FORMAT_NAME:

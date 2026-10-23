@@ -7,12 +7,11 @@ from ..prompting import LabeledPrompt
 from ..recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from .concept_tracking_model import ConceptTrackingModel
 from .detector_prompt_builder import DetectorPromptBuilder
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 from .stream_position import StreamPosition
 
 
-class ConceptTrackingRecognizer(Recognizer):
+class ConceptTrackingRecognizer(Recognizer[ConceptTrackingModel]):
     """
     Loaded SAM 3 concept tracker detecting and following the instances of the phrases and reference images through
     the frames it is handed in order; the query label of each instance names its track.
@@ -27,22 +26,14 @@ class ConceptTrackingRecognizer(Recognizer):
         model : ConceptTrackingModel
             Settings to load.
         """
-        self._model: ConceptTrackingModel = model
+        super().__init__(model, ConceptTrackingModel)
         self._tracker: ConceptTracker = model.settings.build()
         self._prompts: DetectorPromptBuilder = DetectorPromptBuilder()
         self._stream: ConceptTrackingSession | None = None
         self._position: StreamPosition = StreamPosition()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, ConceptTrackingModel):
-            raise TypeError(f"a concept tracker cannot run {model.backend} settings.")
-        self.require_reusable(model)
-        self._model = model
-        self._tracker.settings = model.settings
+    def _apply_model(self) -> None:
+        self._tracker.settings = self._model.settings
         self._stream = None
         self._position.reset()
 

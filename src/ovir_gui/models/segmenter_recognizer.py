@@ -16,12 +16,11 @@ from ..media import KeyedPicture
 from ..prompting import ExemplarBox, FramePrompt, LabeledPrompt, PromptClass
 from ..recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from .detector_prompt_builder import DetectorPromptBuilder
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 from .segmentation_model import SegmentationModel
 
 
-class SegmenterRecognizer(Recognizer):
+class SegmenterRecognizer(Recognizer[SegmentationModel]):
     """
     Loaded ``open_vocabulary_segmentation`` segmenter; masks are kept compact as ``InstanceMask``s.
 
@@ -39,21 +38,13 @@ class SegmenterRecognizer(Recognizer):
         model : SegmentationModel
             Settings to load.
         """
-        self._model: SegmentationModel = model
+        super().__init__(model, SegmentationModel)
         self._segmenter: OpenVocabularySegmenter = model.settings.build()
         self._prompts: DetectorPromptBuilder = DetectorPromptBuilder()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, SegmentationModel):
-            raise TypeError(f"a segmenter cannot run {model.backend} settings.")
-        self.require_reusable(model)
-        self._model = model
-        self._segmenter.settings = model.settings
-        box_detector_settings: DetectorSettings | None = model.settings.box_detector
+    def _apply_model(self) -> None:
+        self._segmenter.settings = self._model.settings
+        box_detector_settings: DetectorSettings | None = self._model.settings.box_detector
         if isinstance(self._segmenter, BoxPromptedSegmenter) and box_detector_settings is not None:
             self._segmenter.box_detector.settings = box_detector_settings
 

@@ -50,9 +50,11 @@ class AnnotatedImageWriter:
         target_directory.mkdir(parents=True, exist_ok=True)
         written: list[Path] = []
         used_names: set[str] = set()
-        for frame_key, picture in PictureLoader(media).load(ordered):
+        for loaded in PictureLoader(media).load(ordered):
+            picture: Image.Image | Exception = loaded.image_or_error
             if isinstance(picture, Exception):
                 continue
+            frame_key: FrameKey = loaded.frame_key
             item: ExportItem = by_key[frame_key]
             annotated: Image.Image = self._renderer.render(picture, item.result, item.label)
             target: Path = target_directory / self._unique_name(frame_key, used_names)

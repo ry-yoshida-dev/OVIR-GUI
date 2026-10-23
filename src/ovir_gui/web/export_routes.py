@@ -12,7 +12,7 @@ from ..export import ExportFormat, ExportOptions, ExportReport, ExportScope
 from ..media import FrameKey
 from ..workspace import ExportCoordinator, ExportRequest, Workspace
 from .json_value import JsonObject
-from .schema import ExportBody
+from .schema import ExportBody, PictureFindings
 from .web_context import WebContext
 
 
@@ -47,8 +47,8 @@ class ExportRoutes:
         @router.get("/export/plan")
         async def export_plan() -> JsonObject:
             workspace: Workspace = context.workspace
-            return context.payloads.export_plan(
-                workspace.export_plan(), ExportCoordinator.default_directory(context.working_directory)
+            return context.replies.export_plan(
+                workspace.exports.plan(), ExportCoordinator.default_directory(context.working_directory)
             )
 
         @router.post("/export")
@@ -62,16 +62,15 @@ class ExportRoutes:
                 is_annotated_image_saved=body.is_annotated_image_saved,
                 is_annotated_video_saved=body.is_annotated_video_saved,
             )
-            listed: dict[FrameKey, frozenset[int]] | None = None
-            if body.listed_findings is not None:
-                listed = {}
-                for group in body.listed_findings:
-                    key: FrameKey = FrameKey(Path(group.path), group.frame)
-                    listed[key] = listed.get(key, frozenset()) | frozenset(group.indices)
+            listed: dict[FrameKey, frozenset[int]] | None = (
+                None
+                if body.listed_findings is None
+                else {key: frozenset(indices) for key, indices in PictureFindings.grouped(body.listed_findings).items()}
+            )
             request: ExportRequest = ExportRequest(
                 options=options, listed_indices=listed, is_label_confidence_shown=body.is_label_confidence_shown
             )
-            return context.payloads.reply(context.workspace.export(request, body.is_skipping_approved))
+            return context.replies.reply(context.workspace.exports.start(request, body.is_skipping_approved))
 
         @router.get("/export/download")
         async def download(background_tasks: BackgroundTasks) -> FileResponse:

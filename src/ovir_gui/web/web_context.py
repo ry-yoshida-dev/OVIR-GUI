@@ -4,7 +4,14 @@ from ..workspace import Workspace
 from .directory_browser import DirectoryBrowser
 from .event_hub import EventHub
 from .object_document_builder import ObjectDocumentBuilder
-from .payload_builder import PayloadBuilder
+from .payloads import (
+    ClassViewBuilder,
+    ModelPanelBuilder,
+    PageStateBuilder,
+    ReplyBuilder,
+    ResultViewBuilder,
+    StatisticsViewBuilder,
+)
 from .picture_preview_cache import PicturePreviewCache
 from .reference_draft_store import ReferenceDraftStore
 
@@ -25,7 +32,13 @@ class WebContext:
         self.working_directory: Path = working_directory
         self.hub: EventHub = EventHub()
         self.preview_cache: PicturePreviewCache = PicturePreviewCache()
-        self.payloads: PayloadBuilder = PayloadBuilder(self.preview_cache)
+        self.result_views: ResultViewBuilder = ResultViewBuilder()
+        self.class_views: ClassViewBuilder = ClassViewBuilder()
+        self.statistics_views: StatisticsViewBuilder = StatisticsViewBuilder()
+        self.replies: ReplyBuilder = ReplyBuilder()
+        self.page_state: PageStateBuilder = PageStateBuilder(
+            self.preview_cache, ModelPanelBuilder(), self.class_views, self.result_views
+        )
         self.drafts: ReferenceDraftStore = ReferenceDraftStore()
         self.documents: ObjectDocumentBuilder = ObjectDocumentBuilder()
         self.browser: DirectoryBrowser = DirectoryBrowser(working_directory, {})

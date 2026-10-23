@@ -6,11 +6,10 @@ from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
 from ..recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from .mask_generation_model import MaskGenerationModel
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 
 
-class MaskGenerationRecognizer(Recognizer):
+class MaskGenerationRecognizer(Recognizer[MaskGenerationModel]):
     """
     Loaded automatic mask generator; every region becomes an instance of ``MaskGenerationModel.REGION_CLASS_NAME``.
     """
@@ -24,19 +23,11 @@ class MaskGenerationRecognizer(Recognizer):
         model : MaskGenerationModel
             Settings to load.
         """
-        self._model: MaskGenerationModel = model
+        super().__init__(model, MaskGenerationModel)
         self._generator: AutomaticMaskGenerator = model.settings.build()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, MaskGenerationModel):
-            raise TypeError(f"a mask generator cannot run {model.backend} settings.")
-        self.require_reusable(model)
-        self._model = model
-        self._generator.options = model.settings.options
+    def _apply_model(self) -> None:
+        self._generator.options = self._model.settings.options
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         results: list[MaskGenerationResult] = self._generator.generate_images([picture.image for picture in pictures])

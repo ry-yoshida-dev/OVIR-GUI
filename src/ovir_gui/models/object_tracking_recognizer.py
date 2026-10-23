@@ -7,12 +7,11 @@ from ..prompting import LabeledPrompt, ObjectMark
 from ..recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from .object_prompt_builder import ObjectPromptBuilder
 from .object_tracking_model import ObjectTrackingModel
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 from .stream_position import StreamPosition
 
 
-class ObjectTrackingRecognizer(Recognizer):
+class ObjectTrackingRecognizer(Recognizer[ObjectTrackingModel]):
     """
     Loaded video object tracker following the marked objects through the frames it is handed in order.
 
@@ -30,21 +29,14 @@ class ObjectTrackingRecognizer(Recognizer):
         model : ObjectTrackingModel
             Settings to load.
         """
-        self._model: ObjectTrackingModel = model
+        super().__init__(model, ObjectTrackingModel)
         self._tracker: ObjectTracker = model.settings.build()
         self._prompts: ObjectPromptBuilder = ObjectPromptBuilder(ObjectTrackingModel.SUPPORTED_ELEMENTS)
         self._stream: TrackingSession | None = None
         self._position: StreamPosition = StreamPosition()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, ObjectTrackingModel):
-            raise TypeError(f"an object tracker cannot run {model.backend} settings.")
-        self.require_reusable(model)
-        self._model = model
+    def _apply_model(self) -> None:
+        pass
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         return [self._track(picture, prompt) for picture in pictures]

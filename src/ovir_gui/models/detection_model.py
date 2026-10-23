@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -14,6 +15,7 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
     from .recognizer import Recognizer
@@ -154,7 +156,16 @@ class DetectionModel(RecognitionModel):
             batch_size=self._settings.batch_size,
         )
 
-    def customized(self, selection: ModelSelection) -> "DetectionModel":
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label=None, is_nms_shown=True, is_minimum_confidence_shown=True)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(selection, confidence_threshold=None)
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "DetectionModel":
         """
         Same preset with the overrides of a selection, keeping detections down to the confidence floor.
 
@@ -162,6 +173,8 @@ class DetectionModel(RecognitionModel):
         ----------
         selection : ModelSelection
             Device, precision, NMS threshold and batch size to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -183,7 +196,7 @@ class DetectionModel(RecognitionModel):
             ),
         )
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[DetectionModel]":
         from .detector_recognizer import DetectorRecognizer
 
         return DetectorRecognizer(self)

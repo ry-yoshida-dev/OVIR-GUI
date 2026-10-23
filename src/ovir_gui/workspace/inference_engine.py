@@ -6,7 +6,7 @@ from threading import Thread
 
 from PIL import Image
 
-from ..media import FrameKey, KeyedPicture, PictureLoader
+from ..media import FrameKey, KeyedPicture, LoadedPicture, PictureLoader
 from ..models import RecognitionOutcome, RecognizerSession
 from .inference_job import InferenceJob
 from .inference_listener import InferenceListener
@@ -245,16 +245,17 @@ class InferenceEngine:
         batch_keys: list[FrameKey] = []
         batch_images: list[Image.Image] = []
         loader: PictureLoader = PictureLoader(dict(job.media))
-        pictures: Generator[tuple[FrameKey, Image.Image | Exception]] = loader.load(job.frame_keys)
+        pictures: Generator[LoadedPicture] = loader.load(job.frame_keys)
         try:
-            for frame_key, picture in pictures:
+            for loaded in pictures:
                 if job.control.is_stop_requested:
                     break
+                picture: Image.Image | Exception = loaded.image_or_error
                 if isinstance(picture, Exception):
-                    unreadable_keys.append(frame_key)
+                    unreadable_keys.append(loaded.frame_key)
                     job.control.advance(1)
                     continue
-                batch_keys.append(frame_key)
+                batch_keys.append(loaded.frame_key)
                 batch_images.append(picture)
                 if len(batch_images) >= job.model.batch_size:
                     if not self._recognize(job, batch_keys, batch_images, total_count):

@@ -1,9 +1,9 @@
-import json
 from pathlib import Path
 from typing import ClassVar
 
 from ..prompting import ExemplarBox, ObjectMark, PicturePrompts
 from .json_fields import JsonFields, JsonValue
+from .json_file import JsonFile
 from .picture_prompt_codec import PicturePromptCodec
 
 
@@ -25,7 +25,7 @@ class PicturePromptStore:
         root_directory : Path
             Data directory holding the file.
         """
-        self._root_directory: Path = root_directory
+        self._file: JsonFile = JsonFile(root_directory / self.FILE_NAME)
 
     @property
     def path(self) -> Path:
@@ -37,7 +37,7 @@ class PicturePromptStore:
         Path
             ``picture_prompts.json`` in the data directory, whether or not it exists.
         """
-        return self._root_directory / self.FILE_NAME
+        return self._file.path
 
     def load(self) -> PicturePrompts:
         """
@@ -48,15 +48,13 @@ class PicturePromptStore:
         PicturePrompts
             Every readable drawing; empty without a readable file.
         """
-        if not self.path.is_file():
+        content: dict[str, JsonValue] | None = self._file.read_object("picture prompts")
+        if content is None:
             return PicturePrompts()
         try:
-            content: dict[str, JsonValue] = JsonFields.object_of(
-                JsonFields.parse(self.path.read_text(encoding="utf-8")), "picture prompts"
-            )
             exemplar_values: list[JsonValue] = JsonFields.list_of(content.get("exemplars", []), "exemplars")
             mark_values: list[JsonValue] = JsonFields.list_of(content.get("marks", []), "marks")
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError):
+        except TypeError:
             return PicturePrompts()
         exemplars: list[ExemplarBox] = []
         for value in exemplar_values:
@@ -91,5 +89,4 @@ class PicturePromptStore:
             "exemplars": [PicturePromptCodec.exemplar_entry(box) for box in prompts.exemplars],
             "marks": [PicturePromptCodec.mark_entry(mark) for mark in prompts.marks],
         }
-        self._root_directory.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
+        self._file.write(content)

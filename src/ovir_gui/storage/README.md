@@ -2,12 +2,13 @@
 
 ## Overview
 
-Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. The `workspace` package reads these stores at start and writes them after changes.
+Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. Every file is replaced atomically through `AtomicFile`; the JSON stores read and write through `JsonFile` (per-task settings through `TaskSettingsFile`), and the ZIP archives read their manifest through `ZipManifest`. The `workspace` package reads these stores at start and writes them after changes.
 
 ## Components
 
 | Component | Description |
 | --- | --- |
+| [atomic_file.py](./atomic_file.py) | `AtomicFile` replaces a file in one step through a hidden `.<name>.partial` file next to it. |
 | [class_set.py](./class_set.py) | `ClassSet` holds classes with every query they are asked with: their phrases and the reference boxes of their image prompts. |
 | [class_set_archive.py](./class_set_archive.py) | `ClassSetArchive` reads and writes a class set stored as one self-contained ZIP file. |
 | [class_set_entry.py](./class_set_entry.py) | `ClassSetEntry` describes a saved class set as listed in the data directory. |
@@ -16,6 +17,7 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [class_threshold_store.py](./class_threshold_store.py) | `ClassThresholdStore` remembers the minimum confidence per task, class and phrase in `class_thresholds.json`. |
 | [duplicate_suppression_store.py](./duplicate_suppression_store.py) | `DuplicateSuppressionStore` remembers the review suppression of overlapping boxes per task in `duplicate_suppression.json`. |
 | [json_fields.py](./json_fields.py) | `JsonFields` gives typed access to parsed JSON values, raising `TypeError` naming the field on a type mismatch. |
+| [json_file.py](./json_file.py) | `JsonFile` reads a JSON object leniently, as absent when missing or unreadable, and writes it atomically. |
 | [license_consent_store.py](./license_consent_store.py) | `LicenseConsentStore` remembers the licenses of optional modules the user accepted, and when, in `license_consent.json`. |
 | [picture_prompt_codec.py](./picture_prompt_codec.py) | `PicturePromptCodec` writes and reads exemplar boxes and object marks as JSON, shared by the results archive and the remembered drawings. |
 | [picture_prompt_store.py](./picture_prompt_store.py) | `PicturePromptStore` remembers the exemplar boxes and object marks drawn on pictures in `picture_prompts.json`. |
@@ -28,4 +30,6 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [session.py](./session.py) | `Session` describes what the user was working on, restored at the next start. |
 | [session_store.py](./session_store.py) | `SessionStore` remembers open media, shown picture, task, sampling and model choices in `session.json`. |
 | [stored_reference_image.py](./stored_reference_image.py) | `StoredReferenceImage` is a reference image read back from a class set archive with its pixels. |
+| [task_settings_file.py](./task_settings_file.py) | `TaskSettingsFile` stores one settings object per task in a JSON file, reading every task on its own. |
 | [upload_store.py](./upload_store.py) | `UploadStore` is the default folder `uploads` receiving images and videos sent from a browser, streamed to disk. |
+| [zip_manifest.py](./zip_manifest.py) | `ZipManifest` reads a ZIP file described by a JSON manifest, reporting every parse failure as `ValueError`. |

@@ -144,24 +144,25 @@ class ResultReadModel:
         """
         return tuple(key for path in self._working.media for key in catalog.keys_of(path))
 
-    def change_of(self, frame_key: FrameKey) -> PromptChange | None:
+    def change_check(self) -> Callable[[FrameKey], PromptChange | None]:
         """
-        How the classes changed since a picture was recognized with the shown profile.
-
-        Parameters
-        ----------
-        frame_key : FrameKey
-            Picture to look up.
+        How the classes changed since pictures were recognized with the shown profile, reading what the classes
+        query now once for every picture looked up.
 
         Returns
         -------
-        PromptChange | None
-            ``None`` when it has no result of the shown profile.
+        Callable[[FrameKey], PromptChange | None]
+            Change of a picture, ``None`` when it has no result of the shown profile or no profile is shown.
         """
         profile: ModelProfile | None = self._working.shown_profile
         if profile is None:
-            return None
-        return self._library.prompt_change_of(profile, frame_key, self.signature_for(profile)(frame_key))
+            return lambda frame_key: None
+        current_of: Callable[[FrameKey], PromptSignature] = self.signature_for(profile)
+
+        def change_of(frame_key: FrameKey) -> PromptChange | None:
+            return self._library.prompt_change_of(profile, frame_key, current_of(frame_key))
+
+        return change_of
 
     def media_statuses(self) -> dict[Path, MediaStatus]:
         """
@@ -280,23 +281,23 @@ class ResultReadModel:
             return None
         return ProfileComparison.between(shown, compared, self.recognized_keys(shown), self._workbench.class_names)
 
-    def outdated_keys(self, profile: ModelProfile, catalog: ResultCatalog) -> dict[FrameKey, PromptChange]:
+    def outdated_keys(self, profile: ModelProfile, frame_keys: tuple[FrameKey, ...]) -> dict[FrameKey, PromptChange]:
         """
-        Recognized pictures of the open media whose result of a profile was recognized with other classes.
+        Pictures whose result of a profile was recognized with other classes.
 
         Parameters
         ----------
         profile : ModelProfile
             Profile of the results.
-        catalog : ResultCatalog
-            Results of the profile.
+        frame_keys : tuple[FrameKey, ...]
+            Pictures to check, usually the ``recognized_keys`` of the catalog of the profile.
 
         Returns
         -------
         dict[FrameKey, PromptChange]
-            How the classes changed for every outdated picture, in media and frame order.
+            How the classes changed for every outdated picture, in the order of ``frame_keys``.
         """
-        return self._library.outdated_keys(profile, self.signature_for(profile), self.recognized_keys(catalog))
+        return self._library.outdated_keys(profile, self.signature_for(profile), frame_keys)
 
     def up_to_date_check(self, profile: ModelProfile | None) -> Callable[[FrameKey], bool]:
         """

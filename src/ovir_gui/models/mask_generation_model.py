@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -20,8 +21,10 @@ from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -151,7 +154,20 @@ class MaskGenerationModel(RecognitionModel):
             batch_size=self._settings.segmenter.batch_size,
         )
 
-    def customized(self, selection: ModelSelection) -> "MaskGenerationModel":
+    @property
+    def usage_description(self) -> str:
+        return "Segments every region of the picture; no classes are needed."
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label="Min IoU", is_nms_shown=True, is_minimum_confidence_shown=False)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(selection, box_detector_label=None)
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "MaskGenerationModel":
         """
         Same preset with the overrides of a selection.
 
@@ -160,6 +176,8 @@ class MaskGenerationModel(RecognitionModel):
         selection : ModelSelection
             Device, precision, minimum predicted IoU, box NMS threshold and batch size to use; NMS off keeps
             overlapping masks.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -185,7 +203,7 @@ class MaskGenerationModel(RecognitionModel):
         )
         return MaskGenerationModel(self.preset, replace(self._settings, segmenter=segmenter, options=options))
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[MaskGenerationModel]":
         from .mask_generation_recognizer import MaskGenerationRecognizer
 
         return MaskGenerationRecognizer(self)

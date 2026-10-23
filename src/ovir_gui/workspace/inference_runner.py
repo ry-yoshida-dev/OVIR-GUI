@@ -248,7 +248,9 @@ class InferenceRunner:
         profile: ModelProfile | None = self._working.shown_profile
         if catalog is None or profile is None:
             return self._notifier.reject("No results are shown.")
-        outdated: tuple[FrameKey, ...] = tuple(self._read_model.outdated_keys(profile, catalog))
+        outdated: tuple[FrameKey, ...] = tuple(
+            self._read_model.outdated_keys(profile, self._read_model.recognized_keys(catalog))
+        )
         if not outdated:
             return self._notifier.reject("No outdated pictures to update.")
         if profile != self._current_model().profile():

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -14,8 +15,10 @@ from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -138,7 +141,20 @@ class ConceptTrackingModel(RecognitionModel):
             confidence_threshold=self._settings.confidence_threshold,
         )
 
-    def customized(self, selection: ModelSelection) -> "ConceptTrackingModel":
+    @property
+    def usage_description(self) -> str:
+        return "Detects every instance of the phrases and follows it through the video."
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label="Conf.", is_nms_shown=False, is_minimum_confidence_shown=False)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(selection, nms_iou_threshold=None, box_detector_label=None, batch_size=None)
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "ConceptTrackingModel":
         """
         Same preset with the overrides of a selection.
 
@@ -146,6 +162,8 @@ class ConceptTrackingModel(RecognitionModel):
         ----------
         selection : ModelSelection
             Device, precision and detection confidence threshold to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -164,7 +182,7 @@ class ConceptTrackingModel(RecognitionModel):
         )
         return ConceptTrackingModel(self.preset, settings)
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[ConceptTrackingModel]":
         from .concept_tracking_recognizer import ConceptTrackingRecognizer
 
         return ConceptTrackingRecognizer(self)

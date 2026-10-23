@@ -3,6 +3,8 @@ import shutil
 from pathlib import Path
 from typing import BinaryIO, ClassVar
 
+from .atomic_file import AtomicFile
+
 
 class UploadStore:
     """
@@ -63,23 +65,18 @@ class UploadStore:
             If the file cannot be written.
         """
         target: Path = self._directory.joinpath(*self._safe_parts(relative_name))
-        target.parent.mkdir(parents=True, exist_ok=True)
-        partial: Path = target.with_name(f".{target.name}.partial")
-        try:
+        with AtomicFile(target).staged() as partial:
             digest: str = self._copy_with_digest(content, partial)
             size: int = partial.stat().st_size
             candidate: Path = target
             copy_number: int = 0
             while candidate.exists():
                 if candidate.is_file() and candidate.stat().st_size == size and self._digest_of(candidate) == digest:
-                    partial.unlink()
                     return candidate
                 copy_number += 1
                 candidate = target.with_name(f"{target.stem}-{copy_number}{target.suffix}")
             partial.replace(candidate)
             return candidate
-        finally:
-            partial.unlink(missing_ok=True)
 
     def _safe_parts(self, relative_name: str) -> tuple[str, ...]:
         parts: tuple[str, ...] = tuple(

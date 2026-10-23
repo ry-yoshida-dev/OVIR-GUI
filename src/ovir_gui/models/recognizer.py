@@ -7,27 +7,39 @@ from ..recognition import FrameResult
 from .recognition_model import RecognitionModel
 
 
-class Recognizer(ABC):
+class Recognizer[ModelT: RecognitionModel](ABC):
     """
     Loaded model turning images and a prompt into library-independent ``FrameResult``s.
 
     A recognizer is used from one thread at a time. ``adopt`` takes settings that differ only in what is read at
-    inference time, such as thresholds, without loading the model again.
+    inference time, such as thresholds, without loading the model again; the settings are checked to be of the model
+    class the recognizer runs before a subclass applies them in ``_apply_model``.
     """
 
+    def __init__(self, model: ModelT, model_type: type[ModelT]) -> None:
+        """
+        Parameters
+        ----------
+        model : ModelT
+            Settings loaded.
+        model_type : type[ModelT]
+            Model class the recognizer runs.
+        """
+        self._model: ModelT = model
+        self._model_type: type[ModelT] = model_type
+
     @property
-    @abstractmethod
-    def model(self) -> RecognitionModel:
+    def model(self) -> ModelT:
         """
         Settings the recognizer runs with.
 
         Returns
         -------
-        RecognitionModel
+        ModelT
             Model last loaded or adopted.
         """
+        return self._model
 
-    @abstractmethod
     def adopt(self, model: RecognitionModel) -> None:
         """
         Run with other settings of the same loaded model.
@@ -40,10 +52,15 @@ class Recognizer(ABC):
         Raises
         ------
         TypeError
-            If the model is of another task.
+            If the model is of another model class.
         ValueError
             If the model would need loading other weights.
         """
+        if not isinstance(model, self._model_type):
+            raise TypeError(f"{type(self).__name__} cannot run {model.task.value} settings of {model.backend}.")
+        self.require_reusable(model)
+        self._model = model
+        self._apply_model()
 
     @abstractmethod
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
@@ -80,3 +97,9 @@ class Recognizer(ABC):
         """
         if model.loading_signature() != self.model.loading_signature():
             raise ValueError(f"{model.preset.label} needs loading other weights than {self.model.preset.label}.")
+
+    @abstractmethod
+    def _apply_model(self) -> None:
+        """
+        Pass the settings just adopted, ``model``, on to the loaded library model.
+        """

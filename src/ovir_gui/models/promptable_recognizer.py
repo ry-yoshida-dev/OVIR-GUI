@@ -15,11 +15,10 @@ from ..prompting import LabeledPrompt, ObjectMark, ReferenceImage
 from ..recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from .object_prompt_builder import ObjectPromptBuilder
 from .promptable_segmentation_model import PromptableSegmentationModel
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 
 
-class PromptableRecognizer(Recognizer):
+class PromptableRecognizer(Recognizer[PromptableSegmentationModel]):
     """
     Loaded promptable segmenter segmenting the objects marked on each picture.
 
@@ -38,20 +37,13 @@ class PromptableRecognizer(Recognizer):
         model : PromptableSegmentationModel
             Settings to load.
         """
-        self._model: PromptableSegmentationModel = model
+        super().__init__(model, PromptableSegmentationModel)
         self._segmenter: PromptableSegmenter = model.settings.build()
         self._prompts: ObjectPromptBuilder = ObjectPromptBuilder(model.supported_elements)
         self._encodings: OrderedDict[FrameKey, tuple[str, EncodedImage]] = OrderedDict()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, PromptableSegmentationModel):
-            raise TypeError(f"a promptable segmenter cannot run {model.backend} settings.")
-        self.require_reusable(model)
-        self._model = model
+    def _apply_model(self) -> None:
+        pass
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         return [self._segment(picture, prompt) for picture in pictures]

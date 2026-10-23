@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -14,8 +15,10 @@ from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -159,7 +162,22 @@ class PromptableSegmentationModel(RecognitionModel):
             batch_size=self._settings.batch_size,
         )
 
-    def customized(self, selection: ModelSelection) -> "PromptableSegmentationModel":
+    @property
+    def usage_description(self) -> str:
+        if self.is_point_supported:
+            return "Click on an object (right-click excludes a spot) or drag a box around it."
+        return "Drag a box around each object; this model takes boxes only."
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label=None, is_nms_shown=False, is_minimum_confidence_shown=True)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(selection, confidence_threshold=None, nms_iou_threshold=None, box_detector_label=None)
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "PromptableSegmentationModel":
         """
         Same preset with the overrides of a selection.
 
@@ -167,6 +185,8 @@ class PromptableSegmentationModel(RecognitionModel):
         ----------
         selection : ModelSelection
             Device, precision and batch size to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -181,7 +201,7 @@ class PromptableSegmentationModel(RecognitionModel):
         )
         return PromptableSegmentationModel(self.preset, settings)
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[PromptableSegmentationModel]":
         from .promptable_recognizer import PromptableRecognizer
 
         return PromptableRecognizer(self)

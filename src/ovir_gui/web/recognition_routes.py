@@ -17,6 +17,7 @@ from .schema import (
     ApprovalBody,
     LicenseBody,
     ModelSelectionBody,
+    PictureFindings,
     PresetBody,
     ProfileBody,
     ProfilesBody,
@@ -60,27 +61,27 @@ class RecognitionRoutes:
 
         @router.get("/state")
         async def state() -> JsonObject:
-            return context.payloads.state(context.workspace)
+            return context.page_state.state(context.workspace)
 
         @router.get("/results")
         async def results() -> JsonObject:
-            return context.payloads.results(context.workspace)
+            return context.result_views.results(context.workspace)
 
         @router.get("/frame")
         async def frame(path: str, frame: int | None = None) -> JsonObject:
-            return context.payloads.frame(context.workspace, Path(path), frame)
+            return context.result_views.frame(context.workspace, Path(path), frame)
 
         @router.get("/video-frames")
         async def video_frames(path: str, after: int | None = None, until: int | None = None) -> JsonObject:
-            return context.payloads.video_frames(context.workspace, Path(path), after, until)
+            return context.result_views.video_frames(context.workspace, Path(path), after, until)
 
         @router.get("/timeline")
         async def timeline(path: str) -> JsonObject:
-            return context.payloads.timeline(context.workspace, Path(path))
+            return context.result_views.timeline(context.workspace, Path(path))
 
         @router.get("/statistics")
         async def statistics() -> JsonObject:
-            return context.payloads.statistics(context.workspace)
+            return context.statistics_views.statistics(context.workspace)
 
         @router.put("/task")
         async def select_task(body: TaskBody) -> JsonObject:
@@ -120,15 +121,15 @@ class RecognitionRoutes:
 
         @router.post("/run")
         async def run(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.jobs.run_current(body.is_skipping_approved))
+            return context.replies.reply(context.workspace.jobs.run_current(body.is_skipping_approved))
 
         @router.post("/run-all")
         async def run_all(body: RunAllBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.jobs.run_all(body.is_skipping_approved, body.start_frame))
+            return context.replies.reply(context.workspace.jobs.run_all(body.is_skipping_approved, body.start_frame))
 
         @router.post("/update-outdated")
         async def update_outdated(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.jobs.update_outdated(body.is_skipping_approved))
+            return context.replies.reply(context.workspace.jobs.update_outdated(body.is_skipping_approved))
 
         @router.post("/cancel")
         async def cancel() -> JsonObject:
@@ -160,10 +161,7 @@ class RecognitionRoutes:
 
         @router.post("/findings/acceptance")
         async def set_acceptance(body: AcceptanceBody) -> JsonObject:
-            findings: dict[FrameKey, list[int]] = {}
-            for group in body.findings:
-                findings.setdefault(FrameKey(Path(group.path), group.frame), []).extend(group.indices)
-            context.workspace.profiles.set_accepted(findings, body.is_accepted)
+            context.workspace.profiles.set_accepted(PictureFindings.grouped(body.findings), body.is_accepted)
             return {}
 
         @router.put("/thresholds")

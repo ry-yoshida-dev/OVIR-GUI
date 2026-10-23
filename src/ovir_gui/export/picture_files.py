@@ -65,10 +65,11 @@ class PictureFiles:
         for frame_key in frame_keys:
             if frame_key.frame_index is None:
                 self._paths[frame_key] = frame_key.path
-        for frame_key, picture in PictureLoader(dict(self._media)).load(frames):
+        for loaded in PictureLoader(dict(self._media)).load(frames):
+            picture: Image.Image | Exception = loaded.image_or_error
             if isinstance(picture, Exception):
                 continue
-            self._paths[frame_key] = self._write_frame(frame_key, picture)
+            self._paths[loaded.frame_key] = self._write_frame(loaded.frame_key, picture)
 
     def path_of(self, frame_key: FrameKey) -> Path | None:
         """

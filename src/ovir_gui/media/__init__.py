@@ -3,6 +3,7 @@ from .frame_key import FrameKey
 from .inference_mode import InferenceMode
 from .keyed_picture import KeyedPicture
 from .loaded_image import LoadedImage
+from .loaded_picture import LoadedPicture
 from .media_collection import MediaCollection
 from .media_item import MediaItem
 from .media_kind import MediaKind
@@ -18,6 +19,7 @@ __all__ = [
     "InferenceMode",
     "KeyedPicture",
     "LoadedImage",
+    "LoadedPicture",
     "MediaCollection",
     "MediaItem",
     "MediaKind",

@@ -13,6 +13,7 @@ Media files opened in the GUI and the pixels read from them. `MediaCollection` f
 | [inference_mode.py](./inference_mode.py) | `InferenceMode` chooses which pictures are inferred: the shown picture only, or every picture with the shown media first. |
 | [keyed_picture.py](./keyed_picture.py) | `KeyedPicture` pairs the pixels of one picture with the key naming it, as handed to the recognizers. |
 | [loaded_image.py](./loaded_image.py) | `LoadedImage` holds an image read from disk, upright according to its EXIF orientation. |
+| [loaded_picture.py](./loaded_picture.py) | `LoadedPicture` is one picture read by `PictureLoader`: its pixels or the error that kept it from being read. |
 | [media_collection.py](./media_collection.py) | `MediaCollection` collects image and video files from user-given paths, separating paths that add nothing. |
 | [media_item.py](./media_item.py) | `MediaItem` describes an open media file: an image, or a video with its stream properties. |
 | [media_kind.py](./media_kind.py) | `MediaKind` enumerates the kinds of media file the user opens. |

@@ -8,11 +8,10 @@ from ..prompting import LabeledPrompt
 from ..recognition import ClassScore, FrameResult, ImageSize, RecognitionTask
 from .classification_model import ClassificationModel
 from .classifier_prompt_builder import ClassifierPromptBuilder
-from .recognition_model import RecognitionModel
 from .recognizer import Recognizer
 
 
-class ClassifierRecognizer(Recognizer):
+class ClassifierRecognizer(Recognizer[ClassificationModel]):
     """
     Loaded ``open_vocabulary_classification`` classifier.
     """
@@ -26,20 +25,12 @@ class ClassifierRecognizer(Recognizer):
         model : ClassificationModel
             Settings to load.
         """
-        self._model: ClassificationModel = model
+        super().__init__(model, ClassificationModel)
         self._classifier: OpenVocabularyClassifier = model.settings.build()
         self._prompts: ClassifierPromptBuilder = ClassifierPromptBuilder()
 
-    @property
-    def model(self) -> RecognitionModel:
-        return self._model
-
-    def adopt(self, model: RecognitionModel) -> None:
-        if not isinstance(model, ClassificationModel):
-            raise TypeError(f"a classifier cannot run {model.task.value} settings.")
-        self.require_reusable(model)
-        self._model = model
-        self._classifier.settings = model.settings
+    def _apply_model(self) -> None:
+        self._classifier.settings = self._model.settings
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         images: list[Image.Image] = [picture.image for picture in pictures]

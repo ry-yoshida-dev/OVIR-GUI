@@ -16,14 +16,10 @@ from ..results import ResultLibrary
 from ..storage import ResultsSnapshot, Session
 from ..vocabulary import ClassDefinition
 from ..wording import CountedNoun
-from .action_reply import ActionReply
-from .action_status import ActionStatus
 from .background_planner import BackgroundPlanner
 from .class_workbench import ClassWorkbench
 from .deferred_save import DeferredSave
 from .export_coordinator import ExportCoordinator
-from .export_plan import ExportPlan
-from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
 from .inference_outcome_handler import InferenceOutcomeHandler
 from .inference_runner import InferenceRunner
@@ -149,6 +145,10 @@ class Workspace:
             self._review,
             self._workbench,
             lambda: self._jobs.is_worker_idle,
+            lambda: self._models.current_model().profile(),
+            lambda: self._jobs.is_busy,
+            lambda pending, is_skipping_approved: self._jobs.start(JobPurpose.EXPORT, pending, is_skipping_approved),
+            lambda: self._jobs.resume_background(),
         )
         self._profiles: ResultProfiles = ResultProfiles(
             self._working,
@@ -734,49 +734,6 @@ class Workspace:
             self._planner.unpin()
         self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
         self._jobs.restart_background()
-
-    def export_plan(self) -> ExportPlan:
-        """
-        What an export would write now.
-
-        Returns
-        -------
-        ExportPlan
-            Profile, counts and why the export cannot start, if it cannot.
-        """
-        current_profile: ModelProfile = self._models.current_model().profile()
-        profile: ModelProfile = self._working.shown_profile or current_profile
-        return self._exports.plan(profile, current_profile, self.is_busy)
-
-    def export(self, request: ExportRequest, is_skipping_approved: bool) -> ActionReply:
-        """
-        Write the stored results of the shown profile, recognizing the pictures without an up-to-date result first.
-
-        Parameters
-        ----------
-        request : ExportRequest
-            Options chosen by the user.
-        is_skipping_approved : bool
-            Whether the user approved leaving out classes the model cannot query.
-
-        Returns
-        -------
-        ActionReply
-            Started, refused, or waiting for approval.
-        """
-        plan: ExportPlan = self.export_plan()
-        issue: str = plan.issue_for(request)
-        if issue:
-            return self._notifier.reject(issue)
-        if not plan.pending_count:
-            self._exports.write(plan.profile, request, self._jobs.resume_background)
-            return ActionReply.done()
-        self._exports.hold(request)
-        pending: tuple[FrameKey, ...] = self._read_model.pending_keys(plan.profile, self.media)
-        reply: ActionReply = self._jobs.start(JobPurpose.EXPORT, pending, is_skipping_approved)
-        if reply.status is not ActionStatus.DONE:
-            self._exports.hold(None)
-        return reply
 
     def save_now(self) -> None:
         """

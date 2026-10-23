@@ -1,5 +1,4 @@
 import asyncio
-import tempfile
 from pathlib import Path
 from typing import Annotated, ClassVar
 
@@ -11,7 +10,8 @@ from ..media import FrameKey, LoadedImage, MediaItem, VideoFrameReader
 from ..prompting import ReferenceBox, ReferenceImage
 from ..storage import ClassSet
 from ..vocabulary import ClassDefinition
-from ..workspace import ClassWorkbench, Workspace
+from ..workspace import Workspace
+from .box_corners import BoxCorners
 from .image_preview import ImagePreview
 from .json_value import JsonObject
 from .picture_preview_cache import PicturePreviewCache
@@ -26,6 +26,7 @@ from .schema import (
     RemoveClassesBody,
     TextBody,
 )
+from .temporary_upload import TemporaryUpload
 from .web_context import WebContext
 
 
@@ -35,7 +36,6 @@ class ClassRoutes:
     """
 
     THUMBNAIL_SIDE: ClassVar[int] = 1024
-    PREVIEW_CACHE_CONTROL: ClassVar[str] = "private, max-age=86400"
 
     def __init__(self, context: WebContext) -> None:
         """
@@ -127,12 +127,8 @@ class ClassRoutes:
 
         @router.post("/classes/file")
         async def load_class_file(file: Annotated[UploadFile, File()]) -> JsonObject:
-            file_name: str = Path(file.filename or "classes.txt").name
-            content: bytes = await file.read()
-            with tempfile.TemporaryDirectory() as directory:
-                path: Path = Path(directory) / file_name
-                await asyncio.to_thread(path.write_bytes, content)
-                context.workspace.edit_classes(lambda bench: bench.load_file(path, file_name))
+            async with TemporaryUpload.saved(file, "classes.txt") as path:
+                context.workspace.edit_classes(lambda bench: bench.load_file(path, path.name))
             return {}
 
         @router.get("/references/image")
@@ -144,13 +140,9 @@ class ClassRoutes:
 
         @router.post("/references/drafts")
         async def upload_reference(file: Annotated[UploadFile, File()]) -> JsonObject:
-            file_name: str = Path(file.filename or "reference").name
-            content: bytes = await file.read()
-            with tempfile.TemporaryDirectory() as directory:
-                path: Path = Path(directory) / file_name
-                await asyncio.to_thread(path.write_bytes, content)
+            async with TemporaryUpload.saved(file, "reference") as path:
                 loaded: LoadedImage = await asyncio.to_thread(LoadedImage.open, path)
-            return self._draft_payload(context.drafts.add(file_name, loaded.image))
+            return self._draft_payload(context.drafts.add(path.name, loaded.image))
 
         @router.post("/references/drafts/path")
         async def open_reference(body: PathBody) -> JsonObject:
@@ -188,18 +180,19 @@ class ClassRoutes:
             if not 0 <= body.class_index < len(class_names):
                 raise IndexError(f"No class {body.class_index}.")
             width, height = draft.image.size
-            corners: list[list[float]] = body.boxes or [[0.0, 0.0, float(width), float(height)]]
-            if any(len(corner) != 4 for corner in corners):
-                raise ValueError("Every box needs four corners.")
+            corners: tuple[BoxCorners, ...] = tuple(
+                BoxCorners.of(value).clamped(float(width), float(height))
+                for value in body.boxes or [[0.0, 0.0, float(width), float(height)]]
+            )
             reference: ReferenceImage = ReferenceImage.of(draft.name, draft.image)
             boxes: tuple[ReferenceBox, ...] = tuple(
                 ReferenceBox(
                     reference_image=reference,
                     class_name=class_names[body.class_index],
-                    left=max(0.0, min(corner[0], corner[2])),
-                    top=max(0.0, min(corner[1], corner[3])),
-                    right=min(float(width), max(corner[0], corner[2])),
-                    bottom=min(float(height), max(corner[1], corner[3])),
+                    left=corner.left,
+                    top=corner.top,
+                    right=corner.right,
+                    bottom=corner.bottom,
                 )
                 for corner in corners
             )
@@ -209,14 +202,14 @@ class ClassRoutes:
 
         @router.get("/class-sets")
         async def class_sets() -> JsonObject:
-            return context.payloads.class_set_entries(context.workspace.workbench.class_set_store.entries)
+            return context.class_views.class_set_entries(context.workspace.workbench.class_set_store.entries)
 
         @router.get("/class-sets/{name}")
         async def class_set_preview(name: str) -> JsonObject:
             class_set: ClassSet = await asyncio.to_thread(
                 context.workspace.workbench.class_set_store.read_class_set, name
             )
-            return context.payloads.class_set_preview(name, class_set)
+            return context.class_views.class_set_preview(name, class_set)
 
         @router.get("/class-sets/{name}/image")
         async def class_set_image(name: str, image_name: str, digest: str) -> Response:
@@ -249,14 +242,8 @@ class ClassRoutes:
 
         @router.post("/class-sets/import")
         async def import_class_set(file: Annotated[UploadFile, File()]) -> JsonObject:
-            file_name: str = Path(file.filename or "classes.ovirset").name
-            content: bytes = await file.read()
-            with tempfile.TemporaryDirectory() as directory:
-                path: Path = Path(directory) / file_name
-                await asyncio.to_thread(path.write_bytes, content)
-                context.workspace.edit_class_sets(
-                    lambda bench: self._import_class_set(bench, path, Path(file_name).stem)
-                )
+            async with TemporaryUpload.saved(file, "classes.ovirset") as path:
+                context.workspace.edit_class_sets(lambda bench: bench.class_set_store.import_archive(path, path.stem))
             return {}
 
         @router.get("/class-sets/{name}/file")
@@ -269,18 +256,11 @@ class ClassRoutes:
         return router
 
     @staticmethod
-    def _import_class_set(bench: ClassWorkbench, path: Path, name: str) -> None:
-        bench.class_set_store.import_archive(path, name)
-
-    @staticmethod
     def _draft_payload(draft: ReferenceDraft) -> JsonObject:
         width, height = draft.image.size
         return {"draft_id": draft.draft_id, "name": draft.name, "width": width, "height": height}
 
-    async def _image_response(self, pixels: Image.Image, max_side: int) -> Response:
+    @staticmethod
+    async def _image_response(pixels: Image.Image, max_side: int) -> Response:
         preview: ImagePreview = await asyncio.to_thread(PicturePreviewCache.encode, pixels, max_side)
-        return Response(
-            content=preview.content,
-            media_type=preview.media_type,
-            headers={"Cache-Control": self.PREVIEW_CACHE_CONTROL},
-        )
+        return preview.response()

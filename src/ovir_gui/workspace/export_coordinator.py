@@ -6,6 +6,8 @@ from ..export import ExportItem, ExportReport, ExportScope, ExportSelection, Res
 from ..media import FrameKey
 from ..models import ModelProfile
 from ..results import ResultCatalog, ResultLibrary, StoredResult
+from .action_reply import ActionReply
+from .action_status import ActionStatus
 from .class_workbench import ClassWorkbench
 from .export_plan import ExportPlan
 from .export_request import ExportRequest
@@ -35,6 +37,10 @@ class ExportCoordinator:
         review: ReviewSettings,
         workbench: ClassWorkbench,
         is_worker_idle: Callable[[], bool],
+        current_profile: Callable[[], ModelProfile],
+        is_busy: Callable[[], bool],
+        start_job: Callable[[tuple[FrameKey, ...], bool], ActionReply],
+        resume_background: Callable[[], None],
     ) -> None:
         """
         Parameters
@@ -55,6 +61,15 @@ class ExportCoordinator:
             Classes naming and coloring the findings.
         is_worker_idle : Callable[[], bool]
             Whether the inference worker has nothing to do, so the activity message can be cleared.
+        current_profile : Callable[[], ModelProfile]
+            Profile of the chosen model, the only one able to recognize pending pictures.
+        is_busy : Callable[[], bool]
+            Whether a foreground job or an export runs.
+        start_job : Callable[[tuple[FrameKey, ...], bool], ActionReply]
+            Starts the export job recognizing some pictures first, given whether the user approved leaving out
+            classes the model cannot query.
+        resume_background : Callable[[], None]
+            Resumes background recognition once an export written at once ended.
         """
         self._scheduler: TaskScheduler = scheduler
         self._notifier: StatusNotifier = notifier
@@ -64,6 +79,10 @@ class ExportCoordinator:
         self._review: ReviewSettings = review
         self._workbench: ClassWorkbench = workbench
         self._is_worker_idle: Callable[[], bool] = is_worker_idle
+        self._current_profile: Callable[[], ModelProfile] = current_profile
+        self._is_busy: Callable[[], bool] = is_busy
+        self._start_job: Callable[[tuple[FrameKey, ...], bool], ActionReply] = start_job
+        self._resume_background: Callable[[], None] = resume_background
         self._is_exporting: bool = False
         self._last_export: ExportReport | None = None
         self._pending_request: ExportRequest | None = None
@@ -109,31 +128,24 @@ class ExportCoordinator:
         """
         return working_directory / "exports" / datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
 
-    def plan(self, profile: ModelProfile, current_profile: ModelProfile, is_busy: bool) -> ExportPlan:
+    def plan(self) -> ExportPlan:
         """
-        What an export of a profile would write now.
-
-        Parameters
-        ----------
-        profile : ModelProfile
-            Profile whose results are exported.
-        current_profile : ModelProfile
-            Profile of the chosen model, the only one able to recognize pending pictures.
-        is_busy : bool
-            Whether a foreground job or an export runs.
+        What an export of the shown profile, or of the chosen model without one, would write now.
 
         Returns
         -------
         ExportPlan
             Profile, counts and why the export cannot start, if it cannot.
         """
+        current_profile: ModelProfile = self._current_profile()
+        profile: ModelProfile = self._working.shown_profile or current_profile
         pending: tuple[FrameKey, ...] = self._read_model.pending_keys(profile, self._working.media.values())
         catalog: ResultCatalog | None = self._library.catalog_of(profile) if profile in self._library else None
         picture_count: int = 0 if catalog is None else len(self._read_model.recognized_keys(catalog))
         issue: str = ""
         if not self._working.media:
             issue = "Open images or videos first."
-        elif is_busy:
+        elif self._is_busy():
             issue = "An inference is already running."
         elif pending and profile != current_profile:
             issue = (
@@ -146,6 +158,36 @@ class ExportCoordinator:
             pending_count=len(pending),
             issue=issue,
         )
+
+    def start(self, request: ExportRequest, is_skipping_approved: bool) -> ActionReply:
+        """
+        Write the stored results of the shown profile, recognizing the pictures without an up-to-date result first.
+
+        Parameters
+        ----------
+        request : ExportRequest
+            Options chosen by the user.
+        is_skipping_approved : bool
+            Whether the user approved leaving out classes the model cannot query.
+
+        Returns
+        -------
+        ActionReply
+            Started, refused, or waiting for approval.
+        """
+        plan: ExportPlan = self.plan()
+        issue: str = plan.issue_for(request)
+        if issue:
+            return self._notifier.reject(issue)
+        if not plan.pending_count:
+            self.write(plan.profile, request, self._resume_background)
+            return ActionReply.done()
+        self.hold(request)
+        pending: tuple[FrameKey, ...] = self._read_model.pending_keys(plan.profile, self._working.media.values())
+        reply: ActionReply = self._start_job(pending, is_skipping_approved)
+        if reply.status is not ActionStatus.DONE:
+            self.hold(None)
+        return reply
 
     def hold(self, request: ExportRequest | None) -> None:
         """

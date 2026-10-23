@@ -125,7 +125,7 @@ class TestWorkspaceFlow:
             for key in ("media", "profiles", "shown_profile_key", "sampling", "inference", "task", "thresholds"):
                 assert state_after[key] == state_before[key], key
         assert (tmp_path / "data" / "results.ovirresults").is_file()
-        assert not (tmp_path / "data" / "results.ovirresults.partial").exists()
+        assert not (tmp_path / "data" / ".results.ovirresults.partial").exists()
         golden.assert_matches("session_file", json.loads((tmp_path / "data" / "session.json").read_text("utf-8")))
 
     def test_classification(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:

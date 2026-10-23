@@ -3,6 +3,7 @@ from dataclasses import replace
 from typing import ClassVar
 
 from ..recognition import RecognitionTask
+from .backend_traits import BackendTraits
 from .classification_model import ClassificationModel
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
@@ -135,6 +136,64 @@ class ModelSelector:
             for preset in self._catalog.presets_of(RecognitionTask.DETECTION, backend)
         )
 
+    def box_detector_labels_of(self, task: RecognitionTask) -> tuple[str, ...]:
+        """
+        Detection presets that can find the boxes a model of a task masks.
+
+        Parameters
+        ----------
+        task : RecognitionTask
+            Task of the model.
+
+        Returns
+        -------
+        tuple[str, ...]
+            ``box_detector_labels`` for segmentation, empty for the other tasks.
+        """
+        match task:
+            case RecognitionTask.SEGMENTATION:
+                return self.box_detector_labels
+            case RecognitionTask.CLASSIFICATION | RecognitionTask.DETECTION:
+                return ()
+
+    @staticmethod
+    def traits_of(task: RecognitionTask, backend: str) -> BackendTraits:
+        """
+        Options a backend offers, read from its name without loading a preset.
+
+        Parameters
+        ----------
+        task : RecognitionTask
+            Task of the backend.
+        backend : str
+            Model family.
+
+        Returns
+        -------
+        BackendTraits
+            Image poolings of a classifier, and whether a segmenter masks detector boxes and its segmentation mode.
+
+        Raises
+        ------
+        ValueError
+            If the backend is not a family of the task.
+        """
+        match task:
+            case RecognitionTask.CLASSIFICATION:
+                return BackendTraits(
+                    image_poolings=ClassificationModel.image_poolings_of(backend),
+                    is_box_prompted=False,
+                    segmentation_mode=None,
+                )
+            case RecognitionTask.DETECTION:
+                return BackendTraits(image_poolings=(), is_box_prompted=False, segmentation_mode=None)
+            case RecognitionTask.SEGMENTATION:
+                return BackendTraits(
+                    image_poolings=(),
+                    is_box_prompted=SegmentationModel.is_box_prompted_backend(backend),
+                    segmentation_mode=SegmentationMode.of_backend(backend),
+                )
+
     def default_selection(self, task: RecognitionTask) -> ModelSelection:
         """
         Preferred light preset of a task, or its first preset, with its own values.
@@ -231,30 +290,7 @@ class ModelSelector:
             selection.device, selection.precision
         ):
             validated = replace(validated, precision=ComputePrecision.FLOAT32)
-        match base:
-            case ClassificationModel():
-                poolings: tuple[str, ...] = ClassificationModel.image_poolings_of(selection.backend)
-                if selection.image_pooling is not None and selection.image_pooling not in poolings:
-                    raise ValueError(f"{selection.backend} offers the poolings {', '.join(poolings)}.")
-            case DetectionModel():
-                validated = replace(validated, confidence_threshold=None)
-            case SegmentationModel():
-                validated = replace(
-                    validated,
-                    confidence_threshold=None,
-                    box_detector_label=selection.box_detector_label if base.is_box_prompted else None,
-                )
-            case PromptableSegmentationModel():
-                validated = replace(
-                    validated, confidence_threshold=None, nms_iou_threshold=None, box_detector_label=None
-                )
-            case ObjectTrackingModel() | ConceptTrackingModel():
-                validated = replace(validated, nms_iou_threshold=None, box_detector_label=None, batch_size=None)
-            case MaskGenerationModel():
-                validated = replace(validated, box_detector_label=None)
-            case _:
-                pass
-        return validated
+        return base.fitted(validated)
 
     def model_of(self, selection: ModelSelection) -> RecognitionModel:
         """
@@ -274,24 +310,11 @@ class ModelSelector:
         ------
         KeyError
             If the preset or the box detector preset does not exist.
+        TypeError
+            If the box detector preset is not a detection preset.
         """
         base: RecognitionModel = self.base_model(selection.task, selection.backend, selection.preset_name)
-        match base:
-            case ClassificationModel():
-                return base.customized(selection)
-            case DetectionModel():
-                return base.customized(selection)
-            case SegmentationModel():
-                box_model: DetectionModel | None = (
-                    None
-                    if selection.box_detector_label is None
-                    else self.box_detector_model(selection.box_detector_label)
-                )
-                return base.customized(selection, box_model)
-            case PromptableSegmentationModel() | MaskGenerationModel() | ObjectTrackingModel() | ConceptTrackingModel():
-                return base.customized(selection)
-            case _:
-                raise TypeError(f"unsupported model {type(base).__name__}")
+        return base.customized(selection, self.box_detector_model)
 
     def base_model(self, task: RecognitionTask, backend: str, preset_name: str) -> RecognitionModel:
         """

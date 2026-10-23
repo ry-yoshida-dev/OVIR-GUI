@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import ClassVar
 
@@ -6,6 +5,7 @@ from ..media import InferenceMode
 from ..models import ComputeDevice, ComputePrecision, ModelSelection
 from ..recognition import RecognitionTask
 from .json_fields import JsonFields, JsonValue
+from .json_file import JsonFile
 from .session import Session
 
 
@@ -26,7 +26,7 @@ class SessionStore:
         root_directory : Path
             Data directory holding the file.
         """
-        self._root_directory: Path = root_directory
+        self._file: JsonFile = JsonFile(root_directory / self.FILE_NAME)
 
     @property
     def path(self) -> Path:
@@ -38,7 +38,7 @@ class SessionStore:
         Path
             ``session.json`` in the data directory, whether or not it exists.
         """
-        return self._root_directory / self.FILE_NAME
+        return self._file.path
 
     def load(self) -> Session:
         """
@@ -49,12 +49,10 @@ class SessionStore:
         Session
             Stored session, or an empty one when nothing is stored or the file is unreadable.
         """
-        if not self.path.is_file():
+        content: dict[str, JsonValue] | None = self._file.read_object("session")
+        if content is None:
             return Session()
         try:
-            content: dict[str, JsonValue] = JsonFields.object_of(
-                JsonFields.parse(self.path.read_text(encoding="utf-8")), "session"
-            )
             media_paths: tuple[Path, ...] = tuple(
                 Path(JsonFields.string_of(media_path, "media path"))
                 for media_path in JsonFields.list_of(content.get("media", []), "media")
@@ -86,7 +84,7 @@ class SessionStore:
                 ),
                 selections=self._selections_of(content.get("selections", [])),
             )
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        except (TypeError, ValueError):
             return Session()
 
     def save(self, session: Session) -> None:
@@ -113,10 +111,7 @@ class SessionStore:
             "is_auto_inference": session.is_auto_inference,
             "selections": [self._selection_content(selection) for selection in session.selections.values()],
         }
-        self._root_directory.mkdir(parents=True, exist_ok=True)
-        partial_path: Path = self.path.with_name(f".{self.FILE_NAME}.partial")
-        partial_path.write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
-        partial_path.replace(self.path)
+        self._file.write(content)
 
     @staticmethod
     def _selection_content(selection: ModelSelection) -> JsonValue:

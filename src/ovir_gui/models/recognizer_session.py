@@ -19,7 +19,7 @@ class RecognizerSession:
     """
 
     def __init__(self) -> None:
-        self._recognizer: Recognizer | None = None
+        self._recognizer: Recognizer[RecognitionModel] | None = None
 
     @property
     def loaded_model(self) -> RecognitionModel | None:
@@ -71,7 +71,7 @@ class RecognizerSession:
             One result per image with the inference time.
         """
         is_model_reloaded: bool = not self.is_loaded_for(model)
-        recognizer: Recognizer = self._prepare(model)
+        recognizer: Recognizer[RecognitionModel] = self._prepare(model)
         started_at: float = perf_counter()
         results: tuple[FrameResult, ...] = tuple(recognizer.recognize(pictures, prompt))
         return RecognitionOutcome(
@@ -87,7 +87,7 @@ class RecognizerSession:
         self._recognizer = None
         gc.collect()
 
-    def _prepare(self, model: RecognitionModel) -> Recognizer:
+    def _prepare(self, model: RecognitionModel) -> Recognizer[RecognitionModel]:
         if self._recognizer is not None and self.is_loaded_for(model):
             self._recognizer.adopt(model)
             return self._recognizer

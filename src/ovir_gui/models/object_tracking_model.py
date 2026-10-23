@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -14,8 +15,10 @@ from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
+    from .detection_model import DetectionModel
     from .recognizer import Recognizer
 
 
@@ -156,7 +159,20 @@ class ObjectTrackingModel(RecognitionModel):
             confidence_threshold=self.minimum_presence,
         )
 
-    def customized(self, selection: ModelSelection) -> "ObjectTrackingModel":
+    @property
+    def usage_description(self) -> str:
+        return "Mark objects on any frame, then inferring every sampled frame follows them through the video."
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        return ThresholdControls(confidence_label="Min presence", is_nms_shown=False, is_minimum_confidence_shown=False)
+
+    def fitted(self, selection: ModelSelection) -> ModelSelection:
+        return replace(selection, nms_iou_threshold=None, box_detector_label=None, batch_size=None)
+
+    def customized(
+        self, selection: ModelSelection, box_detector_of: Callable[[str], "DetectionModel"]
+    ) -> "ObjectTrackingModel":
         """
         Same preset with the overrides of a selection.
 
@@ -164,6 +180,8 @@ class ObjectTrackingModel(RecognitionModel):
         ----------
         selection : ModelSelection
             Device, precision and minimum presence to use.
+        box_detector_of : Callable[[str], DetectionModel]
+            Not read; the model has no box detector.
 
         Returns
         -------
@@ -178,7 +196,7 @@ class ObjectTrackingModel(RecognitionModel):
         )
         return ObjectTrackingModel(self.preset, settings, minimum_presence)
 
-    def build_recognizer(self) -> "Recognizer":
+    def build_recognizer(self) -> "Recognizer[ObjectTrackingModel]":
         from .object_tracking_recognizer import ObjectTrackingRecognizer
 
         return ObjectTrackingRecognizer(self)

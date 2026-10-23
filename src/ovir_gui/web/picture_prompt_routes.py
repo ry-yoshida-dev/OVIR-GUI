@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from ..media import FrameKey
 from ..prompting import ExemplarBox, ObjectMark
 from ..workspace import Workspace
+from .box_corners import BoxCorners
 from .json_value import JsonObject
 from .schema import ExemplarBody, ExemplarRemovalBody, MarkBody, MarkRemovalBody, PictureBody
 from .web_context import WebContext
@@ -41,14 +42,14 @@ class PicturePromptRoutes:
             workspace: Workspace = context.workspace
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
             self._require_class(workspace, body.class_name)
-            left, top, right, bottom = self._box_of(body.box)
+            corners: BoxCorners = BoxCorners.of(body.box)
             box: ExemplarBox = ExemplarBox(
                 frame_key=frame_key,
                 class_name=body.class_name,
-                left=left,
-                top=top,
-                right=right,
-                bottom=bottom,
+                left=corners.left,
+                top=corners.top,
+                right=corners.right,
+                bottom=corners.bottom,
                 is_positive=body.is_positive,
             )
             workspace.edit_picture_prompts(frame_key, lambda board: board.add_exemplar(box))
@@ -77,7 +78,7 @@ class PicturePromptRoutes:
                 class_name=body.class_name,
                 positive_points=self._points_of(body.positive_points),
                 negative_points=self._points_of(body.negative_points),
-                box=None if body.box is None else self._box_of(body.box),
+                box=None if body.box is None else BoxCorners.of(body.box).xyxy,
             )
             workspace.edit_picture_prompts(frame_key, lambda board: board.set_mark(mark))
             return {"object_id": object_id}
@@ -121,9 +122,3 @@ class PicturePromptRoutes:
                 raise ValueError(f"a point needs x and y. got {value}")
             points.append((value[0], value[1]))
         return tuple(points)
-
-    @staticmethod
-    def _box_of(value: list[float]) -> tuple[float, float, float, float]:
-        if len(value) != 4:
-            raise ValueError(f"a box needs [left, top, right, bottom]. got {value}")
-        return (value[0], value[1], value[2], value[3])

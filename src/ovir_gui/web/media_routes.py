@@ -20,7 +20,6 @@ class MediaRoutes:
     browser and their playable copies, video sampling, background recognition and server folder listings.
     """
 
-    PREVIEW_CACHE_CONTROL: ClassVar[str] = "private, max-age=86400"
     VIDEO_CACHE_CONTROL: ClassVar[str] = "private, no-cache"
     FALLBACK_VIDEO_MEDIA_TYPE: ClassVar[str] = "application/octet-stream"
 
@@ -95,13 +94,13 @@ class MediaRoutes:
         async def image(path: str) -> Response:
             item: MediaItem = context.workspace.media_item(Path(path))
             preview: ImagePreview = await asyncio.to_thread(context.preview_cache.image_preview, item.path)
-            return self._response(preview)
+            return preview.response()
 
         @router.get("/media/frame")
         async def frame(path: str, frame: int) -> Response:
             item: MediaItem = context.workspace.media_item(Path(path))
             preview: ImagePreview = await asyncio.to_thread(context.preview_cache.frame_preview, item, frame)
-            return self._response(preview)
+            return preview.response()
 
         @router.post("/media/playback")
         async def prepare_playback(body: PathBody) -> JsonObject:
@@ -123,10 +122,3 @@ class MediaRoutes:
             return await asyncio.to_thread(context.browser.listing_of, None if path is None else Path(path))
 
         return router
-
-    def _response(self, preview: ImagePreview) -> Response:
-        return Response(
-            content=preview.content,
-            media_type=preview.media_type,
-            headers={"Cache-Control": self.PREVIEW_CACHE_CONTROL},
-        )

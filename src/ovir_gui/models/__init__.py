@@ -1,3 +1,4 @@
+from .backend_traits import BackendTraits
 from .classification_model import ClassificationModel
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
@@ -23,8 +24,10 @@ from .recognizer_session import RecognizerSession
 from .segmentation_mode import SegmentationMode
 from .segmentation_model import SegmentationModel
 from .stream_position import StreamPosition
+from .threshold_controls import ThresholdControls
 
 __all__ = [
+    "BackendTraits",
     "ClassificationModel",
     "ComputeDevice",
     "ComputePrecision",
@@ -50,4 +53,5 @@ __all__ = [
     "SegmentationMode",
     "SegmentationModel",
     "StreamPosition",
+    "ThresholdControls",
 ]

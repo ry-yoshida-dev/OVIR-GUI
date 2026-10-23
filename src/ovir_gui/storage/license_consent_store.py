@@ -1,11 +1,11 @@
-import json
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
 
 from ..models import LicensedDependency
-from .json_fields import JsonFields, JsonValue
+from .json_fields import JsonValue
+from .json_file import JsonFile
 
 
 class LicenseConsentStore:
@@ -26,7 +26,7 @@ class LicenseConsentStore:
         root_directory : Path
             Data directory holding the file.
         """
-        self._root_directory: Path = root_directory
+        self._file: JsonFile = JsonFile(root_directory / self.FILE_NAME)
 
     @property
     def path(self) -> Path:
@@ -38,7 +38,7 @@ class LicenseConsentStore:
         Path
             ``license_consent.json`` in the data directory, whether or not it exists.
         """
-        return self._root_directory / self.FILE_NAME
+        return self._file.path
 
     def load(self) -> frozenset[LicensedDependency]:
         """
@@ -72,13 +72,8 @@ class LicenseConsentStore:
             dependency.value: previous.get(dependency.value, {self.ACCEPTED_AT_KEY: now})
             for dependency in sorted(accepted, key=lambda entry: entry.value)
         }
-        self._root_directory.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
+        self._file.write(content)
 
     def _read_entries(self) -> dict[str, JsonValue]:
-        if not self.path.is_file():
-            return {}
-        try:
-            return JsonFields.object_of(JsonFields.parse(self.path.read_text(encoding="utf-8")), "license consent")
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError):
-            return {}
+        entries: dict[str, JsonValue] | None = self._file.read_object("license consent")
+        return {} if entries is None else entries
