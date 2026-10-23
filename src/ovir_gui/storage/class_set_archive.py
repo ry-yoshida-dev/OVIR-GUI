@@ -12,6 +12,7 @@ from ..vocabulary import ClassDefinition
 from .class_set import ClassSet
 from .class_set_summary import ClassSetSummary
 from .json_fields import JsonFields, JsonValue
+from .stored_reference_image import StoredReferenceImage
 
 
 class ClassSetArchive:
@@ -151,9 +152,9 @@ class ClassSetArchive:
         reference_images: list[ReferenceImage] = []
         reference_pixels: dict[ReferenceImage, Image.Image] = {}
         for entry in JsonFields.list_of(manifest.get("reference_images"), "reference_images"):
-            reference_image, pixels = self._read_image(archive, JsonFields.object_of(entry, "reference image"))
-            reference_images.append(reference_image)
-            reference_pixels[reference_image] = pixels
+            stored: StoredReferenceImage = self._read_image(archive, JsonFields.object_of(entry, "reference image"))
+            reference_images.append(stored.reference_image)
+            reference_pixels[stored.reference_image] = stored.pixels
         return ClassSet(
             classes=tuple(
                 self._class_of(JsonFields.object_of(entry, "class"))
@@ -226,7 +227,7 @@ class ClassSetArchive:
         if not isinstance(version, int) or version > self.FORMAT_VERSION:
             raise ValueError(f"{self._path.name} has the unsupported class set version {version!r}.")
 
-    def _read_image(self, archive: zipfile.ZipFile, entry: dict[str, JsonValue]) -> tuple[ReferenceImage, Image.Image]:
+    def _read_image(self, archive: zipfile.ZipFile, entry: dict[str, JsonValue]) -> StoredReferenceImage:
         reference_image: ReferenceImage = ReferenceImage(
             name=JsonFields.string_of(entry.get("name"), "reference image name"),
             digest=JsonFields.string_of(entry.get("digest"), "reference image digest"),
@@ -237,7 +238,7 @@ class ClassSetArchive:
             pixels: Image.Image = source.convert("RGB")
         if ReferenceImage.digest_of(pixels) != reference_image.digest:
             raise ValueError(f"Pixels of the reference image '{reference_image.name}' do not match their digest.")
-        return reference_image, pixels
+        return StoredReferenceImage(reference_image=reference_image, pixels=pixels)
 
     def _class_of(self, entry: dict[str, JsonValue]) -> ClassDefinition:
         return ClassDefinition(

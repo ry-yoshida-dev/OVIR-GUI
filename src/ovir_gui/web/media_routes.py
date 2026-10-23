@@ -1,13 +1,13 @@
 import asyncio
 import mimetypes
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from fastapi import APIRouter, File, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 
-from ..media import MediaItem
-from ..workspace import InferenceMode, Workspace
+from ..media import InferenceMode, MediaItem
+from ..workspace import Workspace
 from .image_preview import ImagePreview
 from .json_value import JsonObject
 from .schema import InferenceBody, PathBody, PathsBody, SamplingBody, ShowBody
@@ -20,9 +20,9 @@ class MediaRoutes:
     browser and their playable copies, video sampling, background recognition and server folder listings.
     """
 
-    PREVIEW_CACHE_CONTROL = "private, max-age=86400"
-    VIDEO_CACHE_CONTROL = "private, no-cache"
-    FALLBACK_VIDEO_MEDIA_TYPE = "application/octet-stream"
+    PREVIEW_CACHE_CONTROL: ClassVar[str] = "private, max-age=86400"
+    VIDEO_CACHE_CONTROL: ClassVar[str] = "private, no-cache"
+    FALLBACK_VIDEO_MEDIA_TYPE: ClassVar[str] = "application/octet-stream"
 
     def __init__(self, context: WebContext) -> None:
         """
@@ -60,7 +60,7 @@ class MediaRoutes:
         @router.post("/media/show")
         async def show(body: ShowBody) -> JsonObject:
             context.workspace.show(Path(body.path), body.frame, body.is_playing)
-            return {"is_following_playback": context.workspace.is_following_playback}
+            return {"is_following_playback": context.workspace.jobs.is_following_playback}
 
         @router.put("/sampling")
         async def set_sampling(body: SamplingBody) -> JsonObject:
@@ -74,7 +74,7 @@ class MediaRoutes:
 
         @router.post("/inference/retry")
         async def retry_inference() -> JsonObject:
-            context.workspace.retry_background()
+            context.workspace.jobs.retry_background()
             return {}
 
         @router.post("/uploads")
@@ -82,13 +82,12 @@ class MediaRoutes:
             files: Annotated[list[UploadFile], File()], is_first_shown: Annotated[bool, Query()] = True
         ) -> JsonObject:
             workspace: Workspace = context.workspace
-            saved_paths: list[Path] = []
-            for upload_file in files:
-                saved_paths.append(
-                    await asyncio.to_thread(
-                        workspace.stores.upload_store.save, upload_file.filename or "", upload_file.file
-                    )
+            saved_paths: list[Path] = [
+                await asyncio.to_thread(
+                    workspace.stores.upload_store.save, upload_file.filename or "", upload_file.file
                 )
+                for upload_file in files
+            ]
             workspace.open_paths(saved_paths, is_first_shown)
             return {}
 
@@ -106,14 +105,12 @@ class MediaRoutes:
 
         @router.post("/media/playback")
         async def prepare_playback(body: PathBody) -> JsonObject:
-            context.workspace.prepare_playback(Path(body.path))
+            context.workspace.playback.prepare(Path(body.path))
             return {}
 
         @router.get("/media/video")
         async def video(path: str) -> FileResponse:
-            item: MediaItem = context.workspace.media_item(Path(path))
-            _ = item.video_info
-            played: Path = context.workspace.playback_path(item.path)
+            played: Path = context.workspace.playback.path_of(Path(path))
             media_type: str | None = mimetypes.guess_type(played.name)[0]
             return FileResponse(
                 played,

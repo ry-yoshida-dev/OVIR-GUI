@@ -1,0 +1,45 @@
+{
+  "classes": [
+    {
+      "color": "#e6194b",
+      "name": "person",
+      "values": [
+        0.9,
+        0.86,
+        0.82
+      ]
+    },
+    {
+      "color": "#3cb44b",
+      "name": "car",
+      "values": [
+        0.7,
+        0.66,
+        0.62
+      ]
+    },
+    {
+      "color": "#4363d8",
+      "name": "dog",
+      "values": [
+        0.5,
+        0.46,
+        0.42
+      ]
+    }
+  ],
+  "fps": 10.0,
+  "frame_count": 12,
+  "frame_step": 4,
+  "frames": [
+    0,
+    4,
+    8
+  ],
+  "path": "<tmp>/media/c_clip.mp4",
+  "top_classes": [
+    "person",
+    "person",
+    "person"
+  ]
+}

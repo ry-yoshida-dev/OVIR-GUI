@@ -8,12 +8,12 @@ from ..storage import (
     DuplicateSuppressionStore,
     LicenseConsentStore,
     PicturePromptStore,
+    PlaybackStore,
     ResultsStore,
     SessionStore,
+    UploadStore,
 )
 from ..vocabulary import ClassListStore
-from .playback_store import PlaybackStore
-from .upload_store import UploadStore
 
 
 @dataclass(frozen=True)
@@ -103,15 +103,3 @@ class WorkspaceStores:
             upload_store=UploadStore(root_directory),
             playback_store=PlaybackStore(root_directory),
         )
-
-    @classmethod
-    def in_working_directory(cls) -> "WorkspaceStores":
-        """
-        Stores in ``ovir_gui_data`` under the current working directory.
-
-        Returns
-        -------
-        WorkspaceStores
-            Every store of the data directory.
-        """
-        return cls.in_directory(Path.cwd() / cls.DEFAULT_DIRECTORY_NAME)

@@ -9,11 +9,13 @@ from .json_fields import JsonFields, JsonValue
 from .license_consent_store import LicenseConsentStore
 from .picture_prompt_codec import PicturePromptCodec
 from .picture_prompt_store import PicturePromptStore
+from .playback_store import PlaybackStore
 from .results_archive import ResultsArchive
 from .results_snapshot import ResultsSnapshot
 from .results_store import ResultsStore
 from .session import Session
 from .session_store import SessionStore
+from .upload_store import UploadStore
 
 __all__ = [
     "ClassSet",
@@ -28,9 +30,11 @@ __all__ = [
     "LicenseConsentStore",
     "PicturePromptCodec",
     "PicturePromptStore",
+    "PlaybackStore",
     "ResultsArchive",
     "ResultsSnapshot",
     "ResultsStore",
     "Session",
     "SessionStore",
+    "UploadStore",
 ]

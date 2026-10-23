@@ -1,8 +1,7 @@
 from collections.abc import Callable, Sequence
 
-from ..media import FrameKey, MediaItem
+from ..media import FrameKey, InferenceMode, MediaItem
 from ..models import ModelProfile
-from .inference_mode import InferenceMode
 
 
 class BackgroundPlanner:

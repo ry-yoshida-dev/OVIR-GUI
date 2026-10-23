@@ -13,9 +13,9 @@ class ClassThresholdStore:
     Minimum confidence per class and task, remembered between runs in ``class_thresholds.json`` of a data directory.
 
     Classifier scores and detection confidences follow different scales, so every task keeps its own minimums. The
-    file looks like ``{"detection": {"default": 0.0, "classes": {"car": 0.35}, "phrases": {"car": {"suv": 0.5}}}}``. The directory is created only
-    when written to. Detectors and segmenters keep findings down to a low floor, so the default minimum of those tasks
-    starts at ``FINDING_DEFAULT_MINIMUM`` instead of keeping every finding.
+    file looks like ``{"detection": {"default": 0.0, "classes": {"car": 0.35}, "phrases": {"car": {"suv": 0.5}}}}``.
+    The directory is created only when written to. Detectors and segmenters keep findings down to a low floor, so the
+    default minimum of those tasks starts at ``FINDING_DEFAULT_MINIMUM`` instead of keeping every finding.
     """
 
     FILE_NAME: ClassVar[str] = "class_thresholds.json"

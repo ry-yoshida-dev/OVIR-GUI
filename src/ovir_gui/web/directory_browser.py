@@ -65,7 +65,8 @@ class DirectoryBrowser:
         shortcuts: list[JsonValue] = [
             {"name": name, "path": str(path.expanduser().resolve())} for name, path in self._shortcuts.items()
         ]
-        sorted_directory_names: list[JsonValue] = [name for name in sorted(directory_names, key=str.casefold)]
+        directory_names_by_case: list[str] = sorted(directory_names, key=str.casefold)
+        sorted_directory_names: list[JsonValue] = list[JsonValue](directory_names_by_case)
         sorted_files: list[JsonValue] = [
             {"name": name, "kind": kind.value} for name, kind in sorted(files, key=lambda file: file[0].casefold())
         ]

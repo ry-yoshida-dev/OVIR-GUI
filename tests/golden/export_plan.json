@@ -1,0 +1,58 @@
+{
+  "default_directory": "<volatile>",
+  "formats": [
+    {
+      "is_confidence_supported": true,
+      "label": "CSV table",
+      "value": "csv"
+    },
+    {
+      "is_confidence_supported": true,
+      "label": "JSON document",
+      "value": "json"
+    },
+    {
+      "is_confidence_supported": true,
+      "label": "MS COCO boxes (JSON)",
+      "value": "coco"
+    },
+    {
+      "is_confidence_supported": true,
+      "label": "YOLO boxes (TXT)",
+      "value": "yolo"
+    },
+    {
+      "is_confidence_supported": false,
+      "label": "Pascal VOC (XML)",
+      "value": "pascal_voc"
+    },
+    {
+      "is_confidence_supported": false,
+      "label": "LabelMe rectangles (JSON)",
+      "value": "labelme"
+    },
+    {
+      "is_confidence_supported": false,
+      "label": "Create ML (JSON)",
+      "value": "create_ml"
+    }
+  ],
+  "issue": "",
+  "model_name": "grounding_dino/original_tiny",
+  "options_text": "auto · fp32 · NMS off",
+  "pending_count": 0,
+  "picture_count": 5,
+  "scopes": [
+    {
+      "description": "Leaves out rejected findings and those below the class minimums.",
+      "label": "Every kept finding",
+      "value": "kept"
+    },
+    {
+      "description": "Also leaves out findings hidden by the filters of the result table.",
+      "label": "Only listed findings",
+      "value": "listed"
+    }
+  ],
+  "task": "detection"
+}

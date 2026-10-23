@@ -66,18 +66,6 @@ class VideoInfo:
             size=ImageSize(width=metadata.width, height=metadata.height),
         )
 
-    @property
-    def duration_seconds(self) -> float:
-        """
-        Length of the video.
-
-        Returns
-        -------
-        float
-            Frame count divided by the frame rate.
-        """
-        return self.frame_count / self.fps
-
     def seconds_of(self, frame_index: int) -> float:
         """
         Time of a frame from the start of the video.

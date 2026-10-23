@@ -5,10 +5,10 @@ import cv2
 import numpy as np
 import pytest
 
-from ovir_gui.media import FrameKey, MediaItem, VideoSampling
+from ovir_gui.media import FrameKey, InferenceMode, MediaItem, VideoSampling
 from ovir_gui.models import ModelProfile
 from ovir_gui.recognition import RecognitionTask
-from ovir_gui.workspace import BackgroundPlanner, InferenceMode
+from ovir_gui.workspace import BackgroundPlanner
 
 FRAME_COUNT = 6
 FRAME_WIDTH = 32

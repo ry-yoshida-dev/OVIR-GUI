@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..recognition import ImageSize
 from .frame_key import FrameKey
 from .media_kind import MediaKind
 from .video_info import VideoInfo
@@ -120,17 +119,35 @@ class MediaItem:
             raise ValueError(f"{self.path.name} is not a video.")
         return self.video
 
-    @property
-    def frame_size(self) -> ImageSize | None:
+    def require_video(self) -> None:
         """
-        Frame size of a video.
+        Check that the item is a video.
+
+        Raises
+        ------
+        ValueError
+            If the item is an image.
+        """
+        if self.video is None:
+            raise ValueError(f"{self.path.name} is not a video.")
+
+    def seconds_at(self, frame_key: FrameKey) -> float | None:
+        """
+        Time of a picture of the item in its video.
+
+        Parameters
+        ----------
+        frame_key : FrameKey
+            Picture of the item.
 
         Returns
         -------
-        ImageSize | None
-            ``None`` for an image, whose size is read from its file.
+        float | None
+            Seconds from the start of the video; ``None`` for an image or a key without a frame.
         """
-        return None if self.video is None else self.video.size
+        if self.video is None or frame_key.frame_index is None:
+            return None
+        return self.video.seconds_of(frame_key.frame_index)
 
     def frame_keys(self, sampling: VideoSampling) -> tuple[FrameKey, ...]:
         """

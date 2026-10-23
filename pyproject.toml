@@ -73,3 +73,10 @@ reportMissingTypeStubs = false
 [tool.ruff]
 line-length = 120
 target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "ANN", "ERA", "BLE", "RUF", "C4", "PIE", "PERF", "ISC"]
+ignore = ["ISC003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ovir_gui"]

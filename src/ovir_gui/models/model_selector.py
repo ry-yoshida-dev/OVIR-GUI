@@ -14,6 +14,7 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .object_tracking_model import ObjectTrackingModel
 from .preset_catalog import PresetCatalog
+from .preset_reference import PresetReference
 from .promptable_segmentation_model import PromptableSegmentationModel
 from .recognition_model import RecognitionModel
 from .segmentation_mode import SegmentationMode
@@ -29,10 +30,10 @@ class ModelSelector:
     read once and remembered.
     """
 
-    PREFERRED_PRESETS: ClassVar[Mapping[RecognitionTask, tuple[str, str]]] = {
-        RecognitionTask.CLASSIFICATION: ("clip", "openai_vit_b32"),
-        RecognitionTask.DETECTION: ("grounding_dino", "original_tiny"),
-        RecognitionTask.SEGMENTATION: ("sam2", "hiera_tiny"),
+    PREFERRED_PRESETS: ClassVar[Mapping[RecognitionTask, PresetReference]] = {
+        RecognitionTask.CLASSIFICATION: PresetReference(RecognitionTask.CLASSIFICATION, "clip", "openai_vit_b32"),
+        RecognitionTask.DETECTION: PresetReference(RecognitionTask.DETECTION, "grounding_dino", "original_tiny"),
+        RecognitionTask.SEGMENTATION: PresetReference(RecognitionTask.SEGMENTATION, "sam2", "hiera_tiny"),
     }
 
     def __init__(self, catalog: PresetCatalog, device_availability: DeviceAvailability) -> None:
@@ -46,7 +47,7 @@ class ModelSelector:
         """
         self._catalog: PresetCatalog = catalog
         self._device_availability: DeviceAvailability = device_availability
-        self._base_models: dict[tuple[RecognitionTask, str, str], RecognitionModel] = {}
+        self._base_models: dict[PresetReference, RecognitionModel] = {}
 
     @property
     def catalog(self) -> PresetCatalog:
@@ -153,9 +154,11 @@ class ModelSelector:
         KeyError
             If the task has no preset.
         """
-        preferred: tuple[str, str] | None = self.PREFERRED_PRESETS.get(task)
-        if preferred is not None and any(preset.name == preferred[1] for preset in self.presets_of(task, preferred[0])):
-            return self.selection_of(task, preferred[0], preferred[1])
+        preferred: PresetReference | None = self.PREFERRED_PRESETS.get(task)
+        if preferred is not None and any(
+            preset.name == preferred.preset_name for preset in self.presets_of(task, preferred.backend)
+        ):
+            return self.selection_of(task, preferred.backend, preferred.preset_name)
         backends: tuple[str, ...] = self.backends_of(task)
         if not backends:
             raise KeyError(f"no {task.value} presets are available.")
@@ -313,7 +316,7 @@ class ModelSelector:
         KeyError
             If no such preset exists.
         """
-        key: tuple[RecognitionTask, str, str] = (task, backend, preset_name)
+        key: PresetReference = PresetReference(task, backend, preset_name)
         cached: RecognitionModel | None = self._base_models.get(key)
         if cached is not None:
             return cached

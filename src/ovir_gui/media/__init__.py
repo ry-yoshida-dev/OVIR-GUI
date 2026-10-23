@@ -1,5 +1,6 @@
 from .class_colors import ClassColors
 from .frame_key import FrameKey
+from .inference_mode import InferenceMode
 from .keyed_picture import KeyedPicture
 from .loaded_image import LoadedImage
 from .media_collection import MediaCollection
@@ -14,6 +15,7 @@ from .video_sampling import VideoSampling
 __all__ = [
     "ClassColors",
     "FrameKey",
+    "InferenceMode",
     "KeyedPicture",
     "LoadedImage",
     "MediaCollection",

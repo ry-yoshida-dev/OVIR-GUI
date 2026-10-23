@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import ClassVar
 
 
 @dataclass(frozen=True)
@@ -19,7 +20,7 @@ class ConfidenceHistogram:
         If there is no bin or a count is negative.
     """
 
-    DEFAULT_BIN_COUNT = 20
+    DEFAULT_BIN_COUNT: ClassVar[int] = 20
 
     bin_counts: tuple[int, ...]
 
@@ -71,18 +72,6 @@ class ConfidenceHistogram:
             ``1 / len(bin_counts)``.
         """
         return 1.0 / len(self.bin_counts)
-
-    @property
-    def largest_count(self) -> int:
-        """
-        Count of the fullest bin.
-
-        Returns
-        -------
-        int
-            0 for a histogram without detections.
-        """
-        return max(self.bin_counts)
 
     @property
     def total_count(self) -> int:

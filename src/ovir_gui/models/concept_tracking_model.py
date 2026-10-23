@@ -23,8 +23,9 @@ class ConceptTrackingModel(RecognitionModel):
     """
     SAM 3 video concept tracker of ``open_vocabulary_segmentation``.
 
-    Every instance of the phrases and reference images of the classes is detected on each frame of a video, read in order, and matched
-    with the tracks of earlier frames; results name the track of each instance. An image is a video of one frame.
+    Every instance of the phrases and reference images of the classes is detected on each frame of a video, read in
+    order, and matched with the tracks of earlier frames; results name the track of each instance. An image is a video
+    of one frame.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION

@@ -67,7 +67,7 @@ class ReviewFilter:
         return frozenset(
             finding.index
             for finding in findings
-            if self._thresholds.accepts(finding.class_name, finding.query_label, finding.confidence)
+            if self._thresholds.is_reaching_minimum(finding.class_name, finding.query_label, finding.confidence)
         )
 
     def passing_indices(self, findings: Sequence[Finding]) -> frozenset[int]:

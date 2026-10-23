@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 
 from ..prompting import PromptSignature
 from ..recognition import FrameResult
+from ..review import ReviewFilter
 
 
 @dataclass(frozen=True, eq=False)
@@ -38,6 +39,24 @@ class StoredResult:
             False once the user rejected it.
         """
         return index not in self.rejected_indices
+
+    def kept_indices(self, review_filter: ReviewFilter) -> frozenset[int]:
+        """
+        Findings kept in the review: accepted by the user and passing the review filter.
+
+        Parameters
+        ----------
+        review_filter : ReviewFilter
+            Minimums and duplicate suppression of the review.
+
+        Returns
+        -------
+        frozenset[int]
+            Indices of the kept findings.
+        """
+        return frozenset(
+            index for index in review_filter.passing_indices(self.result.findings) if self.is_accepted(index)
+        )
 
     def with_accepted(self, indices: frozenset[int], is_accepted: bool) -> "StoredResult":
         """

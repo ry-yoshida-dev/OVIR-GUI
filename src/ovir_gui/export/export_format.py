@@ -142,7 +142,7 @@ class ExportFormat(Enum):
                 return False
 
     @property
-    def needs_picture_files(self) -> bool:
+    def is_picture_file_needed(self) -> bool:
         """
         Whether the format refers to picture files, so video frames are saved as images first.
 

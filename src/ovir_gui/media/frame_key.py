@@ -28,18 +28,6 @@ class FrameKey:
             raise ValueError(f"frame_index must not be negative. got {self.frame_index}")
 
     @property
-    def is_video_frame(self) -> bool:
-        """
-        Whether the key names a frame of a video.
-
-        Returns
-        -------
-        bool
-            True when a frame index is set.
-        """
-        return self.frame_index is not None
-
-    @property
     def label(self) -> str:
         """
         Short name for people.

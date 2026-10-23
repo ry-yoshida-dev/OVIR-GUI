@@ -19,6 +19,7 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [license_consent_store.py](./license_consent_store.py) | `LicenseConsentStore` remembers the licenses of optional modules the user accepted, and when, in `license_consent.json`. |
 | [picture_prompt_codec.py](./picture_prompt_codec.py) | `PicturePromptCodec` writes and reads exemplar boxes and object marks as JSON, shared by the results archive and the remembered drawings. |
 | [picture_prompt_store.py](./picture_prompt_store.py) | `PicturePromptStore` remembers the exemplar boxes and object marks drawn on pictures in `picture_prompts.json`. |
+| [playback_store.py](./playback_store.py) | `PlaybackStore` caches browser-playable copies of videos in `playback`, keyed by the source path, size and modification time. |
 | [results_archive.py](./results_archive.py) | `ResultsArchive` stores every result in one ZIP file with `manifest.json` and, with masks, `masks.npz`. |
 | [results_manifest_reader.py](./results_manifest_reader.py) | `ResultsManifestReader` rebuilds a `ResultLibrary` from a manifest and its mask bits. |
 | [results_manifest_writer.py](./results_manifest_writer.py) | `ResultsManifestWriter` converts a `ResultLibrary` into a `ResultsSnapshot` of a JSON manifest and packed mask bits. |
@@ -26,3 +27,5 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [results_store.py](./results_store.py) | `ResultsStore` loads and saves the results archive `results.ovirresults` of a data directory. |
 | [session.py](./session.py) | `Session` describes what the user was working on, restored at the next start. |
 | [session_store.py](./session_store.py) | `SessionStore` remembers open media, shown picture, task, sampling and model choices in `session.json`. |
+| [stored_reference_image.py](./stored_reference_image.py) | `StoredReferenceImage` is a reference image read back from a class set archive with its pixels. |
+| [upload_store.py](./upload_store.py) | `UploadStore` is the default folder `uploads` receiving images and videos sent from a browser, streamed to disk. |

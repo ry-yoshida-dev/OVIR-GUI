@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import ClassVar
 
 from fastapi import APIRouter, Response
 
@@ -34,7 +35,7 @@ class RecognitionRoutes:
     recognitions, and reviewing and comparing the stored results.
     """
 
-    CSV_FILE_NAME = "findings.csv"
+    CSV_FILE_NAME: ClassVar[str] = "findings.csv"
 
     def __init__(self, context: WebContext) -> None:
         """
@@ -89,7 +90,7 @@ class RecognitionRoutes:
         @router.put("/model")
         async def select_model(body: ModelSelectionBody) -> JsonObject:
             workspace: Workspace = context.workspace
-            workspace.select_model(
+            workspace.models.select_model(
                 ModelSelection(
                     task=workspace.task,
                     backend=body.backend,
@@ -109,52 +110,52 @@ class RecognitionRoutes:
 
         @router.put("/model/preset")
         async def select_preset(body: PresetBody) -> JsonObject:
-            context.workspace.select_preset(body.backend, body.preset_name)
+            context.workspace.models.select_preset(body.backend, body.preset_name)
             return {}
 
         @router.post("/licenses/accept")
         async def accept_license(body: LicenseBody) -> JsonObject:
-            context.workspace.accept_license(LicensedDependency(body.dependency))
+            context.workspace.models.accept_license(LicensedDependency(body.dependency))
             return {}
 
         @router.post("/run")
         async def run(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.run_current(body.is_skipping_approved))
+            return context.payloads.reply(context.workspace.jobs.run_current(body.is_skipping_approved))
 
         @router.post("/run-all")
         async def run_all(body: RunAllBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.run_all(body.is_skipping_approved, body.start_frame))
+            return context.payloads.reply(context.workspace.jobs.run_all(body.is_skipping_approved, body.start_frame))
 
         @router.post("/update-outdated")
         async def update_outdated(body: ApprovalBody) -> JsonObject:
-            return context.payloads.reply(context.workspace.update_outdated(body.is_skipping_approved))
+            return context.payloads.reply(context.workspace.jobs.update_outdated(body.is_skipping_approved))
 
         @router.post("/cancel")
         async def cancel() -> JsonObject:
-            context.workspace.cancel()
+            context.workspace.jobs.cancel()
             return {}
 
         @router.post("/profiles/select")
         async def select_profile(body: ProfileBody) -> JsonObject:
             workspace: Workspace = context.workspace
-            workspace.select_profile(self._profile_of(workspace, body))
+            workspace.profiles.select(self._profile_of(workspace, body))
             return {}
 
         @router.post("/profiles/remove")
         async def remove_profiles(body: ProfilesBody) -> JsonObject:
             workspace: Workspace = context.workspace
-            workspace.remove_profiles(tuple(workspace.library.profile_of_key(key) for key in body.keys))
+            workspace.profiles.remove(tuple(workspace.library.profile_of_key(key) for key in body.keys))
             return {}
 
         @router.post("/profiles/clear")
         async def clear_results() -> JsonObject:
-            context.workspace.clear_results()
+            context.workspace.profiles.clear()
             return {}
 
         @router.put("/comparison")
         async def compare(body: ProfileBody) -> JsonObject:
             workspace: Workspace = context.workspace
-            workspace.compare_with(None if body.key is None else self._profile_of(workspace, body))
+            workspace.profiles.compare_with(None if body.key is None else self._profile_of(workspace, body))
             return {}
 
         @router.post("/findings/acceptance")
@@ -162,19 +163,19 @@ class RecognitionRoutes:
             findings: dict[FrameKey, list[int]] = {}
             for group in body.findings:
                 findings.setdefault(FrameKey(Path(group.path), group.frame), []).extend(group.indices)
-            context.workspace.set_accepted(findings, body.is_accepted)
+            context.workspace.profiles.set_accepted(findings, body.is_accepted)
             return {}
 
         @router.put("/thresholds")
         async def set_thresholds(body: ThresholdsBody) -> JsonObject:
-            context.workspace.set_class_thresholds(
+            context.workspace.review.set_class_thresholds(
                 ClassThresholds(body.default_minimum, body.class_minimums, body.phrase_minimums)
             )
             return {}
 
         @router.put("/suppression")
         async def set_suppression(body: SuppressionBody) -> JsonObject:
-            context.workspace.set_duplicate_suppression(
+            context.workspace.review.set_duplicate_suppression(
                 DuplicateSuppression(body.is_enabled, body.overlap_threshold, body.class_overlap_thresholds)
             )
             return {}
@@ -182,7 +183,7 @@ class RecognitionRoutes:
         @router.post("/findings/csv")
         async def table_csv(body: TableBody) -> Response:
             workspace: Workspace = context.workspace
-            catalog: ResultCatalog | None = workspace.shown_catalog()
+            catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
             if catalog is None:
                 raise KeyError("No results are shown.")
             writer: ListedFindingsWriter = ListedFindingsWriter(catalog, {item.path: item for item in workspace.media})

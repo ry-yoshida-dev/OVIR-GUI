@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import ClassVar
 
 import cv2
 import numpy as np
@@ -79,7 +80,7 @@ class TestDrawnSignature:
     Results remember the drawings they depend on, so editing a drawing outdates exactly the affected pictures.
     """
 
-    VIDEO: Path = Path("/media/clip.mp4")
+    VIDEO: ClassVar[Path] = Path("/media/clip.mp4")
 
     @staticmethod
     def class_signature() -> PromptSignature:

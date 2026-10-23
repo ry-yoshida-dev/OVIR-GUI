@@ -24,15 +24,3 @@ class JobSummary:
     unreadable_keys: tuple[FrameKey, ...]
     is_cancelled: bool
     is_interrupted: bool
-
-    @property
-    def is_complete(self) -> bool:
-        """
-        Whether every picture was handed back.
-
-        Returns
-        -------
-        bool
-            True unless cancelled or interrupted.
-        """
-        return not (self.is_cancelled or self.is_interrupted)

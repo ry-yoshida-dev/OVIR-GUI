@@ -31,6 +31,7 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | [object_tracking_model.py](./object_tracking_model.py) | `ObjectTrackingModel` holds the settings of a video object tracker (SAM 2, SAM 3 tracker, EdgeTAM). |
 | [object_tracking_recognizer.py](./object_tracking_recognizer.py) | `ObjectTrackingRecognizer` follows the marked objects through the frames of a video from their first mark. |
 | [preset_catalog.py](./preset_catalog.py) | `PresetCatalog` discovers model presets of every task from `<root>/<backend>/<name>.yaml`, and from `<root>/<folder>/<family>/<name>.yaml` for nested folders. |
+| [preset_reference.py](./preset_reference.py) | `PresetReference` names one preset of the catalog by task, model family and preset name. |
 | [profile_option.py](./profile_option.py) | `ProfileOption` holds one setting telling results of the same model apart, e.g. `Conf` = `0.35`. |
 | [promptable_recognizer.py](./promptable_recognizer.py) | `PromptableRecognizer` segments the objects marked on each picture, reusing the encodings of recent pictures. |
 | [promptable_segmentation_model.py](./promptable_segmentation_model.py) | `PromptableSegmentationModel` holds the settings of a promptable segmenter (SAM, SAM 2, SAM 3 tracker, EdgeTAM, Florence-2). |

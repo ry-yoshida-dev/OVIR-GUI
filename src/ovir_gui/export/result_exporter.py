@@ -80,7 +80,7 @@ class ResultExporter:
         directory: Path = options.output_directory
         directory.mkdir(parents=True, exist_ok=True)
         pictures: PictureFiles = PictureFiles(directory, self._media)
-        if export_format.needs_picture_files:
+        if export_format.is_picture_file_needed:
             pictures.prepare([item.frame_key for item in items])
         written: list[Path] = list(pictures.written_paths)
         written.extend(self._write_format(items, task, options, class_names, pictures))

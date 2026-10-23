@@ -28,13 +28,16 @@ class WebApplication:
     Web server of the application: a JSON API over the workspace, a WebSocket telling the browsers what changed, and
     the single-page user interface built into ``static``.
 
-    The workspace is created when the server starts, on its event loop, and shut down with it. Errors caused by the
-    request, such as an invalid class name or an unknown image, are answered with status 400 and their message. Only a
-    browser that opened the address with the access token can use the server (see ``AccessGuard``), and only pages of
-    the server and of the parent origins of the embedding policy may show it in a frame (see ``FramingHeaders``).
+    The workspace is created when the server starts, on its event loop, and shut down with it: inference stops, the
+    outcomes, exports and playable copies in flight are awaited for up to ``SHUTDOWN_WAIT_SECONDS``, and the results
+    and the session are saved. Errors caused by the request, such as an invalid class name or an unknown image, are
+    answered with status 400 and their message. Only a browser that opened the address with the access token can use
+    the server (see ``AccessGuard``), and only pages of the server and of the parent origins of the embedding policy may
+    show it in a frame (see ``FramingHeaders``).
     """
 
     STATIC_DIRECTORY: ClassVar[Path] = Path(__file__).parent / "static"
+    SHUTDOWN_WAIT_SECONDS: ClassVar[float] = 60.0
     MISSING_FRONTEND_PAGE: ClassVar[str] = (
         "<!doctype html><title>OVIR GUI</title><h1>OVIR GUI</h1>"
         + "<p>The web interface has not been built. Run <code>npm install && npm run build</code> in "
@@ -134,12 +137,8 @@ class WebApplication:
 
     @asynccontextmanager
     async def _lifespan(self, application: FastAPI) -> AsyncGenerator[None]:
-        workspace: Workspace = Workspace(
-            self._model_selector,
-            self._stores,
-            AsyncioTaskScheduler(asyncio.get_running_loop()),
-            self._session,
-        )
+        scheduler: AsyncioTaskScheduler = AsyncioTaskScheduler(asyncio.get_running_loop())
+        workspace: Workspace = Workspace(self._model_selector, self._stores, scheduler, self._session)
         self._context.attach(workspace)
         if self._initial_paths:
             workspace.open_paths(self._initial_paths)
@@ -149,9 +148,9 @@ class WebApplication:
             yield
         finally:
             self._context.detach()
-            workspace.stop_inference()
-            await asyncio.to_thread(workspace.join_inference)
-            await asyncio.sleep(0)
+            workspace.jobs.stop()
+            await asyncio.to_thread(workspace.jobs.join)
+            await scheduler.settle(self.SHUTDOWN_WAIT_SECONDS)
             workspace.save_now()
 
     @staticmethod

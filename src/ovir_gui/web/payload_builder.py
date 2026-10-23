@@ -1,4 +1,6 @@
+import contextlib
 from pathlib import Path
+from typing import ClassVar
 
 from ..analysis import (
     ClassComparison,
@@ -8,7 +10,7 @@ from ..analysis import (
     ResultStatistics,
 )
 from ..export import ExportFormat, ExportReport, ExportScope
-from ..media import ClassColors, FrameKey, MediaItem, MediaKind
+from ..media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind, VideoInfo
 from ..models import (
     ClassificationModel,
     ComputeDevice,
@@ -36,7 +38,6 @@ from ..workspace import (
     ActionReply,
     ClassWorkbench,
     ExportPlan,
-    InferenceMode,
     MediaStatus,
     RunProgress,
     Workspace,
@@ -54,7 +55,7 @@ class PayloadBuilder:
     full upright picture.
     """
 
-    LISTED_SCORE_COUNT: int = 5
+    LISTED_SCORE_COUNT: ClassVar[int] = 5
 
     def __init__(self, preview_cache: PicturePreviewCache) -> None:
         """
@@ -79,8 +80,8 @@ class PayloadBuilder:
         JsonObject
             Media, shown picture, task, model settings, profiles, classes, minimums and status.
         """
-        statuses: dict[Path, MediaStatus] = workspace.media_statuses()
-        background_key: FrameKey | None = workspace.background_key
+        statuses: dict[Path, MediaStatus] = workspace.read_model.media_statuses()
+        background_key: FrameKey | None = workspace.jobs.background_key
         compared: ModelProfile | None = workspace.compared_profile
         shown: ModelProfile | None = workspace.shown_profile
         palette: list[JsonValue] = list(ClassColors.HEX_COLORS)
@@ -91,30 +92,30 @@ class PayloadBuilder:
             "background_key": None if background_key is None else self._key(background_key),
             "task": self._task(workspace),
             "model": self._model(workspace),
-            "profiles": [self._profile(summary) for summary in workspace.profile_summaries()],
+            "profiles": [self._profile(summary) for summary in workspace.read_model.profile_summaries()],
             "shown_profile_key": None if shown is None else shown.key,
             "compared_profile_key": None if compared is None else compared.key,
             "classes": self._classes(workspace.workbench),
             "class_set": self._class_set_state(workspace.workbench),
-            "thresholds": self._thresholds(workspace.class_thresholds),
-            "suppression": self._suppression(workspace.duplicate_suppression),
+            "thresholds": self._thresholds(workspace.review.class_thresholds),
+            "suppression": self._suppression(workspace.review.duplicate_suppression),
             "standard_minimum": ClassThresholdStore.default_minimum_of(workspace.task),
             "standard_overlap_threshold": DuplicateSuppression.DEFAULT_OVERLAP_THRESHOLD,
-            "status": {"message": workspace.status_message, "serial": workspace.status_serial},
-            "activity": workspace.activity_message,
+            "status": {"message": workspace.notifier.status_message, "serial": workspace.notifier.status_serial},
+            "activity": workspace.notifier.activity_message,
             "summary": workspace.summary,
             "progress": self._progress(workspace.progress),
-            "background_progress": self._progress(workspace.background_progress),
+            "background_progress": self._progress(workspace.jobs.background_progress),
             "is_busy": workspace.is_busy,
             "inference": {
                 "mode": workspace.inference_mode.value,
                 "is_auto": workspace.is_auto_inference,
                 "modes": [{"value": mode.value, "label": mode.label} for mode in InferenceMode],
-                "pause_reason": workspace.background_pause_reason if workspace.is_auto_inference else None,
-                "is_following_playback": workspace.is_following_playback,
+                "pause_reason": workspace.jobs.background_pause_reason if workspace.is_auto_inference else None,
+                "is_following_playback": workspace.jobs.is_following_playback,
             },
             "sampling": {"frame_step": workspace.sampling.frame_step},
-            "last_export": self._export_report(workspace.last_export),
+            "last_export": self._export_report(workspace.exports.last_export),
             "palette": palette,
             "upload_directory": str(workspace.stores.upload_store.directory),
             "accepted_suffixes": list(MediaKind.accepted_suffixes()),
@@ -146,14 +147,14 @@ class PayloadBuilder:
         """
         item: MediaItem = workspace.media_item(path)
         frame_key: FrameKey = item.key_at(frame_index)
-        review_filter: ReviewFilter = workspace.review_filter
-        shown_catalog: ResultCatalog | None = workspace.shown_catalog()
+        review_filter: ReviewFilter = workspace.review.review_filter
+        shown_catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         displayed: FrameKey | None = None if shown_catalog is None else shown_catalog.displayed_key(frame_key)
         stored: StoredResult | None = None
         if shown_catalog is not None and displayed is not None:
             stored = shown_catalog.stored_of(displayed)
-        change: PromptChange | None = None if displayed is None else workspace.change_of(displayed)
-        compared_catalog: ResultCatalog | None = workspace.compared_catalog()
+        change: PromptChange | None = None if displayed is None else workspace.read_model.change_of(displayed)
+        compared_catalog: ResultCatalog | None = workspace.read_model.compared_catalog()
         compared_key: FrameKey | None = None if compared_catalog is None else compared_catalog.displayed_key(frame_key)
         compared_result: FrameResult | None = (
             None if compared_catalog is None or compared_key is None else compared_catalog.result_of(compared_key)
@@ -221,8 +222,8 @@ class PayloadBuilder:
         ValueError
             If the file is not a video.
         """
-        _ = workspace.media_item(path).video_info
-        catalog: ResultCatalog | None = workspace.shown_catalog()
+        workspace.media_item(path).require_video()
+        catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         frame_indices: list[int] = [] if catalog is None else catalog.frame_indices_of(path)
         first_frame: int = -1 if after_frame is None else after_frame
         frame_indices = [
@@ -250,16 +251,14 @@ class PayloadBuilder:
             Profile key, task and pictures in media and frame order. A classified picture carries its best class
             scores from best to worst and the count of every scored class.
         """
-        catalog: ResultCatalog | None = workspace.shown_catalog()
+        catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
         if catalog is None or profile is None:
             return {"profile_key": None, "task": workspace.task.value, "pictures": []}
-        review_filter: ReviewFilter = workspace.review_filter
-        outdated: dict[FrameKey, PromptChange] = workspace.library.outdated_keys(
-            profile, workspace.signature_for(profile), workspace.recognized_keys(catalog)
-        )
+        review_filter: ReviewFilter = workspace.review.review_filter
+        outdated: dict[FrameKey, PromptChange] = workspace.read_model.outdated_keys(profile, catalog)
         pictures: list[JsonValue] = []
-        for frame_key in workspace.recognized_keys(catalog):
+        for frame_key in workspace.read_model.recognized_keys(catalog):
             stored: StoredResult | None = catalog.stored_of(frame_key)
             if stored is None:
                 continue
@@ -270,9 +269,7 @@ class PayloadBuilder:
                     "path": str(frame_key.path),
                     "name": frame_key.path.name,
                     "frame": frame_key.frame_index,
-                    "seconds": None
-                    if item.video is None or frame_key.frame_index is None
-                    else item.video.seconds_of(frame_key.frame_index),
+                    "seconds": item.seconds_at(frame_key),
                     "outdated": None if change is None else change.description,
                     "scores": [
                         {"class_name": score.class_name, "score": score.score}
@@ -308,12 +305,11 @@ class PayloadBuilder:
         ValueError
             If the file is not a video.
         """
-        item: MediaItem = workspace.media_item(path)
-        video = item.video_info
-        catalog: ResultCatalog | None = workspace.shown_catalog()
+        video: VideoInfo = workspace.media_item(path).video_info
+        catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         frame_indices: list[int] = [] if catalog is None else catalog.frame_indices_of(path)
-        review_filter: ReviewFilter = workspace.review_filter
-        colors: dict[str, str] = workspace.class_colors()
+        review_filter: ReviewFilter = workspace.review.review_filter
+        colors: dict[str, str] = workspace.workbench.class_colors()
         names: list[str] = list(workspace.workbench.class_names)
         values: dict[str, list[float]] = {name: [0.0] * len(frame_indices) for name in names}
         top_classes: list[JsonValue] = []
@@ -327,17 +323,16 @@ class PayloadBuilder:
                 if name not in values:
                     names.append(name)
                     values[name] = [0.0] * len(frame_indices)
-            passing: frozenset[int] = review_filter.passing_indices(result.findings)
+            kept: frozenset[int] = stored.kept_indices(review_filter)
             if result.class_scores:
                 for score in result.class_scores:
                     values[score.class_name][position] = score.score
                 top: Finding = result.findings[0]
-                is_kept: bool = stored.is_accepted(0) and top.index in passing
-                top_classes.append(top.class_name if is_kept else None)
+                top_classes.append(top.class_name if top.index in kept else None)
                 continue
             top_classes.append(None)
             for finding in result.findings:
-                if stored.is_accepted(finding.index) and finding.index in passing:
+                if finding.index in kept:
                     values[finding.class_name][position] += 1.0
         return {
             "path": str(path),
@@ -371,8 +366,8 @@ class PayloadBuilder:
             Shown model, statistics and comparison; ``null`` parts are not available.
         """
         shown: ModelProfile | None = workspace.shown_profile
-        statistics: ResultStatistics | None = workspace.statistics()
-        comparison: ProfileComparison | None = workspace.comparison()
+        statistics: ResultStatistics | None = workspace.read_model.statistics()
+        comparison: ProfileComparison | None = workspace.read_model.comparison()
         return {
             "model": None if shown is None else shown.label,
             "task": workspace.task.value,
@@ -529,10 +524,8 @@ class PayloadBuilder:
                 pass
         else:
             width, height = item.video.size.width, item.video.size.height
-            try:
+            with contextlib.suppress(OSError):
                 version = self._preview_cache.version_of(item.path)
-            except OSError:
-                pass
         return {
             "path": str(item.path),
             "name": item.path.name,
@@ -543,7 +536,7 @@ class PayloadBuilder:
             "height": height,
             "frame_count": None if item.video is None else item.video.frame_count,
             "fps": None if item.video is None else item.video.fps,
-            "playback": workspace.playback_state(item.path).value,
+            "playback": workspace.playback.state_of(item.path).value,
             "timestamp": None
             if item.video is None or frame_key.frame_index is None
             else item.video.timestamp_of(frame_key.frame_index),
@@ -554,37 +547,34 @@ class PayloadBuilder:
     def _task(workspace: Workspace) -> JsonObject:
         return {
             "value": workspace.task.value,
-            "options": [{"value": task.value, "title": task.title} for task in workspace.model_selector.tasks],
+            "options": [{"value": task.value, "title": task.title} for task in workspace.models.model_selector.tasks],
         }
 
     def _model(self, workspace: Workspace) -> JsonObject:
-        selector: ModelSelector = workspace.model_selector
-        selection: ModelSelection = workspace.selection
-        model: RecognitionModel = workspace.current_model()
+        selector: ModelSelector = workspace.models.model_selector
+        selection: ModelSelection = workspace.models.selection
+        model: RecognitionModel = workspace.models.current_model()
         task: RecognitionTask = workspace.task
-        backends: list[JsonValue] = []
-        for backend in selector.backends_of(task):
-            backends.append(
-                {
-                    "value": backend,
-                    "presets": [
-                        {
-                            "name": preset.name,
-                            "label": preset.label,
-                            "licenses": self._licenses_of(selector.base_model(task, backend, preset.name)),
-                        }
-                        for preset in selector.presets_of(task, backend)
-                    ],
-                    "image_poolings": list[JsonValue](ClassificationModel.image_poolings_of(backend))
-                    if task is RecognitionTask.CLASSIFICATION
-                    else [],
-                    "is_box_prompted": task is RecognitionTask.SEGMENTATION
-                    and SegmentationModel.is_box_prompted_backend(backend),
-                    "mode": SegmentationMode.of_backend(backend).value
-                    if task is RecognitionTask.SEGMENTATION
-                    else None,
-                }
-            )
+        backends: list[JsonValue] = [
+            {
+                "value": backend,
+                "presets": [
+                    {
+                        "name": preset.name,
+                        "label": preset.label,
+                        "licenses": self._licenses_of(selector.base_model(task, backend, preset.name)),
+                    }
+                    for preset in selector.presets_of(task, backend)
+                ],
+                "image_poolings": list[JsonValue](ClassificationModel.image_poolings_of(backend))
+                if task is RecognitionTask.CLASSIFICATION
+                else [],
+                "is_box_prompted": task is RecognitionTask.SEGMENTATION
+                and SegmentationModel.is_box_prompted_backend(backend),
+                "mode": SegmentationMode.of_backend(backend).value if task is RecognitionTask.SEGMENTATION else None,
+            }
+            for backend in selector.backends_of(task)
+        ]
         modes: list[JsonValue] = (
             [
                 {"value": mode.value, "title": mode.title}
@@ -627,9 +617,9 @@ class PayloadBuilder:
             ]
             if task is RecognitionTask.SEGMENTATION
             else [],
-            "licenses": self._license_entries(workspace.license_consent),
+            "licenses": self._license_entries(workspace.models.license_consent),
             "selection": self._selection(selection),
-            "is_image_prompt_supported": QueryKind.VISUAL in model.supported_query_kinds,
+            "is_image_prompt_supported": workspace.models.is_image_prompt_supported(),
             "query_kinds": list[JsonValue](sorted(kind.value for kind in model.supported_query_kinds)),
             "text_templates": list[JsonValue](model.text_templates) if isinstance(model, ClassificationModel) else None,
             "weights_path": model.weights_path,
@@ -664,7 +654,7 @@ class PayloadBuilder:
                     return f"Boxes from {model.box_detector_description}"
                 if QueryKind.EXEMPLAR in model.supported_query_kinds:
                     return (
-                        "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "
+                        "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "  # noqa: RUF001
                         + "a class without phrases is segmented from its boxes alone."
                     )
                 return ""

@@ -37,7 +37,8 @@ class CommandLine:
         self._parser.add_argument(
             "--host",
             default=self.DEFAULT_HOST,
-            help=f"interface the web server listens on (default {self.DEFAULT_HOST}; 0.0.0.0 exposes it to the network)",
+            help=f"interface the web server listens on (default {self.DEFAULT_HOST}; "
+            + "0.0.0.0 exposes it to the network)",
         )
         self._parser.add_argument(
             "--port", type=int, default=self.DEFAULT_PORT, help=f"port of the web server (default {self.DEFAULT_PORT})"

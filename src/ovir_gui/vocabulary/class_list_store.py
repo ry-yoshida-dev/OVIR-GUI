@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from pathlib import Path
+from typing import ClassVar
 
 from .class_definition import ClassDefinition
 from .class_list_file import ClassListFile
@@ -13,7 +14,7 @@ class ClassListStore:
     only when written to.
     """
 
-    LAST_CLASSES_FILE_NAME = "last_classes.txt"
+    LAST_CLASSES_FILE_NAME: ClassVar[str] = "last_classes.txt"
 
     def __init__(self, root_directory: Path) -> None:
         """

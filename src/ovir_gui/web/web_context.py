@@ -59,7 +59,7 @@ class WebContext:
             Workspace running on the event loop of the server.
         """
         self._workspace = workspace
-        workspace.add_observer(self.hub)
+        workspace.notifier.add_observer(self.hub)
         self.browser = DirectoryBrowser(
             self.working_directory,
             {
@@ -74,5 +74,5 @@ class WebContext:
         Stop using the workspace, e.g. when the server stops.
         """
         if self._workspace is not None:
-            self._workspace.remove_observer(self.hub)
+            self._workspace.notifier.remove_observer(self.hub)
         self._workspace = None

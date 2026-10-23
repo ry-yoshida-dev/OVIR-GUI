@@ -1,4 +1,3 @@
-import bisect
 from dataclasses import dataclass
 
 from .video_info import VideoInfo
@@ -78,23 +77,3 @@ class VideoSampling:
         if self.frame_step == 1:
             return "every frame"
         return f"every {self.frame_step} frames ({self.frame_step / video.fps:.2f} s)"
-
-    @staticmethod
-    def nearest_at_or_before(frame_indices: list[int], frame_index: int) -> int | None:
-        """
-        Latest of some sorted frames at or before a frame.
-
-        Parameters
-        ----------
-        frame_indices : list[int]
-            Frame indices in ascending order.
-        frame_index : int
-            Frame to look up.
-
-        Returns
-        -------
-        int | None
-            ``None`` when every frame comes later.
-        """
-        position: int = bisect.bisect_right(frame_indices, frame_index)
-        return frame_indices[position - 1] if position else None

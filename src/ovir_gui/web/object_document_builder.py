@@ -46,9 +46,9 @@ class ObjectDocumentBuilder:
         KeyError
             If a file is not open.
         """
-        catalog: ResultCatalog | None = workspace.shown_catalog()
+        catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
-        review_filter: ReviewFilter = workspace.review_filter
+        review_filter: ReviewFilter = workspace.review.review_filter
         pictures: list[JsonValue] = []
         open_paths: list[Path] = self._paths_of(workspace, paths)
         if catalog is None or profile is None:
@@ -58,12 +58,7 @@ class ObjectDocumentBuilder:
                 stored: StoredResult | None = catalog.stored_of(frame_key)
                 if stored is None or stored.result.class_scores:
                     continue
-                passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
-                kept: list[int] = [
-                    index
-                    for index in range(len(stored.result.instances))
-                    if stored.is_accepted(index) and index in passing
-                ]
+                kept: list[int] = sorted(stored.kept_indices(review_filter))
                 pictures.append(self._picture(frame_key, stored.result, kept))
         return self._document(profile.label, pictures)
 

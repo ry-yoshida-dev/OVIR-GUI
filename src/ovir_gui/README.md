@@ -19,6 +19,7 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 | [review/](./review/README.md) | `ClassThresholds` hiding low-confidence findings per class without recognizing again. |
 | [storage/](./storage/README.md) | On-disk stores of class sets, thresholds, results and the session. |
 | [vocabulary/](./vocabulary/README.md) | Class definitions and the class list remembered between runs. |
+| [wording/](./wording/README.md) | `CountedNoun` writing counts with singular or plural nouns in user-facing messages. |
 | [web/](./web/README.md) | FastAPI application, routes and launcher serving the React frontend. |
 | [workspace/](./workspace/README.md) | `Workspace` state of the open media, classes, inference jobs and exports shared by the web routes. |
 | [\_\_main\_\_.py](./__main__.py) | `main` entry point of the `ovir-gui` command: parses the command line and starts the web server. |

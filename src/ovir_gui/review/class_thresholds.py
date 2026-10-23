@@ -121,22 +121,6 @@ class ClassThresholds:
         """
         return self._phrase_minimums
 
-    @property
-    def is_effective(self) -> bool:
-        """
-        Whether any detection can be hidden.
-
-        Returns
-        -------
-        bool
-            True when the default, a class or a phrase minimum is above 0.
-        """
-        return (
-            self._default_minimum > 0.0
-            or any(minimum > 0.0 for minimum in self._class_minimums.values())
-            or any(minimum > 0.0 for by_phrase in self._phrase_minimums.values() for minimum in by_phrase.values())
-        )
-
     def minimum_of(self, class_name: str, query_label: str | None = None) -> float:
         """
         Minimum confidence of one class or one of its phrases.
@@ -160,23 +144,7 @@ class ClassThresholds:
                 return phrase_minimum
         return self._class_minimums.get(class_name, self._default_minimum)
 
-    def has_own_minimum(self, class_name: str) -> bool:
-        """
-        Whether a class overrides the default minimum.
-
-        Parameters
-        ----------
-        class_name : str
-            Class to look up.
-
-        Returns
-        -------
-        bool
-            True when the class has its own minimum.
-        """
-        return class_name in self._class_minimums
-
-    def accepts(self, class_name: str, query_label: str, confidence: float) -> bool:
+    def is_reaching_minimum(self, class_name: str, query_label: str, confidence: float) -> bool:
         """
         Whether a finding reaches the minimum of its phrase.
 
@@ -195,55 +163,6 @@ class ClassThresholds:
             True when ``confidence`` is at least the minimum of the phrase of ``class_name``.
         """
         return confidence >= self.minimum_of(class_name, query_label)
-
-    def with_default_minimum(self, default_minimum: float) -> "ClassThresholds":
-        """
-        Copy with another default minimum.
-
-        Parameters
-        ----------
-        default_minimum : float
-            New default minimum in ``[0, 1]``.
-
-        Returns
-        -------
-        ClassThresholds
-            Updated thresholds.
-
-        Raises
-        ------
-        ValueError
-            If ``default_minimum`` is outside ``[0, 1]``.
-        """
-        return ClassThresholds(default_minimum, self._class_minimums, self._phrase_minimums)
-
-    def with_class_minimum(self, class_name: str, minimum: float | None) -> "ClassThresholds":
-        """
-        Copy with the own minimum of one class set or removed.
-
-        Parameters
-        ----------
-        class_name : str
-            Class to change.
-        minimum : float | None
-            New minimum in ``[0, 1]``; ``None`` makes the class use the default minimum.
-
-        Returns
-        -------
-        ClassThresholds
-            Updated thresholds.
-
-        Raises
-        ------
-        ValueError
-            If ``minimum`` is outside ``[0, 1]`` or ``class_name`` is blank.
-        """
-        minimums: dict[str, float] = dict(self._class_minimums)
-        if minimum is None:
-            minimums.pop(class_name, None)
-        else:
-            minimums[class_name] = minimum
-        return ClassThresholds(self._default_minimum, minimums, self._phrase_minimums)
 
     def _plain_phrase_minimums(self) -> dict[str, dict[str, float]]:
         return {class_name: dict(by_phrase) for class_name, by_phrase in self._phrase_minimums.items()}

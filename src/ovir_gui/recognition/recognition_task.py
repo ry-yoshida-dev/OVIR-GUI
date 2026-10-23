@@ -38,34 +38,6 @@ class RecognitionTask(Enum):
                 return "Segmentation"
 
     @property
-    def is_instance_based(self) -> bool:
-        """
-        Whether results are instances located in the image.
-
-        Returns
-        -------
-        bool
-            True for detection and segmentation.
-        """
-        match self:
-            case RecognitionTask.CLASSIFICATION:
-                return False
-            case RecognitionTask.DETECTION | RecognitionTask.SEGMENTATION:
-                return True
-
-    @property
-    def is_mask_based(self) -> bool:
-        """
-        Whether every instance carries a mask.
-
-        Returns
-        -------
-        bool
-            True for segmentation.
-        """
-        return self is RecognitionTask.SEGMENTATION
-
-    @property
     def finding_noun(self) -> str:
         """
         What one finding of the task is called.

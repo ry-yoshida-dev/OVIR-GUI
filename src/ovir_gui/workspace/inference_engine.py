@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from functools import partial
 from queue import SimpleQueue
@@ -11,6 +12,8 @@ from .inference_job import InferenceJob
 from .inference_listener import InferenceListener
 from .job_summary import JobSummary
 from .task_scheduler import TaskScheduler
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class InferenceEngine:
@@ -87,18 +90,6 @@ class InferenceEngine:
         return self._running_job
 
     @property
-    def foreground_job(self) -> InferenceJob | None:
-        """
-        Foreground job requested or running.
-
-        Returns
-        -------
-        InferenceJob | None
-            ``None`` while no foreground job exists.
-        """
-        return self._foreground_job
-
-    @property
     def session(self) -> RecognizerSession:
         """
         Session keeping the loaded model; touch it only from the worker.
@@ -110,9 +101,9 @@ class InferenceEngine:
         """
         return self._session
 
-    def submit(self, job: InferenceJob) -> bool:
+    def is_accepting(self, job: InferenceJob) -> bool:
         """
-        Request a job.
+        Whether ``submit`` would start or queue a job.
 
         Parameters
         ----------
@@ -122,7 +113,23 @@ class InferenceEngine:
         Returns
         -------
         bool
-            True when the job was accepted; a background job is refused while another job runs or waits.
+            False once stopped, for a foreground job while another foreground job exists, and for a background job
+            while another job runs or waits.
+        """
+        if self._is_stopped:
+            return False
+        if job.purpose.is_foreground:
+            return self._foreground_job is None
+        return self._running_job is None and self._foreground_job is None
+
+    def submit(self, job: InferenceJob) -> None:
+        """
+        Request a job; a background job is ignored while another job runs or waits, and every job once stopped.
+
+        Parameters
+        ----------
+        job : InferenceJob
+            Job to run.
 
         Raises
         ------
@@ -130,12 +137,11 @@ class InferenceEngine:
             If a foreground job is requested while another foreground job exists.
         """
         if self._is_stopped:
-            return False
+            return
         if not job.purpose.is_foreground:
-            if self._running_job is not None or self._foreground_job is not None:
-                return False
-            self._send(job)
-            return True
+            if self.is_accepting(job):
+                self._send(job)
+            return
         if self._foreground_job is not None:
             raise RuntimeError("An inference is already running.")
         self._foreground_job = job
@@ -144,7 +150,6 @@ class InferenceEngine:
             self._send(job)
         else:
             self._running_job.control.interrupt()
-        return True
 
     def interrupt_background(self) -> None:
         """
@@ -261,6 +266,7 @@ class InferenceEngine:
                     return
                 recognized_count += len(batch_keys)
         except Exception as error:
+            LOGGER.exception("Reading the pictures of %s failed.", job.purpose.title)
             self._scheduler.dispatch(partial(self._on_failed, job, f"{type(error).__name__}: {error}"))
             return
         finally:
@@ -288,6 +294,7 @@ class InferenceEngine:
             ]
             outcome: RecognitionOutcome = self._session.recognize(job.model, pictures, job.prompt)
         except Exception as error:
+            LOGGER.exception("Recognizing %s failed.", frame_keys[0].label)
             message: str = f"{frame_keys[0].label}: {type(error).__name__}: {error}"
             self._scheduler.dispatch(partial(self._on_failed, job, message))
             return False

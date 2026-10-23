@@ -51,3 +51,27 @@ class ActionReply:
             Reply of the ``REJECTED`` status.
         """
         return cls(status=ActionStatus.REJECTED, message=message)
+
+    @classmethod
+    def needing_approval(cls, model_label: str, skipped_class_names: tuple[str, ...]) -> "ActionReply":
+        """
+        Request waiting for the user to approve leaving out classes the model cannot query.
+
+        Parameters
+        ----------
+        model_label : str
+            Name of the model that cannot take reference images.
+        skipped_class_names : tuple[str, ...]
+            Classes queried only by reference images.
+
+        Returns
+        -------
+        ActionReply
+            Reply of the ``NEEDS_APPROVAL`` status.
+        """
+        return cls(
+            status=ActionStatus.NEEDS_APPROVAL,
+            message=f"{model_label} does not take reference images, so these classes have no usable query: "
+            + f"{', '.join(skipped_class_names)}. Infer the other classes without them?",
+            skipped_class_names=skipped_class_names,
+        )

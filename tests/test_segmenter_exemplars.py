@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from open_vocabulary_segmentation import (
@@ -37,7 +38,7 @@ class RecordingSegmenter(OpenVocabularySegmenter):
     SAM 3 stand-in recording the classes and exemplars of every mini-batch, finding nothing.
     """
 
-    BACKENDS = frozenset({SegmenterBackend.SAM3})
+    BACKENDS: ClassVar[frozenset[SegmenterBackend]] = frozenset({SegmenterBackend.SAM3})
 
     def __init__(self, settings: SegmenterSettings) -> None:
         super().__init__(settings)

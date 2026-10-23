@@ -1,0 +1,12 @@
+{
+  "compared": null,
+  "findings": [],
+  "frame": 5,
+  "is_exact": false,
+  "is_recognized": false,
+  "outdated": null,
+  "path": "<tmp>/media/c_clip.mp4",
+  "result_frame": null,
+  "scores": [],
+  "task": "detection"
+}

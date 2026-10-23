@@ -2,6 +2,7 @@ import csv
 import io
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import ClassVar
 
 from ..media import FrameKey, MediaItem
 from ..recognition import Finding
@@ -15,7 +16,7 @@ class ListedFindingsWriter:
     Columns are media, frame, seconds, class, query, confidence, box corners, area and whether the finding is kept.
     """
 
-    HEADER: tuple[str, ...] = (
+    HEADER: ClassVar[tuple[str, ...]] = (
         "media",
         "frame",
         "seconds",

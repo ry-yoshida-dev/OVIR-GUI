@@ -57,9 +57,9 @@ class ResultStatistics:
         """
         names: list[str] = list(class_names)
         confidences: dict[str, list[float]] = {name: [] for name in names}
-        rejected: dict[str, int] = {name: 0 for name in names}
-        below: dict[str, int] = {name: 0 for name in names}
-        pictures: dict[str, int] = {name: 0 for name in names}
+        rejected: dict[str, int] = dict.fromkeys(names, 0)
+        below: dict[str, int] = dict.fromkeys(names, 0)
+        pictures: dict[str, int] = dict.fromkeys(names, 0)
         recognized_count: int = 0
         for frame_key in frame_keys:
             stored: StoredResult | None = catalog.stored_of(frame_key)
@@ -67,7 +67,7 @@ class ResultStatistics:
                 continue
             recognized_count += 1
             kept_classes: set[str] = set()
-            passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
+            kept: frozenset[int] = stored.kept_indices(review_filter)
             finding: Finding
             for finding in stored.result.findings:
                 if finding.class_name not in confidences:
@@ -79,10 +79,10 @@ class ResultStatistics:
                 confidences[finding.class_name].append(finding.confidence)
                 if not stored.is_accepted(finding.index):
                     rejected[finding.class_name] += 1
-                elif finding.index not in passing:
-                    below[finding.class_name] += 1
-                else:
+                elif finding.index in kept:
                     kept_classes.add(finding.class_name)
+                else:
+                    below[finding.class_name] += 1
             for class_name in kept_classes:
                 pictures[class_name] += 1
         return cls(

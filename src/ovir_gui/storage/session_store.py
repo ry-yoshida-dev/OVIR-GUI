@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import ClassVar
 
+from ..media import InferenceMode
 from ..models import ComputeDevice, ComputePrecision, ModelSelection
 from ..recognition import RecognitionTask
 from .json_fields import JsonFields, JsonValue
@@ -75,7 +76,11 @@ class SessionStore:
                 current_frame_index=None if frame_value is None else JsonFields.integer_of(frame_value, "frame"),
                 task=None if task_value is None else RecognitionTask(JsonFields.string_of(task_value, "task")),
                 frame_step=None if step_value is None else JsonFields.integer_of(step_value, "frame_step"),
-                inference_mode=None if mode_value is None else JsonFields.string_of(mode_value, "inference_mode"),
+                inference_mode=(
+                    None
+                    if mode_value is None
+                    else InferenceMode.parsed(JsonFields.string_of(mode_value, "inference_mode"))
+                ),
                 is_auto_inference=(
                     None if auto_value is None else JsonFields.boolean_of(auto_value, "is_auto_inference")
                 ),
@@ -104,7 +109,7 @@ class SessionStore:
             "frame": session.current_frame_index,
             "task": None if session.task is None else session.task.value,
             "frame_step": session.frame_step,
-            "inference_mode": session.inference_mode,
+            "inference_mode": None if session.inference_mode is None else session.inference_mode.value,
             "is_auto_inference": session.is_auto_inference,
             "selections": [self._selection_content(selection) for selection in session.selections.values()],
         }

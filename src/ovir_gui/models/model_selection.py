@@ -76,15 +76,3 @@ class ModelSelection:
             raise ValueError("text_templates must hold at least one template; use ('{}',) for the phrase as it is.")
         if self.batch_size is not None and (self.batch_size < 1 or self.batch_size & (self.batch_size - 1)):
             raise ValueError(f"batch_size must be a positive power of two. got {self.batch_size}")
-
-    @property
-    def preset_label(self) -> str:
-        """
-        Name of the preset within its task.
-
-        Returns
-        -------
-        str
-            ``"<backend>/<preset>"``.
-        """
-        return f"{self.backend}/{self.preset_name}"

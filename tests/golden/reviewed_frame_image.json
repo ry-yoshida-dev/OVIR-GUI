@@ -1,0 +1,81 @@
+{
+  "compared": null,
+  "findings": [
+    {
+      "area": 144.0,
+      "box": [
+        2.0,
+        2.0,
+        10.0,
+        20.0
+      ],
+      "class_name": "person",
+      "color": null,
+      "confidence": 0.9,
+      "index": 0,
+      "is_accepted": true,
+      "is_passing": true,
+      "polygons": [],
+      "query": "person"
+    },
+    {
+      "area": 144.0,
+      "box": [
+        10.0,
+        2.0,
+        18.0,
+        20.0
+      ],
+      "class_name": "car",
+      "color": null,
+      "confidence": 0.7,
+      "index": 1,
+      "is_accepted": false,
+      "is_passing": true,
+      "polygons": [],
+      "query": "car"
+    },
+    {
+      "area": 144.0,
+      "box": [
+        18.0,
+        2.0,
+        26.0,
+        20.0
+      ],
+      "class_name": "dog",
+      "color": null,
+      "confidence": 0.5,
+      "index": 2,
+      "is_accepted": true,
+      "is_passing": true,
+      "polygons": [],
+      "query": "dog"
+    },
+    {
+      "area": 144.0,
+      "box": [
+        3.0,
+        2.0,
+        11.0,
+        20.0
+      ],
+      "class_name": "person",
+      "color": null,
+      "confidence": 0.5,
+      "index": 3,
+      "is_accepted": true,
+      "is_passing": false,
+      "polygons": [],
+      "query": "person"
+    }
+  ],
+  "frame": null,
+  "is_exact": true,
+  "is_recognized": true,
+  "outdated": null,
+  "path": "<tmp>/media/a_first.png",
+  "result_frame": null,
+  "scores": [],
+  "task": "detection"
+}

@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..media import InferenceMode
 from ..models import ModelSelection
 from ..recognition import RecognitionTask
 
@@ -23,8 +24,8 @@ class Session:
         Task chosen in the model settings.
     frame_step : int | None
         Distance between sampled video frames.
-    inference_mode : str | None
-        Value of the inference mode.
+    inference_mode : InferenceMode | None
+        Which pictures are inferred.
     is_auto_inference : bool | None
         Whether pictures are inferred automatically while the user works.
     selections : Mapping[RecognitionTask, ModelSelection]
@@ -41,7 +42,7 @@ class Session:
     current_frame_index: int | None = None
     task: RecognitionTask | None = None
     frame_step: int | None = None
-    inference_mode: str | None = None
+    inference_mode: InferenceMode | None = None
     is_auto_inference: bool | None = None
     selections: Mapping[RecognitionTask, ModelSelection] = field(default_factory=dict[RecognitionTask, ModelSelection])
 

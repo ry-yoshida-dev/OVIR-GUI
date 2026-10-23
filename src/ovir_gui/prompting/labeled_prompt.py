@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 from ..media import FrameKey
+from ..wording import CountedNoun
 from .frame_prompt import FramePrompt
 from .picture_prompts import PicturePrompts
 from .prompt_class import PromptClass
@@ -103,9 +104,9 @@ class LabeledPrompt:
         descriptions: list[str] = []
         if parts:
             total: int = text_count + visual_count + exemplar_count
-            descriptions.append(f"{' + '.join(parts)} prompt{'' if total == 1 else 's'}")
+            descriptions.append(f"{' + '.join(parts)} {CountedNoun('prompt').form_for(total)}")
         if mark_count:
-            descriptions.append(f"{mark_count} object mark{'' if mark_count == 1 else 's'}")
+            descriptions.append(CountedNoun("object mark").of(mark_count))
         return " + ".join(descriptions) if descriptions else "automatic"
 
     def frame_prompt_of(self, frame_key: FrameKey) -> FramePrompt:

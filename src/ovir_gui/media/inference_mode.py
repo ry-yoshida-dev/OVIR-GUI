@@ -33,3 +33,20 @@ class InferenceMode(Enum):
                 return "Current view"
             case InferenceMode.ALL:
                 return "All files"
+
+    @classmethod
+    def parsed(cls, value: str) -> "InferenceMode | None":
+        """
+        Mode stored under a value.
+
+        Parameters
+        ----------
+        value : str
+            Stored value, e.g. ``"all"``.
+
+        Returns
+        -------
+        InferenceMode | None
+            ``None`` when no mode has the value.
+        """
+        return next((mode for mode in cls if mode.value == value), None)

@@ -33,10 +33,10 @@ class SegmentationModel(RecognitionModel):
     """
     Open-vocabulary instance segmenter of ``open_vocabulary_segmentation``.
 
-    SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector
-    of the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases
-    themselves, and SAM 3 also of reference images and of the exemplar boxes drawn on each picture. Masks and boxes are kept down to the
-    confidence floor of ``DetectionModel``, so the minimum confidence is tuned afterwards through the class minimums
+    SAM and SAM 2 mask the boxes of an open-vocabulary detector, which decides the accepted query kinds; the detector of
+    the preset can be replaced by any detection preset. SAM 3 and Florence-2 find the instances of phrases themselves,
+    and SAM 3 also of reference images and of the exemplar boxes drawn on each picture. Masks and boxes are kept down to
+    the confidence floor of ``DetectionModel``, so the minimum confidence is tuned afterwards through the class minimums
     without recognizing again. NMS thresholds are read at inference time.
 
     A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases, reference images and exemplar

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from ovir_gui.workspace import PlaybackStore
+from ovir_gui.storage import PlaybackStore
 
 
 class TestPlaybackStore:

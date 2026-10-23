@@ -1,7 +1,7 @@
 import io
 from pathlib import Path
 
-from ovir_gui.workspace import UploadStore
+from ovir_gui.storage import UploadStore
 
 
 class TestUploadStore:

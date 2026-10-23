@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 
 from ..export import ExportFormat, ExportOptions, ExportReport, ExportScope
 from ..media import FrameKey
-from ..workspace import ExportRequest, Workspace
+from ..workspace import ExportCoordinator, ExportRequest, Workspace
 from .json_value import JsonObject
 from .schema import ExportBody
 from .web_context import WebContext
@@ -48,7 +48,7 @@ class ExportRoutes:
         async def export_plan() -> JsonObject:
             workspace: Workspace = context.workspace
             return context.payloads.export_plan(
-                workspace.export_plan(), Workspace.default_export_directory(context.working_directory)
+                workspace.export_plan(), ExportCoordinator.default_directory(context.working_directory)
             )
 
         @router.post("/export")
@@ -75,7 +75,7 @@ class ExportRoutes:
 
         @router.get("/export/download")
         async def download(background_tasks: BackgroundTasks) -> FileResponse:
-            report: ExportReport | None = context.workspace.last_export
+            report: ExportReport | None = context.workspace.exports.last_export
             if report is None:
                 raise KeyError("Nothing has been exported yet.")
             staging_directory: Path = Path(tempfile.mkdtemp())

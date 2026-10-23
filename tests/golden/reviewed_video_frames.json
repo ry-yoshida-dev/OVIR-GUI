@@ -1,0 +1,167 @@
+{
+  "frames": [
+    {
+      "compared": null,
+      "findings": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "color": null,
+          "confidence": 0.86,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "color": null,
+          "confidence": 0.66,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "color": null,
+          "confidence": 0.5,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": false,
+          "polygons": [],
+          "query": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "color": null,
+          "confidence": 0.46,
+          "index": 3,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "dog"
+        }
+      ],
+      "frame": 4,
+      "is_exact": true,
+      "is_recognized": true,
+      "outdated": null,
+      "path": "<tmp>/media/c_clip.mp4",
+      "result_frame": 4,
+      "scores": [],
+      "task": "detection"
+    },
+    {
+      "compared": null,
+      "findings": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "color": null,
+          "confidence": 0.82,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "color": null,
+          "confidence": 0.62,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "color": null,
+          "confidence": 0.5,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": false,
+          "polygons": [],
+          "query": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "color": null,
+          "confidence": 0.42,
+          "index": 3,
+          "is_accepted": true,
+          "is_passing": true,
+          "polygons": [],
+          "query": "dog"
+        }
+      ],
+      "frame": 8,
+      "is_exact": true,
+      "is_recognized": true,
+      "outdated": null,
+      "path": "<tmp>/media/c_clip.mp4",
+      "result_frame": 8,
+      "scores": [],
+      "task": "detection"
+    }
+  ],
+  "path": "<tmp>/media/c_clip.mp4"
+}

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from ..wording import CountedNoun
+
 
 @dataclass(frozen=True)
 class ClassSetSummary:
@@ -30,13 +32,9 @@ class ClassSetSummary:
         str
             E.g. ``"3 classes · 5 text prompts · 2 images"``; zero counts of prompts and images are left out.
         """
-        parts: list[str] = [self._count_of(len(self.class_names), "class", "classes")]
+        parts: list[str] = [CountedNoun("class", "classes").of(len(self.class_names))]
         if self.phrase_count:
-            parts.append(self._count_of(self.phrase_count, "text prompt", "text prompts"))
+            parts.append(CountedNoun("text prompt").of(self.phrase_count))
         if self.reference_image_count:
-            parts.append(self._count_of(self.reference_image_count, "image", "images"))
+            parts.append(CountedNoun("image").of(self.reference_image_count))
         return " · ".join(parts)
-
-    @staticmethod
-    def _count_of(count: int, singular: str, plural: str) -> str:
-        return f"{count} {singular if count == 1 else plural}"

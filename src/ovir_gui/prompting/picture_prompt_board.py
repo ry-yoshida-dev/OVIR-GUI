@@ -141,18 +141,6 @@ class PicturePromptBoard:
         self._exemplars = [box for box in self._exemplars if box.frame_key != frame_key]
         self._marks = {identity: mark for identity, mark in self._marks.items() if mark.frame_key != frame_key}
 
-    def clear_media(self, path: Path) -> None:
-        """
-        Remove every drawing of one media file.
-
-        Parameters
-        ----------
-        path : Path
-            Image or video file.
-        """
-        self._exemplars = [box for box in self._exemplars if box.frame_key.path != path]
-        self._marks = {identity: mark for identity, mark in self._marks.items() if mark.frame_key.path != path}
-
     def replace(self, prompts: PicturePrompts) -> None:
         """
         Replace every drawing, e.g. with the drawings remembered from the last session.

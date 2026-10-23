@@ -1,0 +1,176 @@
+{
+  "pictures": [
+    {
+      "class_count": 3,
+      "findings": [
+        {
+          "area": null,
+          "box": null,
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "person"
+        }
+      ],
+      "frame": null,
+      "name": "a_first.png",
+      "outdated": null,
+      "path": "<tmp>/media/a_first.png",
+      "scores": [
+        {
+          "class_name": "person",
+          "score": 0.9
+        },
+        {
+          "class_name": "car",
+          "score": 0.7
+        },
+        {
+          "class_name": "dog",
+          "score": 0.5
+        }
+      ],
+      "seconds": null
+    },
+    {
+      "class_count": 3,
+      "findings": [
+        {
+          "area": null,
+          "box": null,
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "person"
+        }
+      ],
+      "frame": null,
+      "name": "b_second.png",
+      "outdated": null,
+      "path": "<tmp>/media/b_second.png",
+      "scores": [
+        {
+          "class_name": "person",
+          "score": 0.9
+        },
+        {
+          "class_name": "car",
+          "score": 0.7
+        },
+        {
+          "class_name": "dog",
+          "score": 0.5
+        }
+      ],
+      "seconds": null
+    },
+    {
+      "class_count": 3,
+      "findings": [
+        {
+          "area": null,
+          "box": null,
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "person"
+        }
+      ],
+      "frame": 0,
+      "name": "c_clip.mp4",
+      "outdated": null,
+      "path": "<tmp>/media/c_clip.mp4",
+      "scores": [
+        {
+          "class_name": "person",
+          "score": 0.9
+        },
+        {
+          "class_name": "car",
+          "score": 0.7
+        },
+        {
+          "class_name": "dog",
+          "score": 0.5
+        }
+      ],
+      "seconds": 0.0
+    },
+    {
+      "class_count": 3,
+      "findings": [
+        {
+          "area": null,
+          "box": null,
+          "class_name": "person",
+          "confidence": 0.86,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "person"
+        }
+      ],
+      "frame": 4,
+      "name": "c_clip.mp4",
+      "outdated": null,
+      "path": "<tmp>/media/c_clip.mp4",
+      "scores": [
+        {
+          "class_name": "person",
+          "score": 0.86
+        },
+        {
+          "class_name": "car",
+          "score": 0.66
+        },
+        {
+          "class_name": "dog",
+          "score": 0.46
+        }
+      ],
+      "seconds": 0.4
+    },
+    {
+      "class_count": 3,
+      "findings": [
+        {
+          "area": null,
+          "box": null,
+          "class_name": "person",
+          "confidence": 0.82,
+          "index": 0,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "person"
+        }
+      ],
+      "frame": 8,
+      "name": "c_clip.mp4",
+      "outdated": null,
+      "path": "<tmp>/media/c_clip.mp4",
+      "scores": [
+        {
+          "class_name": "person",
+          "score": 0.82
+        },
+        {
+          "class_name": "car",
+          "score": 0.62
+        },
+        {
+          "class_name": "dog",
+          "score": 0.42
+        }
+      ],
+      "seconds": 0.8
+    }
+  ],
+  "profile_key": "94b8200713d237a5",
+  "task": "classification"
+}

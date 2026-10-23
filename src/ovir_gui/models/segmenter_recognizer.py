@@ -64,10 +64,7 @@ class SegmenterRecognizer(Recognizer):
         results: dict[int, FrameResult] = {}
         for class_names, indices in groups.items():
             group: list[KeyedPicture] = [pictures[index] for index in indices]
-            for index, result in zip(
-                indices, self._segment_group(group, prompt.restricted_to(class_names)), strict=True
-            ):
-                results[index] = result
+            results.update(zip(indices, self._segment_group(group, prompt.restricted_to(class_names)), strict=True))
         return [results[index] for index in range(len(pictures))]
 
     def _class_names_on(self, picture: KeyedPicture, prompt: LabeledPrompt) -> tuple[str, ...]:

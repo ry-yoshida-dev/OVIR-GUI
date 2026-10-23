@@ -1,0 +1,328 @@
+{
+  "coordinate_space": "pixels of the upright picture (EXIF orientation applied), origin at top-left",
+  "format": "ovir-gui-objects",
+  "model": "grounding_dino/original_tiny",
+  "pictures": [
+    {
+      "frame": null,
+      "height": 48,
+      "objects": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "polygons": [],
+          "source": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "polygons": [],
+          "source": "dog"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.5,
+          "index": 3,
+          "polygons": [],
+          "source": "person"
+        }
+      ],
+      "path": "<tmp>/media/a_first.png",
+      "width": 64
+    },
+    {
+      "frame": null,
+      "height": 40,
+      "objects": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "polygons": [],
+          "source": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "polygons": [],
+          "source": "dog"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.5,
+          "index": 3,
+          "polygons": [],
+          "source": "person"
+        }
+      ],
+      "path": "<tmp>/media/b_second.png",
+      "width": 80
+    },
+    {
+      "frame": 0,
+      "height": 48,
+      "objects": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.9,
+          "index": 0,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "polygons": [],
+          "source": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "polygons": [],
+          "source": "dog"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.5,
+          "index": 3,
+          "polygons": [],
+          "source": "person"
+        }
+      ],
+      "path": "<tmp>/media/c_clip.mp4",
+      "width": 64
+    },
+    {
+      "frame": 4,
+      "height": 48,
+      "objects": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.86,
+          "index": 0,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "confidence": 0.66,
+          "index": 1,
+          "polygons": [],
+          "source": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.5,
+          "index": 2,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "confidence": 0.46,
+          "index": 3,
+          "polygons": [],
+          "source": "dog"
+        }
+      ],
+      "path": "<tmp>/media/c_clip.mp4",
+      "width": 64
+    },
+    {
+      "frame": 8,
+      "height": 48,
+      "objects": [
+        {
+          "area": 144.0,
+          "box": [
+            2.0,
+            2.0,
+            10.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.82,
+          "index": 0,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            10.0,
+            2.0,
+            18.0,
+            20.0
+          ],
+          "class_name": "car",
+          "confidence": 0.62,
+          "index": 1,
+          "polygons": [],
+          "source": "car"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            3.0,
+            2.0,
+            11.0,
+            20.0
+          ],
+          "class_name": "person",
+          "confidence": 0.5,
+          "index": 2,
+          "polygons": [],
+          "source": "person"
+        },
+        {
+          "area": 144.0,
+          "box": [
+            18.0,
+            2.0,
+            26.0,
+            20.0
+          ],
+          "class_name": "dog",
+          "confidence": 0.42,
+          "index": 3,
+          "polygons": [],
+          "source": "dog"
+        }
+      ],
+      "path": "<tmp>/media/c_clip.mp4",
+      "width": 64
+    }
+  ],
+  "version": "<volatile>"
+}

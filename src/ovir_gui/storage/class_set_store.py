@@ -236,26 +236,6 @@ class ClassSetStore:
         self.class_set_directory.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source_path, target_path)
 
-    def export_archive(self, name: str, target_path: Path) -> None:
-        """
-        Copy a saved class set to a file outside the store, e.g. to share it.
-
-        Parameters
-        ----------
-        name : str
-            Class set name.
-        target_path : Path
-            File to write, replaced if it exists.
-
-        Raises
-        ------
-        ValueError
-            If the name is not usable as a file name.
-        OSError
-            If the class set cannot be read or the file cannot be written.
-        """
-        shutil.copyfile(self.path_of(name), target_path)
-
     def _entry_of(self, name: str) -> ClassSetEntry:
         archive: ClassSetArchive = self._archive_of(name)
         summary: ClassSetSummary | None

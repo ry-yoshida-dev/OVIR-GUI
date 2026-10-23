@@ -10,6 +10,7 @@ Media files opened in the GUI and the pixels read from them. `MediaCollection` f
 | --- | --- |
 | [class_colors.py](./class_colors.py) | `ClassColors` assigns distinct, stable colors to class ids for every view and annotated export. |
 | [frame_key.py](./frame_key.py) | `FrameKey` identifies one recognizable picture: an image file or one frame of a video file. |
+| [inference_mode.py](./inference_mode.py) | `InferenceMode` chooses which pictures are inferred: the shown picture only, or every picture with the shown media first. |
 | [keyed_picture.py](./keyed_picture.py) | `KeyedPicture` pairs the pixels of one picture with the key naming it, as handed to the recognizers. |
 | [loaded_image.py](./loaded_image.py) | `LoadedImage` holds an image read from disk, upright according to its EXIF orientation. |
 | [media_collection.py](./media_collection.py) | `MediaCollection` collects image and video files from user-given paths, separating paths that add nothing. |

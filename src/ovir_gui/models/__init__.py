@@ -13,6 +13,7 @@ from .model_selection import ModelSelection
 from .model_selector import ModelSelector
 from .object_tracking_model import ObjectTrackingModel
 from .preset_catalog import PresetCatalog
+from .preset_reference import PresetReference
 from .profile_option import ProfileOption
 from .promptable_segmentation_model import PromptableSegmentationModel
 from .recognition_model import RecognitionModel
@@ -39,6 +40,7 @@ __all__ = [
     "ModelSelector",
     "ObjectTrackingModel",
     "PresetCatalog",
+    "PresetReference",
     "ProfileOption",
     "PromptableSegmentationModel",
     "RecognitionModel",

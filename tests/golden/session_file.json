@@ -1,0 +1,29 @@
+{
+  "current": "<tmp>/media/a_first.png",
+  "frame": null,
+  "frame_step": 4,
+  "inference_mode": "all",
+  "is_auto_inference": true,
+  "media": [
+    "<tmp>/media/a_first.png",
+    "<tmp>/media/b_second.png",
+    "<tmp>/media/c_clip.mp4"
+  ],
+  "selections": [
+    {
+      "backend": "grounding_dino",
+      "batch_size": 4,
+      "box_detector": null,
+      "confidence": null,
+      "device": "auto",
+      "nms": null,
+      "pooling": null,
+      "precision": "float32",
+      "preset": "original_tiny",
+      "task": "detection",
+      "templates": null,
+      "tiling": null
+    }
+  ],
+  "task": "detection"
+}

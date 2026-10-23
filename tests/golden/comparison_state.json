@@ -1,0 +1,562 @@
+{
+  "accepted_suffixes": [
+    ".avi",
+    ".bmp",
+    ".jpeg",
+    ".jpg",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp4",
+    ".mpeg",
+    ".mpg",
+    ".png",
+    ".tif",
+    ".tiff",
+    ".webm",
+    ".webp",
+    ".wmv"
+  ],
+  "activity": "",
+  "background_key": null,
+  "background_progress": null,
+  "class_set": {
+    "directory": "<tmp>/data/classes",
+    "is_edited": true,
+    "is_unsaved": true,
+    "name": "",
+    "names": []
+  },
+  "classes": [
+    {
+      "color": "#e6194b",
+      "name": "person",
+      "phrases": [
+        "person"
+      ],
+      "references": []
+    },
+    {
+      "color": "#3cb44b",
+      "name": "car",
+      "phrases": [
+        "car"
+      ],
+      "references": []
+    }
+  ],
+  "compared_profile_key": "327359f3cf1ca3e8",
+  "current": {
+    "fps": null,
+    "frame": null,
+    "frame_count": null,
+    "height": 48,
+    "is_sampled": true,
+    "kind": "image",
+    "name": "a_first.png",
+    "path": "<tmp>/media/a_first.png",
+    "playback": "none",
+    "timestamp": null,
+    "version": "<volatile>",
+    "width": 64
+  },
+  "inference": {
+    "is_auto": true,
+    "is_following_playback": false,
+    "mode": "all",
+    "modes": [
+      {
+        "label": "Current view",
+        "value": "shown"
+      },
+      {
+        "label": "All files",
+        "value": "all"
+      }
+    ],
+    "pause_reason": null
+  },
+  "is_busy": false,
+  "last_export": null,
+  "media": [
+    {
+      "color": "#3cb44b",
+      "count_text": "3",
+      "description": "Inferred",
+      "fps": null,
+      "frame_count": null,
+      "kept_count": 3,
+      "kind": "image",
+      "name": "a_first.png",
+      "path": "<tmp>/media/a_first.png",
+      "state": "done"
+    },
+    {
+      "color": "#3cb44b",
+      "count_text": "3",
+      "description": "Inferred",
+      "fps": null,
+      "frame_count": null,
+      "kept_count": 3,
+      "kind": "image",
+      "name": "b_second.png",
+      "path": "<tmp>/media/b_second.png",
+      "state": "done"
+    },
+    {
+      "color": "#3cb44b",
+      "count_text": "3/3",
+      "description": "3/3 frames inferred",
+      "fps": 10.0,
+      "frame_count": 12,
+      "kept_count": 9,
+      "kind": "video",
+      "name": "c_clip.mp4",
+      "path": "<tmp>/media/c_clip.mp4",
+      "state": "done"
+    }
+  ],
+  "model": {
+    "backends": [
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "grounding_dino/llmdet_base",
+            "licenses": [],
+            "name": "llmdet_base"
+          },
+          {
+            "label": "grounding_dino/llmdet_large",
+            "licenses": [],
+            "name": "llmdet_large"
+          },
+          {
+            "label": "grounding_dino/llmdet_tiny",
+            "licenses": [],
+            "name": "llmdet_tiny"
+          },
+          {
+            "label": "grounding_dino/mm_base_all",
+            "licenses": [],
+            "name": "mm_base_all"
+          },
+          {
+            "label": "grounding_dino/mm_base_o365v1_goldg_v3det",
+            "licenses": [],
+            "name": "mm_base_o365v1_goldg_v3det"
+          },
+          {
+            "label": "grounding_dino/mm_large_all",
+            "licenses": [],
+            "name": "mm_large_all"
+          },
+          {
+            "label": "grounding_dino/mm_large_o365v2_oiv6_goldg",
+            "licenses": [],
+            "name": "mm_large_o365v2_oiv6_goldg"
+          },
+          {
+            "label": "grounding_dino/mm_tiny_o365v1_goldg",
+            "licenses": [],
+            "name": "mm_tiny_o365v1_goldg"
+          },
+          {
+            "label": "grounding_dino/mm_tiny_o365v1_goldg_grit",
+            "licenses": [],
+            "name": "mm_tiny_o365v1_goldg_grit"
+          },
+          {
+            "label": "grounding_dino/mm_tiny_o365v1_goldg_grit_v3det",
+            "licenses": [],
+            "name": "mm_tiny_o365v1_goldg_grit_v3det"
+          },
+          {
+            "label": "grounding_dino/mm_tiny_o365v1_goldg_v3det",
+            "licenses": [],
+            "name": "mm_tiny_o365v1_goldg_v3det"
+          },
+          {
+            "label": "grounding_dino/original_base",
+            "licenses": [],
+            "name": "original_base"
+          },
+          {
+            "label": "grounding_dino/original_tiny",
+            "licenses": [],
+            "name": "original_tiny"
+          }
+        ],
+        "value": "grounding_dino"
+      },
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "owl_vit/v1_base_patch16",
+            "licenses": [],
+            "name": "v1_base_patch16"
+          },
+          {
+            "label": "owl_vit/v1_base_patch32",
+            "licenses": [],
+            "name": "v1_base_patch32"
+          },
+          {
+            "label": "owl_vit/v1_large_patch14",
+            "licenses": [],
+            "name": "v1_large_patch14"
+          },
+          {
+            "label": "owl_vit/v2_base_patch16",
+            "licenses": [],
+            "name": "v2_base_patch16"
+          },
+          {
+            "label": "owl_vit/v2_base_patch16_ensemble",
+            "licenses": [],
+            "name": "v2_base_patch16_ensemble"
+          },
+          {
+            "label": "owl_vit/v2_large_patch14",
+            "licenses": [],
+            "name": "v2_large_patch14"
+          },
+          {
+            "label": "owl_vit/v2_large_patch14_ensemble",
+            "licenses": [],
+            "name": "v2_large_patch14_ensemble"
+          }
+        ],
+        "value": "owl_vit"
+      },
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "omdet_turbo/swin_tiny",
+            "licenses": [],
+            "name": "swin_tiny"
+          }
+        ],
+        "value": "omdet_turbo"
+      },
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "florence2/base",
+            "licenses": [],
+            "name": "base"
+          },
+          {
+            "label": "florence2/base_ft",
+            "licenses": [],
+            "name": "base_ft"
+          },
+          {
+            "label": "florence2/large",
+            "licenses": [],
+            "name": "large"
+          },
+          {
+            "label": "florence2/large_ft",
+            "licenses": [],
+            "name": "large_ft"
+          }
+        ],
+        "value": "florence2"
+      },
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "yolo_world/l",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "l"
+          },
+          {
+            "label": "yolo_world/m",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "m"
+          },
+          {
+            "label": "yolo_world/s",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "s"
+          },
+          {
+            "label": "yolo_world/x",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "x"
+          }
+        ],
+        "value": "yolo_world"
+      },
+      {
+        "image_poolings": [],
+        "is_box_prompted": false,
+        "mode": null,
+        "presets": [
+          {
+            "label": "yoloe/11l",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "11l"
+          },
+          {
+            "label": "yoloe/11m",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "11m"
+          },
+          {
+            "label": "yoloe/11s",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "11s"
+          },
+          {
+            "label": "yoloe/26l",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "26l"
+          },
+          {
+            "label": "yoloe/26m",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "26m"
+          },
+          {
+            "label": "yoloe/26n",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "26n"
+          },
+          {
+            "label": "yoloe/26s",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "26s"
+          },
+          {
+            "label": "yoloe/26x",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "26x"
+          },
+          {
+            "label": "yoloe/v8l",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "v8l"
+          },
+          {
+            "label": "yoloe/v8m",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "v8m"
+          },
+          {
+            "label": "yoloe/v8s",
+            "licenses": [
+              "ultralytics"
+            ],
+            "name": "v8s"
+          }
+        ],
+        "value": "yoloe"
+      }
+    ],
+    "box_detectors": [],
+    "description": "",
+    "devices": "<volatile>",
+    "drawing_kinds": [],
+    "is_image_prompt_supported": true,
+    "is_point_supported": true,
+    "is_sequential": false,
+    "licenses": [
+      {
+        "install_command": "pip install 'ovir-gui[ultralytics]'",
+        "is_accepted": false,
+        "is_installed": "<volatile>",
+        "license_name": "AGPL-3.0",
+        "license_url": "https://www.ultralytics.com/license",
+        "notice": "YOLO-World and YOLOE run on Ultralytics, which is licensed under AGPL-3.0; the model weights are distributed under AGPL-3.0 as well.\n\nYou may use them only if your use complies with AGPL-3.0, which includes releasing the complete source code of any software or network service built on them under AGPL-3.0, or if you hold an Ultralytics Enterprise License.\n\nOVIR GUI does not grant you any license to Ultralytics or its model weights, and its authors accept no responsibility or liability for how you use them. You alone are responsible for complying with their license terms.\n\nBy accepting, you confirm that your use complies with these terms, that you take full responsibility for it, and that the ultralytics module may be imported. Your acceptance is remembered in license_consent.json of the data directory; delete that file to withdraw it.",
+        "title": "Ultralytics",
+        "value": "ultralytics"
+      }
+    ],
+    "mode": null,
+    "modes": [],
+    "precisions": "<volatile>",
+    "prompt_mode": "classes",
+    "query_kinds": [
+      "text",
+      "visual"
+    ],
+    "selection": {
+      "backend": "owl_vit",
+      "batch_size": 4,
+      "box_detector_label": null,
+      "confidence_threshold": null,
+      "device": "auto",
+      "image_pooling": null,
+      "nms_iou_threshold": 0.3,
+      "precision": "float32",
+      "preset_name": "v2_base_patch16",
+      "text_templates": null,
+      "tiling_grid_size": null
+    },
+    "text_templates": null,
+    "tuning": {
+      "confidence_label": null,
+      "is_minimum_confidence_shown": true,
+      "is_nms_shown": true
+    },
+    "weights_path": "google/owlv2-base-patch16"
+  },
+  "palette": [
+    "#e6194b",
+    "#3cb44b",
+    "#4363d8",
+    "#f58231",
+    "#911eb4",
+    "#42d4f4",
+    "#f032e6",
+    "#bfef45",
+    "#fabed4",
+    "#469990",
+    "#dcbeff",
+    "#9a6324",
+    "#fffac8",
+    "#800000",
+    "#aaffc3",
+    "#808000",
+    "#ffd8b1",
+    "#000075"
+  ],
+  "picture_prompt": {
+    "exemplars": [],
+    "frame": null,
+    "marks": [],
+    "next_object_id": 1,
+    "objects": [],
+    "path": "<tmp>/media/a_first.png"
+  },
+  "profiles": [
+    {
+      "backend": "grounding_dino",
+      "device": "auto",
+      "done_file_count": 3,
+      "expected_frame_count": 5,
+      "file_count": 3,
+      "finding_count": 20,
+      "key": "327359f3cf1ca3e8",
+      "model_name": "original_tiny",
+      "options": [
+        {
+          "name": "NMS",
+          "value": "off"
+        }
+      ],
+      "options_text": "auto · fp32 · NMS off",
+      "outdated_count": 5,
+      "precision": "fp32",
+      "recognized_frame_count": 5,
+      "task": "detection",
+      "weights_path": "IDEA-Research/grounding-dino-tiny"
+    },
+    {
+      "backend": "owl_vit",
+      "device": "auto",
+      "done_file_count": 3,
+      "expected_frame_count": 5,
+      "file_count": 3,
+      "finding_count": 15,
+      "key": "e9469a03233e629f",
+      "model_name": "v2_base_patch16",
+      "options": [
+        {
+          "name": "NMS",
+          "value": "0.3"
+        }
+      ],
+      "options_text": "auto · fp32 · NMS 0.3",
+      "outdated_count": 0,
+      "precision": "fp32",
+      "recognized_frame_count": 5,
+      "task": "detection",
+      "weights_path": "google/owlv2-base-patch16"
+    }
+  ],
+  "progress": null,
+  "sampling": {
+    "frame_step": 4
+  },
+  "shown_profile_key": "e9469a03233e629f",
+  "standard_minimum": 0.25,
+  "standard_overlap_threshold": 0.5,
+  "status": {
+    "message": "Added 2 images and 1 video.",
+    "serial": 1
+  },
+  "summary": "owl_vit/v2_base_patch16 | google/owlv2-base-patch16 | 2 text prompts | 3 detections | <ms> ms/picture",
+  "suppression": {
+    "class_overlap_thresholds": {},
+    "is_enabled": false,
+    "overlap_threshold": 0.5
+  },
+  "task": {
+    "options": [
+      {
+        "title": "Classification",
+        "value": "classification"
+      },
+      {
+        "title": "Detection",
+        "value": "detection"
+      },
+      {
+        "title": "Segmentation",
+        "value": "segmentation"
+      }
+    ],
+    "value": "detection"
+  },
+  "thresholds": {
+    "class_minimums": {},
+    "default_minimum": 0.25,
+    "phrase_minimums": {}
+  },
+  "upload_directory": "<tmp>/data/uploads"
+}

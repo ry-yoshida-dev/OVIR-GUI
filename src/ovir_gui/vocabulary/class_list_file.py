@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from pathlib import Path
+from typing import ClassVar
 
 from .class_definition import ClassDefinition
 
@@ -13,8 +14,8 @@ class ClassListFile:
     stay readable by other tools. Blank lines are skipped when reading.
     """
 
-    SUFFIXES: tuple[str, ...] = (".txt", ".names")
-    ENCODING = "utf-8"
+    SUFFIXES: ClassVar[tuple[str, ...]] = (".txt", ".names")
+    ENCODING: ClassVar[str] = "utf-8"
 
     def __init__(self, path: Path) -> None:
         """

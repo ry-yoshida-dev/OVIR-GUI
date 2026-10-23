@@ -3,6 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from ..media import ClassColors
 from ..prompting import PicturePromptBoard, ReferenceBoard, ReferenceBox, ReferenceImage
 from ..storage import ClassSet, ClassSetArchive, ClassSetStore
 from ..vocabulary import ClassDefinition, ClassListFile, ClassVocabulary
@@ -13,8 +14,9 @@ class ClassWorkbench:
     Classes to detect with their phrases and reference images, edited by class id, and the class set they belong to.
 
     Edits that would break the vocabulary rules raise ``ValueError`` and change nothing. Reference boxes, and the
-    exemplar boxes and object marks drawn on pictures, follow their class when it is renamed and are dropped with it. The workbench remembers the saved class set the classes were
-    last loaded from or saved to, and whether they were edited since.
+    exemplar boxes and object marks drawn on pictures, follow their class when it is renamed and are dropped with it.
+    The workbench remembers the saved class set the classes were last loaded from or saved to, and whether they were
+    edited since.
     """
 
     def __init__(self, class_set_store: ClassSetStore) -> None:
@@ -54,6 +56,17 @@ class ClassWorkbench:
             Name of every class.
         """
         return self._vocabulary.class_names
+
+    def class_colors(self) -> dict[str, str]:
+        """
+        Color of every current class, by class id.
+
+        Returns
+        -------
+        dict[str, str]
+            ``#rrggbb`` per class name.
+        """
+        return {name: ClassColors.hex_of(index) for index, name in enumerate(self.class_names)}
 
     @property
     def picture_board(self) -> PicturePromptBoard:

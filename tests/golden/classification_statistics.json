@@ -1,0 +1,141 @@
+{
+  "comparison": null,
+  "model": "clip/openai_vit_b32",
+  "statistics": {
+    "classes": [
+      {
+        "below_minimum_count": 0,
+        "class_name": "person",
+        "finding_count": 5,
+        "histogram": {
+          "bin_counts": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            3,
+            0
+          ],
+          "bin_width": 0.05
+        },
+        "kept_count": 5,
+        "mean_confidence": 0.876,
+        "median_confidence": 0.9,
+        "picture_count": 5,
+        "rejected_count": 0
+      },
+      {
+        "below_minimum_count": 0,
+        "class_name": "car",
+        "finding_count": 0,
+        "histogram": {
+          "bin_counts": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "bin_width": 0.05
+        },
+        "kept_count": 0,
+        "mean_confidence": null,
+        "median_confidence": null,
+        "picture_count": 0,
+        "rejected_count": 0
+      },
+      {
+        "below_minimum_count": 0,
+        "class_name": "dog",
+        "finding_count": 0,
+        "histogram": {
+          "bin_counts": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "bin_width": 0.05
+        },
+        "kept_count": 0,
+        "mean_confidence": null,
+        "median_confidence": null,
+        "picture_count": 0,
+        "rejected_count": 0
+      }
+    ],
+    "histogram": {
+      "bin_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        3,
+        0
+      ],
+      "bin_width": 0.05
+    },
+    "picture_count": 5,
+    "recognized_count": 5
+  },
+  "task": "classification"
+}

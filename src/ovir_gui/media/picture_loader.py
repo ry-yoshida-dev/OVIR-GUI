@@ -47,13 +47,13 @@ class PictureLoader:
                 position += 1
                 continue
             end: int = position + 1
-            while end < len(frame_keys) and self._continues_run(frame_keys[end - 1], frame_keys[end]):
+            while end < len(frame_keys) and self._is_continuing_run(frame_keys[end - 1], frame_keys[end]):
                 end += 1
             yield from self._load_frames(item, frame_keys[position:end])
             position = end
 
     @staticmethod
-    def _continues_run(previous: FrameKey, following: FrameKey) -> bool:
+    def _is_continuing_run(previous: FrameKey, following: FrameKey) -> bool:
         return (
             following.path == previous.path
             and previous.frame_index is not None
@@ -65,7 +65,7 @@ class PictureLoader:
     def _load_image(frame_key: FrameKey) -> Image.Image | Exception:
         try:
             return LoadedImage.open(frame_key.path).image
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             return error
 
     @staticmethod
@@ -78,7 +78,7 @@ class PictureLoader:
                 frame_key: FrameKey | None = keys_by_index.pop(frame_index, None)
                 if frame_key is not None:
                     yield frame_key, image
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             for frame_key in keys_by_index.values():
                 yield frame_key, error
             return
