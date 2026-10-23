@@ -464,6 +464,24 @@ export interface ExportFormat {
   is_confidence_supported: boolean;
 }
 
+export type ExportScopeValue = "kept" | "listed";
+
+export interface ExportChoice {
+  export_format: string;
+  output_directory: string;
+  is_confidence_included: boolean;
+  scope: ExportScopeValue;
+  minimum_confidence: number;
+  is_annotated_image_saved: boolean;
+  is_annotated_video_saved: boolean;
+}
+
+export interface ExportRequest extends ExportChoice {
+  listed_findings: PictureFindings[] | null;
+  is_label_confidence_shown: boolean;
+  is_skipping_approved: boolean;
+}
+
 export interface ExportPlan {
   model_name: string;
   options_text: string;
@@ -472,7 +490,7 @@ export interface ExportPlan {
   pending_count: number;
   issue: string;
   formats: ExportFormat[];
-  scopes: { value: string; label: string; description: string }[];
+  scopes: { value: ExportScopeValue; label: string; description: string }[];
   default_directory: string;
 }
 

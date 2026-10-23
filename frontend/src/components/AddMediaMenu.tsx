@@ -1,5 +1,5 @@
+import { PlusGlyph } from "./Glyphs";
 import type { MenuEntry } from "./Menu";
-import { PlusGlyph } from "./PlusGlyph";
 
 interface AddMediaMenuProps {
   onUploadFiles: () => void;

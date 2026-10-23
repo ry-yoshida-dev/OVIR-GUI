@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChevronGlyph } from "./ChevronGlyph";
+import { ChevronGlyph } from "./Glyphs";
 
 interface SectionProps {
   title: string;

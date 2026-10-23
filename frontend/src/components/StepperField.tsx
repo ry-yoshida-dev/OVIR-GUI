@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { clamp } from "../lib/numbers";
 
 interface StepperFieldProps {
   initialValue: number;
@@ -9,9 +10,9 @@ interface StepperFieldProps {
 }
 
 export function StepperField({ initialValue, minimum, maximum, unit, onChange }: StepperFieldProps) {
-  const [value, setValue] = useState(Math.min(maximum, Math.max(minimum, initialValue)));
+  const [value, setValue] = useState(clamp(initialValue, minimum, maximum));
   const stepBy = (delta: number) => {
-    const next = Math.min(maximum, Math.max(minimum, value + delta));
+    const next = clamp(value + delta, minimum, maximum);
     if (next === value) return;
     setValue(next);
     onChange(next);

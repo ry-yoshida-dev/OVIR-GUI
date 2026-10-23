@@ -1,20 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api, errorMessage } from "../api/client";
-import type { ExportPlan } from "../api/types";
+import type { ExportChoice, ExportScopeValue } from "../api/types";
+import { useAsyncResource } from "../hooks/useAsyncResource";
 import { useStoredState } from "../hooks/useStoredState";
 import { Dialog } from "./Dialog";
 import { NumberField } from "./NumberField";
 import { ServerBrowserDialog } from "./ServerBrowserDialog";
-
-export interface ExportChoice {
-  export_format: string;
-  output_directory: string;
-  is_confidence_included: boolean;
-  scope: string;
-  minimum_confidence: number;
-  is_annotated_image_saved: boolean;
-  is_annotated_video_saved: boolean;
-}
 
 interface ExportDialogProps {
   hasVideos: boolean;
@@ -27,15 +18,16 @@ interface ExportDialogProps {
 interface StoredExportOptions {
   formats: Record<string, string>;
   is_confidence_included: boolean;
-  scope: string;
+  scope: ExportScopeValue;
   minimum_confidence: number;
   is_annotated_image_saved: boolean;
   is_annotated_video_saved: boolean;
   output_directory: string;
 }
 
+const EXPORT_PLAN_KEY = "export-plan";
+
 export function ExportDialog({ hasVideos, listedFindingCount, onExport, onDownloadCsv, onClose }: ExportDialogProps) {
-  const [plan, setPlan] = useState<ExportPlan | null>(null);
   const [error, setError] = useState("");
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,16 +41,10 @@ export function ExportDialog({ hasVideos, listedFindingCount, onExport, onDownlo
     output_directory: "",
   });
   const [outputDirectory, setOutputDirectory] = useState("");
-
-  useEffect(() => {
-    api
-      .exportPlan()
-      .then((loaded) => {
-        setPlan(loaded);
-        setOutputDirectory(loaded.default_directory);
-      })
-      .catch((caught: unknown) => setError(errorMessage(caught)));
-  }, []);
+  const plan = useAsyncResource(EXPORT_PLAN_KEY, api.exportPlan, {
+    onLoaded: (loaded) => setOutputDirectory(loaded.default_directory),
+    onError: (caught) => setError(errorMessage(caught)),
+  });
 
   const format =
     plan?.formats.find((entry) => entry.value === stored.formats[plan.task]) ?? plan?.formats[0];

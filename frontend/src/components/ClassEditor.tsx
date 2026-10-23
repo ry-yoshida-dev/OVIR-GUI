@@ -1,10 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { api, errorMessage } from "../api/client";
-import type { ClassEntry, ClassSetState, ReferenceEntry } from "../api/types";
+import { type DragEvent, useMemo, useRef, useState } from "react";
+import { api, attempt } from "../api/client";
+import type { ClassEntry, ClassSetState } from "../api/types";
+import { SWATCH_FALLBACK_COLOR } from "../lib/frameView";
+import { toggledMembership } from "../lib/sets";
+import { ClassRow } from "./classTree/ClassRow";
+import {
+  type DragPayload,
+  type DropTarget,
+  type Editing,
+  isRowPresent,
+  isSameRow,
+  removalOf,
+  type TreeRow,
+} from "./classTree/classTreeModel";
+import { InlineInput } from "./classTree/InlineInput";
+import { PhraseRow } from "./classTree/PhraseRow";
+import { ReferenceRow } from "./classTree/ReferenceRow";
 import { useDialogs } from "./DialogHost";
+import { SaveGlyph, TrashGlyph } from "./Glyphs";
 import { type MenuEntry, useMenu } from "./Menu";
-import { SaveGlyph } from "./SaveGlyph";
-import { TrashGlyph } from "./TrashGlyph";
 
 interface ClassEditorProps {
   classes: ClassEntry[];
@@ -16,86 +30,7 @@ interface ClassEditorProps {
   onEditAsText: () => void;
 }
 
-type RowKey = string;
-
-type Editing =
-  | { kind: "rename-class"; classIndex: number }
-  | { kind: "rename-phrase"; classIndex: number; phraseIndex: number }
-  | { kind: "new-class"; position: number }
-  | { kind: "new-phrase"; classIndex: number; position: number };
-
-type DragPayload =
-  | { kind: "phrase"; classIndex: number; phraseIndex: number }
-  | { kind: "reference"; classIndex: number; name: string; digest: string };
-
-type DropTarget =
-  | { kind: "into-class"; classIndex: number }
-  | { kind: "before-class"; classIndex: number }
-  | { kind: "before-phrase"; classIndex: number; phraseIndex: number }
-  | { kind: "end" };
-
 const DRAG_TYPE = "application/x-ovir-query";
-
-const classKey = (classIndex: number): RowKey => `c:${classIndex}`;
-const phraseKey = (classIndex: number, phraseIndex: number): RowKey => `p:${classIndex}:${phraseIndex}`;
-const referenceKey = (classIndex: number, reference: ReferenceEntry): RowKey =>
-  `r:${classIndex}:${reference.digest}:${reference.name}`;
-
-function parseKey(key: RowKey) {
-  const [kind, first, ...rest] = key.split(":");
-  const classIndex = Number(first);
-  switch (kind) {
-    case "c":
-      return { kind: "class" as const, classIndex };
-    case "p":
-      return { kind: "phrase" as const, classIndex, phraseIndex: Number(rest[0]) };
-    default:
-      return { kind: "reference" as const, classIndex, digest: rest[0] ?? "", name: rest.slice(1).join(":") };
-  }
-}
-
-function InlineInput({
-  initialValue,
-  placeholder,
-  onCommit,
-  onCancel,
-}: {
-  initialValue: string;
-  placeholder: string;
-  onCommit: (value: string) => Promise<boolean>;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState(initialValue);
-  const isCommitting = useRef(false);
-  const commit = async () => {
-    if (isCommitting.current) return;
-    if (value.trim() === "" || value === initialValue) {
-      onCancel();
-      return;
-    }
-    isCommitting.current = true;
-    const isDone = await onCommit(value);
-    isCommitting.current = false;
-    if (!isDone) setValue(value);
-  };
-  return (
-    <input
-      type="text"
-      autoFocus
-      value={value}
-      placeholder={placeholder}
-      onChange={(event) => setValue(event.target.value)}
-      onClick={(event) => event.stopPropagation()}
-      onDoubleClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key === "Enter") void commit();
-        if (event.key === "Escape") onCancel();
-      }}
-      onBlur={() => void commit()}
-    />
-  );
-}
 
 export function ClassEditor({
   classes,
@@ -108,34 +43,16 @@ export function ClassEditor({
 }: ClassEditorProps) {
   const dialogs = useDialogs();
   const menu = useMenu();
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selected, setSelected] = useState<RowKey | null>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [selected, setSelected] = useState<TreeRow | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const treeElement = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (selected === null) return;
-    const parsed = parseKey(selected);
-    const entry = classes[parsed.classIndex];
-    const isValid =
-      entry !== undefined &&
-      (parsed.kind === "class" ||
-        (parsed.kind === "phrase" && parsed.phraseIndex < entry.phrases.length) ||
-        (parsed.kind === "reference" && entry.references.some((reference) => reference.digest === parsed.digest)));
-    if (!isValid) setSelected(null);
-  }, [classes, selected]);
+  if (selected !== null && !isRowPresent(selected, classes)) setSelected(null);
 
-  const run = async (action: () => Promise<unknown>): Promise<boolean> => {
-    try {
-      await action();
-      return true;
-    } catch (error) {
-      onReport(errorMessage(error));
-      return false;
-    }
-  };
+  const run = (action: () => Promise<unknown>): Promise<boolean> => attempt(action, onReport);
 
   const expand = (name: string) => setExpanded((current) => new Set(current).add(name));
 
@@ -144,34 +61,25 @@ export function ClassEditor({
       setEditing({ kind: "new-class", position: classes.length });
       return;
     }
-    const parsed = parseKey(selected);
-    const entry = classes[parsed.classIndex];
+    const entry = classes[selected.classIndex];
     if (entry === undefined) return;
-    switch (parsed.kind) {
+    switch (selected.kind) {
       case "class":
-        setEditing({ kind: "new-class", position: parsed.classIndex + 1 });
+        setEditing({ kind: "new-class", position: selected.classIndex + 1 });
         break;
       case "phrase":
-        setEditing({ kind: "new-phrase", classIndex: parsed.classIndex, position: parsed.phraseIndex + 1 });
+        setEditing({ kind: "new-phrase", classIndex: selected.classIndex, position: selected.phraseIndex + 1 });
         break;
       case "reference":
         expand(entry.name);
-        setEditing({ kind: "new-phrase", classIndex: parsed.classIndex, position: entry.phrases.length });
+        setEditing({ kind: "new-phrase", classIndex: selected.classIndex, position: entry.phrases.length });
         break;
     }
   };
 
   const removeSelection = async () => {
     if (selected === null) return;
-    const parsed = parseKey(selected);
-    const body = {
-      class_indices: parsed.kind === "class" ? [parsed.classIndex] : [],
-      phrases: parsed.kind === "phrase" ? [{ class_index: parsed.classIndex, phrase_index: parsed.phraseIndex }] : [],
-      references:
-        parsed.kind === "reference"
-          ? [{ class_index: parsed.classIndex, name: parsed.name, digest: parsed.digest }]
-          : [],
-    };
+    const body = removalOf(selected);
     if (await run(() => api.removeClassRows(body))) setSelected(null);
   };
 
@@ -189,7 +97,7 @@ export function ClassEditor({
         isDone = await run(() => api.addClassRow(value, null, editing.position));
         if (isDone) {
           if (value.includes(":")) expand(value.split(":")[0]?.trim() ?? "");
-          setSelected(classKey(Math.min(editing.position, classes.length)));
+          setSelected({ kind: "class", classIndex: Math.min(editing.position, classes.length) });
         }
         break;
       case "new-phrase": {
@@ -197,7 +105,7 @@ export function ClassEditor({
         const entry = classes[editing.classIndex];
         if (isDone && entry !== undefined) {
           expand(entry.name);
-          setSelected(phraseKey(editing.classIndex, editing.position));
+          setSelected({ kind: "phrase", classIndex: editing.classIndex, phraseIndex: editing.position });
         }
         break;
       }
@@ -209,14 +117,14 @@ export function ClassEditor({
     return isDone;
   };
 
-  const onDragStart = (event: React.DragEvent, payload: DragPayload) => {
+  const onDragStart = (event: DragEvent, payload: DragPayload) => {
     event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(payload));
     event.dataTransfer.effectAllowed = "move";
   };
 
-  const acceptsDrag = (event: React.DragEvent) => event.dataTransfer.types.includes(DRAG_TYPE);
+  const acceptsDrag = (event: DragEvent) => event.dataTransfer.types.includes(DRAG_TYPE);
 
-  const onDragOver = (event: React.DragEvent, target: DropTarget) => {
+  const onDragOver = (event: DragEvent, target: DropTarget) => {
     if (!acceptsDrag(event)) return;
     event.preventDefault();
     event.stopPropagation();
@@ -224,7 +132,7 @@ export function ClassEditor({
     setDropTarget(target);
   };
 
-  const onDrop = async (event: React.DragEvent) => {
+  const onDrop = async (event: DragEvent) => {
     const target = dropTarget;
     setDropTarget(null);
     if (!acceptsDrag(event) || target === null) return;
@@ -309,7 +217,7 @@ export function ClassEditor({
       label: "Text Prompt",
       onSelect: () => {
         expand(entry.name);
-        setSelected(classKey(classIndex));
+        setSelected({ kind: "class", classIndex });
         setEditing({ kind: "new-phrase", classIndex, position: entry.phrases.length });
       },
     },
@@ -317,7 +225,7 @@ export function ClassEditor({
       label: isImagePromptSupported ? "Image Prompt…" : "Image Prompt… (needs OWL-ViT or YOLOE)",
       isDisabled: !isImagePromptSupported,
       onSelect: () => {
-        setSelected(classKey(classIndex));
+        setSelected({ kind: "class", classIndex });
         onAddImagePrompt(classIndex);
       },
     },
@@ -341,7 +249,7 @@ export function ClassEditor({
     editing?.kind === "new-class" && editing.position === position ? (
       <div className="tree-row">
         <span className="toggle" />
-        <span className="swatch" style={{ background: "var(--border-strong)" }} />
+        <span className="swatch" style={{ background: SWATCH_FALLBACK_COLOR }} />
         {renderEditing("class or class: phrase, phrase")}
       </div>
     ) : null;
@@ -400,19 +308,17 @@ export function ClassEditor({
       </div>
       <div
         ref={treeElement}
-        className="list"
+        className="list class-tree"
         tabIndex={0}
-        style={{ display: "flex", flexDirection: "column", paddingBottom: 4 }}
         onKeyDown={(event) => {
           if (editing !== null) return;
           if (event.key === "Delete" || event.key === "Backspace") {
             event.preventDefault();
             void removeSelection();
           } else if (event.key === "F2" && selected !== null) {
-            const parsed = parseKey(selected);
-            if (parsed.kind === "class") setEditing({ kind: "rename-class", classIndex: parsed.classIndex });
-            if (parsed.kind === "phrase") {
-              setEditing({ kind: "rename-phrase", classIndex: parsed.classIndex, phraseIndex: parsed.phraseIndex });
+            if (selected.kind === "class") setEditing({ kind: "rename-class", classIndex: selected.classIndex });
+            if (selected.kind === "phrase") {
+              setEditing({ kind: "rename-phrase", classIndex: selected.classIndex, phraseIndex: selected.phraseIndex });
             }
           } else if (event.key === "Enter" && selected === null) {
             startNewRow();
@@ -426,22 +332,32 @@ export function ClassEditor({
         {rows.map(({ entry, classIndex }) => {
           const isExpanded = expanded.has(entry.name);
           const isReferenceOnly = entry.phrases.length === 0 && entry.references.length > 0;
+          const isAddingPhraseAtEnd =
+            editing?.kind === "new-phrase" &&
+            editing.classIndex === classIndex &&
+            editing.position >= entry.phrases.length;
           return (
             <div key={`${classIndex}:${entry.name}`}>
               {newClassRow(classIndex)}
-              <div
-                className={[
-                  "tree-row",
-                  selected === classKey(classIndex) ? "selected" : "",
-                  dropTarget?.kind === "into-class" && dropTarget.classIndex === classIndex ? "drop-into" : "",
-                  dropTarget?.kind === "before-class" && dropTarget.classIndex === classIndex ? "drop-before" : "",
-                  isReferenceOnly && !isImagePromptSupported ? "disabled" : "",
-                ].join(" ")}
-                onClick={() => setSelected(classKey(classIndex))}
-                onDoubleClick={() => setEditing({ kind: "rename-class", classIndex })}
+              <ClassRow
+                entry={entry}
+                classIndex={classIndex}
+                isExpanded={isExpanded}
+                isSelected={isSameRow(selected, { kind: "class", classIndex })}
+                isDropInto={dropTarget?.kind === "into-class" && dropTarget.classIndex === classIndex}
+                isDropBefore={dropTarget?.kind === "before-class" && dropTarget.classIndex === classIndex}
+                isDisabled={isReferenceOnly && !isImagePromptSupported}
+                renameInput={
+                  editing?.kind === "rename-class" && editing.classIndex === classIndex
+                    ? renderEditing("class name", entry.name)
+                    : null
+                }
+                onSelect={() => setSelected({ kind: "class", classIndex })}
+                onRename={() => setEditing({ kind: "rename-class", classIndex })}
+                onToggleExpanded={() => setExpanded((current) => toggledMembership(current, entry.name))}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  setSelected(classKey(classIndex));
+                  setSelected({ kind: "class", classIndex });
                   menu.open(event.clientX, event.clientY, [
                     { label: "Rename", shortcut: "F2", onSelect: () => setEditing({ kind: "rename-class", classIndex }) },
                     ...promptEntries(entry, classIndex),
@@ -450,81 +366,41 @@ export function ClassEditor({
                     {
                       label: "Remove Class",
                       shortcut: "Del",
-                      onSelect: () =>
-                        void run(() => api.removeClassRows({ class_indices: [classIndex], phrases: [], references: [] })),
+                      onSelect: () => void run(() => api.removeClassRows(removalOf({ kind: "class", classIndex }))),
                     },
                   ]);
                 }}
-                onDragOver={(event) => {
-                  const bounds = event.currentTarget.getBoundingClientRect();
-                  const isUpper = event.clientY - bounds.top < bounds.height * 0.3;
-                  onDragOver(event, isUpper ? { kind: "before-class", classIndex } : { kind: "into-class", classIndex });
-                }}
-              >
-                <span
-                  className="toggle"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setExpanded((current) => {
-                      const next = new Set(current);
-                      if (next.has(entry.name)) next.delete(entry.name);
-                      else next.add(entry.name);
-                      return next;
-                    });
-                  }}
-                >
-                  {isExpanded ? "▾" : "▸"}
-                </span>
-                <span className="swatch" style={{ background: entry.color }} />
-                {editing?.kind === "rename-class" && editing.classIndex === classIndex ? (
-                  renderEditing("class name", entry.name)
-                ) : (
-                  <>
-                    <span className="label" title={entry.phrases.join(", ")}>
-                      {entry.name}
-                    </span>
-                    <span className="faint small">
-                      {[
-                        entry.phrases.length === 1 && entry.phrases[0] === entry.name
-                          ? ""
-                          : `${entry.phrases.length} prompt${entry.phrases.length === 1 ? "" : "s"}`,
-                        entry.references.length > 0
-                          ? `${entry.references.length} image${entry.references.length === 1 ? "" : "s"}`
-                          : "",
-                      ]
-                        .filter((part) => part !== "")
-                        .join(" · ")}
-                    </span>
-                  </>
-                )}
-              </div>
+                onDragOver={onDragOver}
+              />
               {isExpanded &&
                 entry.phrases.map((phrase, phraseIndex) => (
-                  <div key={`p-${phrase}`}>
+                  <div key={`p-${phraseIndex}`}>
                     {editing?.kind === "new-phrase" &&
                       editing.classIndex === classIndex &&
                       editing.position === phraseIndex && (
                         <div className="tree-row child">{renderEditing("phrase, phrase")}</div>
                       )}
-                    <div
-                      className={[
-                        "tree-row child",
-                        selected === phraseKey(classIndex, phraseIndex) ? "selected" : "",
+                    <PhraseRow
+                      phrase={phrase}
+                      isSelected={isSameRow(selected, { kind: "phrase", classIndex, phraseIndex })}
+                      isDropBefore={
                         dropTarget?.kind === "before-phrase" &&
                         dropTarget.classIndex === classIndex &&
                         dropTarget.phraseIndex === phraseIndex
-                          ? "drop-before"
-                          : "",
-                      ].join(" ")}
-                      draggable={editing === null}
-                      onDragStart={(event) => onDragStart(event, { kind: "phrase", classIndex, phraseIndex })}
-                      onDragEnd={() => setDropTarget(null)}
-                      onDragOver={(event) => onDragOver(event, { kind: "before-phrase", classIndex, phraseIndex })}
-                      onClick={() => setSelected(phraseKey(classIndex, phraseIndex))}
-                      onDoubleClick={() => setEditing({ kind: "rename-phrase", classIndex, phraseIndex })}
+                      }
+                      isDraggable={editing === null}
+                      renameInput={
+                        editing?.kind === "rename-phrase" &&
+                        editing.classIndex === classIndex &&
+                        editing.phraseIndex === phraseIndex
+                          ? renderEditing("phrase", phrase)
+                          : null
+                      }
+                      onSelect={() => setSelected({ kind: "phrase", classIndex, phraseIndex })}
+                      onRename={() => setEditing({ kind: "rename-phrase", classIndex, phraseIndex })}
                       onContextMenu={(event) => {
                         event.preventDefault();
-                        setSelected(phraseKey(classIndex, phraseIndex));
+                        setSelected({ kind: "phrase", classIndex, phraseIndex });
                         menu.open(event.clientX, event.clientY, [
                           {
                             label: "Rename",
@@ -544,48 +420,32 @@ export function ClassEditor({
                             label: "Remove Phrase",
                             shortcut: "Del",
                             onSelect: () =>
-                              void run(() =>
-                                api.removeClassRows({
-                                  class_indices: [],
-                                  phrases: [{ class_index: classIndex, phrase_index: phraseIndex }],
-                                  references: [],
-                                }),
-                              ),
+                              void run(() => api.removeClassRows(removalOf({ kind: "phrase", classIndex, phraseIndex }))),
                           },
                         ]);
                       }}
-                    >
-                      <span className="faint">“</span>
-                      {editing?.kind === "rename-phrase" &&
-                      editing.classIndex === classIndex &&
-                      editing.phraseIndex === phraseIndex ? (
-                        renderEditing("phrase", phrase)
-                      ) : (
-                        <span className="label">{phrase}</span>
-                      )}
-                    </div>
+                      onDragStart={(event) => onDragStart(event, { kind: "phrase", classIndex, phraseIndex })}
+                      onDragEnd={() => setDropTarget(null)}
+                      onDragOver={(event) => onDragOver(event, { kind: "before-phrase", classIndex, phraseIndex })}
+                    />
                   </div>
                 ))}
-              {editing?.kind === "new-phrase" &&
-                editing.classIndex === classIndex &&
-                editing.position >= entry.phrases.length && (
-                  <div className="tree-row child">{renderEditing("phrase, phrase")}</div>
-                )}
+              {isAddingPhraseAtEnd && <div className="tree-row child">{renderEditing("phrase, phrase")}</div>}
               {isExpanded &&
                 entry.references.map((reference) => (
-                  <div
+                  <ReferenceRow
                     key={`r-${reference.digest}-${reference.name}`}
-                    className={[
-                      "tree-row child",
-                      selected === referenceKey(classIndex, reference) ? "selected" : "",
-                      isImagePromptSupported ? "" : "disabled",
-                    ].join(" ")}
-                    title={
-                      isImagePromptSupported
-                        ? `${reference.boxes.length} boxes on ${reference.name}`
-                        : "The selected model does not take image prompts"
+                    reference={reference}
+                    isSelected={isSameRow(selected, {
+                      kind: "reference",
+                      classIndex,
+                      name: reference.name,
+                      digest: reference.digest,
+                    })}
+                    isImagePromptSupported={isImagePromptSupported}
+                    onSelect={() =>
+                      setSelected({ kind: "reference", classIndex, name: reference.name, digest: reference.digest })
                     }
-                    draggable
                     onDragStart={(event) =>
                       onDragStart(event, {
                         kind: "reference",
@@ -596,31 +456,19 @@ export function ClassEditor({
                     }
                     onDragEnd={() => setDropTarget(null)}
                     onDragOver={(event) => onDragOver(event, { kind: "into-class", classIndex })}
-                    onClick={() => setSelected(referenceKey(classIndex, reference))}
-                  >
-                    <img className="thumb" src={api.referenceImageUrl(reference.name, reference.digest)} alt="" />
-                    <span className="label">{reference.name}</span>
-                    <span className="faint small">
-                      {reference.boxes.length} box{reference.boxes.length === 1 ? "" : "es"}
-                    </span>
-                  </div>
+                  />
                 ))}
-              {isExpanded &&
-                !(
-                  editing?.kind === "new-phrase" &&
-                  editing.classIndex === classIndex &&
-                  editing.position >= entry.phrases.length
-                ) && (
-                  <div className="tree-row child tree-add-prompt">
-                    <button
-                      className="ghost"
-                      onClick={(event) => menu.openBelow(event.currentTarget, promptEntries(entry, classIndex))}
-                      title={`Add a text or image prompt to ${entry.name}`}
-                    >
-                      + Add Prompt
-                    </button>
-                  </div>
-                )}
+              {isExpanded && !isAddingPhraseAtEnd && (
+                <div className="tree-row child tree-add-prompt">
+                  <button
+                    className="ghost"
+                    onClick={(event) => menu.openBelow(event.currentTarget, promptEntries(entry, classIndex))}
+                    title={`Add a text or image prompt to ${entry.name}`}
+                  >
+                    + Add Prompt
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

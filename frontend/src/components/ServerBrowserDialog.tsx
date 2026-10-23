@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import type { DirectoryListing } from "../api/types";
 import { isImagePath, isMediaPath } from "../lib/droppedFiles";
+import { toggledMembership } from "../lib/sets";
 import { Dialog } from "./Dialog";
 
 export type BrowseMode = "media" | "images" | "directory" | "image";
@@ -35,22 +36,21 @@ export function ServerBrowserDialog({
   const [error, setError] = useState("");
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async (path?: string) => {
+  const showListing = (next: DirectoryListing) => {
+    setListing(next);
+    setPathText(next.path);
+    setSelectedImages(new Set());
+    setError("");
     try {
-      const next = await api.files(path);
-      setListing(next);
-      setPathText(next.path);
-      setSelectedImages(new Set());
-      setError("");
-      try {
-        window.localStorage.setItem(LAST_DIRECTORY_KEY, next.path);
-      } catch {
-        /* storage may be unavailable */
-      }
-    } catch (caught) {
-      setError(errorMessage(caught));
+      window.localStorage.setItem(LAST_DIRECTORY_KEY, next.path);
+    } catch {
+      return;
     }
-  }, []);
+  };
+  const showError = (caught: unknown) => setError(errorMessage(caught));
+  const load = (path?: string) => api.files(path).then(showListing, showError);
+  const showInitialListing = useEffectEvent(showListing);
+  const showInitialError = useEffectEvent(showError);
 
   useEffect(() => {
     let remembered: string | undefined;
@@ -59,8 +59,11 @@ export function ServerBrowserDialog({
     } catch {
       remembered = undefined;
     }
-    void load(initialPath ?? remembered);
-  }, [load, initialPath]);
+    api.files(initialPath ?? remembered).then(
+      (next) => showInitialListing(next),
+      (caught: unknown) => showInitialError(caught),
+    );
+  }, [initialPath]);
 
   const chooseTypedPath = () => {
     const typed = pathText.trim();
@@ -145,10 +148,9 @@ export function ServerBrowserDialog({
                 onClick={(event) => {
                   setSelectedImages((current) => {
                     if (mode === "image") return new Set([name]);
-                    const next = new Set(event.metaKey || event.ctrlKey || event.shiftKey ? current : []);
-                    if (next.has(name)) next.delete(name);
-                    else next.add(name);
-                    return next;
+                    const base: ReadonlySet<string> =
+                      event.metaKey || event.ctrlKey || event.shiftKey ? current : new Set();
+                    return toggledMembership(base, name);
                   });
                 }}
                 onDoubleClick={() => listing !== null && onChoose([joinPath(listing.path, name)])}

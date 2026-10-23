@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IndexBase, PlaybackState, type PlayerController, type PlayerSnapshot } from "@video-player-ui/core";
 import {
   FrameCanvas,
@@ -8,13 +7,15 @@ import {
   type FrameDrawContext,
   type FramePointer,
 } from "@video-player-ui/web";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { CurrentPicture, FramePayload } from "../api/types";
 import type { DisplayOptions } from "../lib/displayOptions";
 import { FindingPainter, type FrameScene } from "../lib/findingPainter";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
-import type { PlaybackPosition } from "../lib/playbackPosition";
+import type { ClassColors } from "../lib/frameView";
 import { visibleInstancesOf } from "../lib/frameView";
+import type { PlaybackPosition } from "../lib/playbackPosition";
 import { pictureKeyOf } from "../lib/resultTable";
 import { type LiveRun, LivePlaybackGate } from "./LivePlaybackGate";
 import { ScorePanel } from "./ScorePanel";
@@ -24,6 +25,13 @@ export interface HighlightedFinding {
   index: number;
 }
 
+export interface VideoPlayback {
+  position: PlaybackPosition;
+  live: LiveRun | null;
+  onSeek: (frame: number, isFinal: boolean) => void;
+  onFollow: (frame: number, isStart: boolean) => void;
+}
+
 interface VideoResultPlayerProps {
   current: CurrentPicture;
   frame: FramePayload | null;
@@ -31,17 +39,14 @@ interface VideoResultPlayerProps {
   listed: Map<string, Set<number>> | null;
   highlighted: HighlightedFinding | null;
   options: DisplayOptions;
-  classColors: Record<string, string>;
-  position: PlaybackPosition;
-  live: LiveRun | null;
-  onSeek: (frame: number, isFinal: boolean) => void;
-  onFollow: (frame: number, isStart: boolean) => void;
+  classColors: ClassColors;
+  playback: VideoPlayback;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onNavigate: (step: number) => void;
   onError: (error: Error) => void;
 }
 
-interface FindingsOverlayProps extends Omit<VideoResultPlayerProps, "onError" | "live"> {
+interface FindingsOverlayProps extends Omit<VideoResultPlayerProps, "onError"> {
   onShownFrame: (frame: number) => void;
 }
 
@@ -73,13 +78,12 @@ function FindingsOverlay({
   highlighted,
   options,
   classColors,
-  onSeek,
-  onFollow,
+  playback,
   onSelectFinding,
   onNavigate,
   onShownFrame,
-  position,
 }: FindingsOverlayProps) {
+  const { position, onSeek, onFollow } = playback;
   const controller: PlayerController = usePlayerController();
   const reportedFrame = useRef<number | null>(current.frame);
   const lastReportAt = useRef(0);
@@ -208,7 +212,7 @@ function FindingsOverlay({
 }
 
 export function VideoResultPlayer(props: VideoResultPlayerProps) {
-  const { current, frame, results, listed, options, classColors, live, onSelectFinding, onError, ...overlayProps } =
+  const { current, frame, results, listed, options, classColors, playback, onSelectFinding, onError, ...overlayProps } =
     props;
   const [shownFrame, setShownFrame] = useState<number | null>(current.frame);
   const source = useMemo(
@@ -245,11 +249,12 @@ export function VideoResultPlayer(props: VideoResultPlayerProps) {
           listed={listed}
           options={options}
           classColors={classColors}
+          playback={playback}
           onSelectFinding={onSelectFinding}
           onShownFrame={setShownFrame}
         />
         <LivePlaybackGate
-          live={live}
+          live={playback.live}
           results={results}
           framesPerSecond={current.fps ?? 30}
           frameCount={current.frame_count ?? 1}

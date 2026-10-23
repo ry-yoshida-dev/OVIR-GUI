@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { api, errorMessage } from "../api/client";
-import type { ClassSetListEntry, ClassSetPreview, ClassSetState } from "../api/types";
+import { useRef, useState } from "react";
+import { api, attempt, errorMessage } from "../api/client";
+import type { ClassSetListEntry, ClassSetState } from "../api/types";
+import { useAsyncResource } from "../hooks/useAsyncResource";
 import { Dialog } from "./Dialog";
 import { useDialogs } from "./DialogHost";
 
@@ -11,34 +12,23 @@ interface ClassSetDialogProps {
   onClose: () => void;
 }
 
+const NO_ENTRIES: ClassSetListEntry[] = [];
+
 export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSetDialogProps) {
   const dialogs = useDialogs();
-  const [entries, setEntries] = useState<ClassSetListEntry[]>([]);
   const [search, setSearch] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(classSet.name || null);
-  const [preview, setPreview] = useState<ClassSetPreview | null>(null);
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    api
-      .classSets()
-      .then((loaded) => setEntries(loaded.entries))
-      .catch((caught: unknown) => setError(errorMessage(caught)));
-  }, [version]);
-
-  useEffect(() => {
-    setPreview(null);
-    if (selectedName === null) return;
-    let isCurrent = true;
-    api
-      .classSetPreview(selectedName)
-      .then((loaded) => isCurrent && setPreview(loaded))
-      .catch(() => isCurrent && setPreview(null));
-    return () => {
-      isCurrent = false;
-    };
-  }, [selectedName, version]);
+  const entries =
+    useAsyncResource(String(version), api.classSets, {
+      onError: (caught) => setError(errorMessage(caught)),
+    })?.entries ?? NO_ENTRIES;
+  const preview = useAsyncResource(
+    selectedName === null ? null : JSON.stringify([selectedName, version]),
+    () => api.classSetPreview(selectedName ?? ""),
+    { isStaleShown: false },
+  );
 
   const needle = search.trim().toLowerCase();
   const shown = entries.filter(
@@ -50,15 +40,12 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
   const selected = entries.find((entry) => entry.name === selectedName) ?? null;
 
   const run = async (action: () => Promise<unknown>, message: string) => {
-    try {
-      await action();
+    const isDone = await attempt(action, setError);
+    if (isDone) {
       setError("");
       onReport(message);
-      return true;
-    } catch (caught) {
-      setError(errorMessage(caught));
-      return false;
     }
+    return isDone;
   };
 
   const load = async () => {
@@ -121,8 +108,8 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
       }
     >
       {error !== "" && <div className="error-text">{error}</div>}
-      <div className="split-view" style={{ flex: 1 }}>
-        <div style={{ width: 300, display: "flex", flexDirection: "column", gap: 6, minHeight: 0 }}>
+      <div className="split-view class-sets-split">
+        <div className="class-sets-catalog">
           <input type="search" placeholder="Search sets and classes" value={search} onChange={(event) => setSearch(event.target.value)} />
           <div
             className="list"
@@ -137,8 +124,7 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
             {shown.map((entry) => (
               <div
                 key={entry.name}
-                className={`list-item${entry.name === selectedName ? " selected" : ""}`}
-                style={{ flexDirection: "column", alignItems: "stretch", padding: "5px 8px" }}
+                className={`list-item class-set-entry${entry.name === selectedName ? " selected" : ""}`}
                 onClick={() => setSelectedName(entry.name)}
                 onDoubleClick={() => void load()}
               >
@@ -146,14 +132,14 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
                   <b className="grow">{entry.name}</b>
                   {entry.name === classSet.name && <span className="badge">current</span>}
                 </div>
-                <div className="small muted" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div className="small muted class-set-description">
                   {entry.is_readable ? entry.description : "Unreadable file"} · {new Date(entry.saved_at).toLocaleString()}
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+        <div className="class-sets-preview">
           <div className="row">
             <b className="grow">{selected?.name ?? "Select a class set"}</b>
             <button disabled={selected === null} onClick={() => void rename()}>
@@ -163,21 +149,20 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
               Delete
             </button>
           </div>
-          <div className="list" style={{ padding: 6 }}>
+          <div className="list class-sets-preview-list">
             {preview?.classes.map((entry) => (
-              <div key={entry.name} style={{ marginBottom: 8 }}>
+              <div key={entry.name} className="class-set-preview-class">
                 <div className="row">
                   <span className="swatch" style={{ background: entry.color }} />
                   <b>{entry.name}</b>
                   <span className="muted small">{entry.phrases.join(", ")}</span>
                 </div>
                 {entry.references.length > 0 && (
-                  <div className="row wrap" style={{ marginTop: 4, marginLeft: 17 }}>
+                  <div className="row wrap class-set-preview-references">
                     {entry.references.map((reference) => (
                       <img
                         key={reference.digest}
-                        className="thumb"
-                        style={{ width: 64, height: 48 }}
+                        className="thumb class-set-preview-thumb"
                         title={`${reference.name} · ${reference.boxes.length} boxes`}
                         src={api.classSetImageUrl(preview.name, reference.name, reference.digest)}
                         alt={reference.name}

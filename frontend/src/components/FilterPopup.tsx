@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useDismiss } from "../hooks/useDismiss";
+import { useViewportPosition } from "../hooks/useViewportPosition";
 import {
   type ColumnCondition,
   type ColumnDefinition,
@@ -7,6 +9,7 @@ import {
   type TableRow,
   valuesOf,
 } from "../lib/resultTable";
+import { withMembership } from "../lib/sets";
 
 interface FilterPopupProps {
   column: ColumnDefinition;
@@ -18,14 +21,16 @@ interface FilterPopupProps {
   onClose: () => void;
 }
 
+const FILTER_POPUP_MARGINS = { near: 4, far: 8 };
+
 function parseBound(text: string): number | null {
   const value = Number.parseFloat(text);
   return text.trim() === "" || Number.isNaN(value) ? null : value;
 }
 
 export function FilterPopup({ column, rows, condition, x, y, onApply, onClose }: FilterPopupProps) {
-  const reference = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
+  const { element: reference, position } = useViewportPosition<HTMLDivElement>(x, y, FILTER_POPUP_MARGINS);
+  useDismiss([reference], onClose);
   const values = useMemo(() => (column.kind === "values" ? valuesOf(rows, column.key) : []), [rows, column]);
   const span = useMemo(() => (column.kind === "range" ? spanOf(rows, column.key) : null), [rows, column]);
   const [checked, setChecked] = useState<Set<string>>(
@@ -38,31 +43,6 @@ export function FilterPopup({ column, rows, condition, x, y, onApply, onClose }:
   const [maximum, setMaximum] = useState(
     condition?.kind === "range" && condition.maximum !== null ? String(condition.maximum) : "",
   );
-
-  useLayoutEffect(() => {
-    const element = reference.current;
-    if (element === null) return;
-    const bounds = element.getBoundingClientRect();
-    setPosition({
-      left: Math.max(4, Math.min(x, window.innerWidth - bounds.width - 8)),
-      top: Math.max(4, Math.min(y, window.innerHeight - bounds.height - 8)),
-    });
-  }, [x, y]);
-
-  useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      if (!reference.current?.contains(event.target as Node)) onClose();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("mousedown", onPointerDown, true);
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.removeEventListener("mousedown", onPointerDown, true);
-      window.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, [onClose]);
 
   const shownValues = values.filter((value) => value.toLowerCase().includes(search.toLowerCase()));
 
@@ -101,12 +81,7 @@ export function FilterPopup({ column, rows, condition, x, y, onApply, onClose }:
                 <input
                   type="checkbox"
                   checked={checked.has(value)}
-                  onChange={(event) => {
-                    const next = new Set(checked);
-                    if (event.target.checked) next.add(value);
-                    else next.delete(value);
-                    setChecked(next);
-                  }}
+                  onChange={(event) => setChecked(withMembership(checked, value, event.target.checked))}
                 />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
               </label>

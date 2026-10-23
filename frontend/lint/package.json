@@ -1,0 +1,18 @@
+{
+  "name": "ovir-gui-frontend-lint",
+  "private": true,
+  "version": "0.0.1",
+  "description": "ESLint toolchain for the frontend, kept apart because typescript-eslint requires the TypeScript 6 API while the build uses TypeScript 7.",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --max-warnings 0 ../src ../vite.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}

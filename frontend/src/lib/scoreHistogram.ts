@@ -1,3 +1,5 @@
+import { clamp } from "./numbers";
+
 export class ScoreHistogram {
   static readonly BIN_COUNT = 20;
 
@@ -11,7 +13,7 @@ export class ScoreHistogram {
     const counts = new Array<number>(ScoreHistogram.BIN_COUNT).fill(0);
     for (const score of scores) {
       const bin = Math.floor(
-        Math.min(1, Math.max(0, score)) * ScoreHistogram.BIN_COUNT,
+        clamp(score, 0, 1) * ScoreHistogram.BIN_COUNT,
       );
       const index = Math.min(bin, ScoreHistogram.BIN_COUNT - 1);
       counts[index] = (counts[index] ?? 0) + 1;

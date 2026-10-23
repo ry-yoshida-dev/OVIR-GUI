@@ -1,4 +1,6 @@
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
+import { useDismiss } from "../hooks/useDismiss";
+import { useViewportPosition } from "../hooks/useViewportPosition";
 
 export interface MenuEntry {
   label: ReactNode;
@@ -17,36 +19,11 @@ interface MenuProps {
   onClose: () => void;
 }
 
+const MENU_MARGINS = { near: 4, far: 4 };
+
 export function Menu({ x, y, entries, onClose }: MenuProps) {
-  const reference = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
-
-  useLayoutEffect(() => {
-    const element = reference.current;
-    if (element === null) return;
-    const bounds = element.getBoundingClientRect();
-    setPosition({
-      left: Math.max(4, Math.min(x, window.innerWidth - bounds.width - 4)),
-      top: Math.max(4, Math.min(y, window.innerHeight - bounds.height - 4)),
-    });
-  }, [x, y]);
-
-  useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      if (!reference.current?.contains(event.target as Node)) onClose();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("mousedown", onPointerDown, true);
-    window.addEventListener("keydown", onKeyDown, true);
-    window.addEventListener("blur", onClose);
-    return () => {
-      window.removeEventListener("mousedown", onPointerDown, true);
-      window.removeEventListener("keydown", onKeyDown, true);
-      window.removeEventListener("blur", onClose);
-    };
-  }, [onClose]);
+  const { element: reference, position } = useViewportPosition<HTMLDivElement>(x, y, MENU_MARGINS);
+  useDismiss([reference], onClose, { isDismissedOnBlur: true });
 
   return (
     <div className="menu" ref={reference} style={position} onContextMenu={(event) => event.preventDefault()}>

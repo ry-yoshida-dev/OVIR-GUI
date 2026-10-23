@@ -3,17 +3,16 @@ import type { CurrentPicture, FrameInstance, FramePayload } from "../api/types";
 import { usePreloadedSource } from "../hooks/usePreloadedSource";
 import { BELOW_MINIMUM_OPACITY, type DisplayOptions } from "../lib/displayOptions";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
-import type { PlaybackPosition } from "../lib/playbackPosition";
-import type { ViewerDrawing } from "../lib/viewerDrawing";
+import { type ClassColors, classColorOf, comparedOf, labelOf, visibleInstancesOf } from "../lib/frameView";
+import { pictureKeyOf } from "../lib/resultTable";
 import { DEFAULT_TASK, taskViewOf } from "../lib/taskViews";
-import { comparedOf, FALLBACK_CLASS_COLOR, labelOf, visibleInstancesOf } from "../lib/frameView";
+import type { ViewerDrawing } from "../lib/viewerDrawing";
 import { BoxShape } from "./BoxShape";
 import { MaskShape } from "./MaskShape";
 import { MediaKindBadges } from "./MediaKindBadges";
-import { ScorePanel } from "./ScorePanel";
 import { PlayerErrorBoundary } from "./PlayerErrorBoundary";
-import type { LiveRun } from "./LivePlaybackGate";
-import { type HighlightedFinding, VideoResultPlayer } from "./VideoResultPlayer";
+import { ScorePanel } from "./ScorePanel";
+import { type HighlightedFinding, type VideoPlayback, VideoResultPlayer } from "./VideoResultPlayer";
 import { ZoomableImage } from "./ZoomableImage";
 
 interface ResultViewerProps {
@@ -21,21 +20,16 @@ interface ResultViewerProps {
   frame: FramePayload | null;
   videoResults: FrameResultIndex | null;
   listed: Map<string, Set<number>> | null;
-  listedIndices: Set<number> | null;
   highlighted: HighlightedFinding | null;
-  highlightedIndex: number | null;
   options: DisplayOptions;
-  classColors: Record<string, string>;
-  position: PlaybackPosition;
-  live: LiveRun | null;
+  classColors: ClassColors;
+  playback: VideoPlayback;
   isMediaEmpty: boolean;
   isVideoPlayerUsed: boolean;
   drawing?: ViewerDrawing | null;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onClearSelection: () => void;
   onNavigate: (step: number) => void;
-  onSeek: (frame: number, isFinal: boolean) => void;
-  onFollow: (frame: number, isStart: boolean) => void;
   onStepFrame: (step: number) => void;
   onVideoPlayerFailed: (error: Error) => void;
   onUploadRequested: () => void;
@@ -55,21 +49,16 @@ export function ResultViewer({
   frame,
   videoResults,
   listed,
-  listedIndices,
   highlighted,
-  highlightedIndex,
   options,
   classColors,
-  position,
-  live,
+  playback,
   isMediaEmpty,
   isVideoPlayerUsed,
   drawing = null,
   onSelectFinding,
   onClearSelection,
   onNavigate,
-  onSeek,
-  onFollow,
   onStepFrame,
   onVideoPlayerFailed,
   onUploadRequested,
@@ -88,10 +77,7 @@ export function ResultViewer({
           highlighted={highlighted}
           options={options}
           classColors={classColors}
-          position={position}
-          live={live}
-          onSeek={onSeek}
-          onFollow={onFollow}
+          playback={playback}
           onSelectFinding={onSelectFinding}
           onNavigate={onNavigate}
           onError={onVideoPlayerFailed}
@@ -123,11 +109,17 @@ export function ResultViewer({
     );
   }
   const isFrameOfCurrent = frame !== null && frame.path === current.path;
+  const listedIndices =
+    listed === null || !isFrameOfCurrent
+      ? null
+      : (listed.get(pictureKeyOf(frame.path, frame.result_frame)) ?? new Set<number>());
+  const highlightedIndex =
+    highlighted !== null && isFrameOfCurrent && highlighted.frame === frame.result_frame ? highlighted.index : null;
   const visible: FrameInstance[] = isFrameOfCurrent ? visibleInstancesOf(frame, listedIndices, options) : [];
   const compared = isFrameOfCurrent ? comparedOf(frame, options) : null;
   const comparedPrefix = compared === null ? "" : `${compared.model_name}: `;
   const scores = isFrameOfCurrent ? frame.scores : [];
-  const colorOf = (className: string) => classColors[className] ?? FALLBACK_CLASS_COLOR;
+  const colorOf = (className: string) => classColorOf(classColors, className);
   const selectFinding = (index: number) => {
     if (isFrameOfCurrent) onSelectFinding(frame.result_frame, index);
   };

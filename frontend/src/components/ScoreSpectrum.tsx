@@ -1,4 +1,5 @@
 import type { RankedScore } from "../api/types";
+import { clamp } from "../lib/numbers";
 
 interface ScoreSpectrumProps {
   scores: RankedScore[];
@@ -14,7 +15,7 @@ export function ScoreSpectrum({ scores, colorOf }: ScoreSpectrumProps) {
           key={score.class_name}
           className={rank === 0 ? "score-spectrum-bar leader" : "score-spectrum-bar"}
           style={{
-            height: `${Math.max(0, Math.min(1, score.score)) * 100}%`,
+            height: `${clamp(score.score, 0, 1) * 100}%`,
             background: colorOf(score.class_name),
           }}
         />

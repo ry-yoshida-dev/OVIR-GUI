@@ -1,5 +1,5 @@
 import type { InferenceModeValue, InferenceState } from "../api/types";
-import { GearGlyph } from "./GearGlyph";
+import { GearGlyph } from "./Glyphs";
 import { InferenceModeSettings } from "./InferenceModeSettings";
 import { PopoverButton } from "./PopoverButton";
 

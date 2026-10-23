@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEditableText } from "../hooks/useEditableText";
+import { clamp } from "../lib/numbers";
 
 interface NumberFieldProps {
   value: number;
@@ -21,15 +22,14 @@ export function NumberField({
   width,
   title,
 }: NumberFieldProps) {
-  const [text, setText] = useState(String(value));
-  useEffect(() => setText(String(value)), [value]);
+  const { text, setText, reset } = useEditableText(String(value));
   const commit = () => {
     const parsed = Number.parseFloat(text);
     if (Number.isNaN(parsed)) {
-      setText(String(value));
+      reset();
       return;
     }
-    const clamped = Math.min(maximum, Math.max(minimum, parsed));
+    const clamped = clamp(parsed, minimum, maximum);
     setText(String(clamped));
     if (clamped !== value) onCommit(clamped);
   };

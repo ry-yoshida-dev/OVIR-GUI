@@ -114,6 +114,7 @@ releases; to update them, point both `@video-player-ui` dependencies of `fronten
 cd frontend && npm install
 npm run dev        # Vite dev server proxying /api to OVIR_GUI_BACKEND (default http://127.0.0.1:8000)
 npm run build      # writes src/ovir_gui/web/static
+npm run lint       # ESLint from frontend/lint, installed by npm install
 ```
 
 ```bash

@@ -21,6 +21,7 @@ export interface ColumnDefinition {
   label: string;
   kind: ColumnKind;
   width: number;
+  isNumeric: boolean;
 }
 
 const KEEP: ColumnDefinition = {
@@ -28,42 +29,72 @@ const KEEP: ColumnDefinition = {
   label: "Keep",
   kind: "values",
   width: 50,
+  isNumeric: false,
 };
 const MEDIA: ColumnDefinition = {
   key: "media",
   label: "Media",
   kind: "values",
   width: 140,
+  isNumeric: false,
 };
 const FRAME: ColumnDefinition = {
   key: "frame",
   label: "Frame",
   kind: "range",
   width: 92,
+  isNumeric: false,
 };
 const CLASS: ColumnDefinition = {
   key: "class",
   label: "Class",
   kind: "values",
   width: 110,
+  isNumeric: false,
 };
 const QUERY: ColumnDefinition = {
   key: "query",
   label: "Query",
   kind: "values",
   width: 104,
+  isNumeric: false,
 };
 const CONFIDENCE: ColumnDefinition = {
   key: "confidence",
   label: "Confidence",
   kind: "range",
   width: 82,
+  isNumeric: true,
 };
 const BOX_COLUMNS: ColumnDefinition[] = [
-  { key: "x1", label: "x1", kind: "range", width: 54 },
-  { key: "y1", label: "y1", kind: "range", width: 54 },
-  { key: "x2", label: "x2", kind: "range", width: 54 },
-  { key: "y2", label: "y2", kind: "range", width: 54 },
+  {
+    key: "x1",
+    label: "x1",
+    kind: "range",
+    width: 54,
+    isNumeric: true,
+  },
+  {
+    key: "y1",
+    label: "y1",
+    kind: "range",
+    width: 54,
+    isNumeric: true,
+  },
+  {
+    key: "x2",
+    label: "x2",
+    kind: "range",
+    width: 54,
+    isNumeric: true,
+  },
+  {
+    key: "y2",
+    label: "y2",
+    kind: "range",
+    width: 54,
+    isNumeric: true,
+  },
 ];
 
 export const SCORE_COLUMNS: ColumnDefinition[] = [
@@ -72,8 +103,20 @@ export const SCORE_COLUMNS: ColumnDefinition[] = [
   FRAME,
   CLASS,
   QUERY,
-  { key: "confidence", label: "Score", kind: "range", width: 72 },
-  { key: "runner_up", label: "Runner-up", kind: "values", width: 120 },
+  {
+    key: "confidence",
+    label: "Score",
+    kind: "range",
+    width: 72,
+    isNumeric: true,
+  },
+  {
+    key: "runner_up",
+    label: "Runner-up",
+    kind: "values",
+    width: 120,
+    isNumeric: false,
+  },
 ];
 
 export const BOX_FINDING_COLUMNS: ColumnDefinition[] = [
@@ -93,6 +136,12 @@ export const MASK_FINDING_COLUMNS: ColumnDefinition[] = [
   CLASS,
   QUERY,
   CONFIDENCE,
-  { key: "area", label: "Area", kind: "range", width: 70 },
+  {
+    key: "area",
+    label: "Area",
+    kind: "range",
+    width: 70,
+    isNumeric: true,
+  },
   ...BOX_COLUMNS,
 ];

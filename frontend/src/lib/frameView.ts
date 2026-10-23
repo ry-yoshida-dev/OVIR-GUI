@@ -2,6 +2,17 @@ import type { Finding, FrameInstance, FramePayload } from "../api/types";
 import type { DisplayOptions } from "./displayOptions";
 
 export const FALLBACK_CLASS_COLOR = "#e6194b";
+export const SWATCH_FALLBACK_COLOR = "var(--border-strong)";
+
+export type ClassColors = Readonly<Record<string, string>>;
+
+export function classColorOf(
+  classColors: ClassColors,
+  className: string,
+  fallback: string = FALLBACK_CLASS_COLOR,
+): string {
+  return classColors[className] ?? fallback;
+}
 
 export function isInstance(
   finding: Finding | FrameInstance,

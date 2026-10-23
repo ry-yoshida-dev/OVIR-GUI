@@ -1,5 +1,7 @@
 import { useRef } from "react";
 import type { TimelinePayload } from "../api/types";
+import { usePointerDrag } from "../hooks/usePointerDrag";
+import { clamp } from "../lib/numbers";
 
 interface VideoTimelineProps {
   timeline: TimelinePayload | null;
@@ -15,7 +17,6 @@ const TOP_ROW_HEIGHT = 10;
 
 export function VideoTimeline({ timeline, frameCount, frame, isTopClassBanded, onSeek }: VideoTimelineProps) {
   const element = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
   const lastFrame = Math.max(1, frameCount - 1);
   const frames = timeline?.frames ?? [];
   const rows = (timeline?.classes ?? []).filter((entry) => entry.values.some((value) => value > 0)).slice(0, MAX_ROWS);
@@ -30,28 +31,23 @@ export function VideoTimeline({ timeline, frameCount, frame, isTopClassBanded, o
   const frameAt = (clientX: number) => {
     const bounds = element.current?.getBoundingClientRect();
     if (bounds === undefined || bounds.width <= 0) return frame;
-    const ratio = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
+    const ratio = clamp((clientX - bounds.left) / bounds.width, 0, 1);
     return Math.round(ratio * lastFrame);
   };
+
+  const drag = usePointerDrag<HTMLDivElement>({
+    onDrag: (event) => onSeek(frameAt(event.clientX), false),
+    onDrop: (event) => onSeek(frameAt(event.clientX), true),
+  });
 
   return (
     <div
       ref={element}
       className="timeline"
       style={{ height }}
-      onPointerDown={(event) => {
-        isDragging.current = true;
-        event.currentTarget.setPointerCapture(event.pointerId);
-        onSeek(frameAt(event.clientX), false);
-      }}
-      onPointerMove={(event) => {
-        if (isDragging.current) onSeek(frameAt(event.clientX), false);
-      }}
-      onPointerUp={(event) => {
-        if (!isDragging.current) return;
-        isDragging.current = false;
-        onSeek(frameAt(event.clientX), true);
-      }}
+      onPointerDown={drag.onPointerDown}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
       title="Click or drag to seek; marks show inferred frames and where each class was found"
     >
       <svg width="100%" height={height} viewBox={`0 0 1 ${height}`} preserveAspectRatio="none">

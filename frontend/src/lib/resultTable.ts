@@ -8,6 +8,7 @@ import type {
 import type { BelowMinimumStyle } from "./displayOptions";
 import type { ColumnDefinition, ColumnKey, ResultScope } from "./resultColumns";
 import { taskViewOf } from "./taskViews";
+import { formatSeconds } from "./videoTime";
 
 export type {
   ColumnDefinition,
@@ -296,12 +297,6 @@ export function formatNumber(value: number, key: ColumnKey): string {
   if (key === "confidence") return value.toFixed(3);
   if (key === "area" || key === "frame") return value.toFixed(0);
   return value.toFixed(1);
-}
-
-export function formatSeconds(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds - minutes * 60;
-  return `${minutes}:${rest.toFixed(1).padStart(4, "0")}`;
 }
 
 export function frameText(

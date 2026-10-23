@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { api } from "../api/client";
 import { EmbedBridge, type EmbedHandlers, type EmbedNotice } from "../lib/embedBridge";
 
 export function useEmbedBridge(handlers: EmbedHandlers) {
-  const latestHandlers = useRef(handlers);
-  latestHandlers.current = handlers;
+  const open = useEffectEvent((paths: string[], shownPath: string | null) => handlers.open(paths, shownPath));
+  const show = useEffectEvent((path: string, frame: number | null) => handlers.show(path, frame));
+  const close = useEffectEvent((paths: string[]) => handlers.close(paths));
+  const results = useEffectEvent((paths: string[] | null) => handlers.results(paths));
   const bridge = useRef<EmbedBridge | null>(null);
   const [isEmbedded, setIsEmbedded] = useState(false);
 
@@ -12,10 +14,10 @@ export function useEmbedBridge(handlers: EmbedHandlers) {
     if (window.parent === window) return;
     let isDisposed = false;
     const delegate: EmbedHandlers = {
-      open: (paths, shownPath) => latestHandlers.current.open(paths, shownPath),
-      show: (path, frame) => latestHandlers.current.show(path, frame),
-      close: (paths) => latestHandlers.current.close(paths),
-      results: (paths) => latestHandlers.current.results(paths),
+      open: (paths, shownPath) => open(paths, shownPath),
+      show: (path, frame) => show(path, frame),
+      close: (paths) => close(paths),
+      results: (paths) => results(paths),
     };
     api
       .embedding()

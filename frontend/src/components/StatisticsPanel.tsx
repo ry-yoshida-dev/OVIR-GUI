@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api, errorMessage } from "../api/client";
-import type { HistogramPayload, Profile, StatisticsPayload, Thresholds } from "../api/types";
+import type { HistogramPayload, Profile, Thresholds } from "../api/types";
+import { useAsyncResource } from "../hooks/useAsyncResource";
+import { type ClassColors, classColorOf, SWATCH_FALLBACK_COLOR } from "../lib/frameView";
+import { withEntry } from "../lib/records";
 import { DEFAULT_TASK, taskViewOf } from "../lib/taskViews";
 import { NumberField } from "./NumberField";
 
 interface StatisticsPanelProps {
   refreshToken: string;
   thresholds: Thresholds;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   profiles: Profile[];
   shownKey: string | null;
   comparedKey: string | null;
@@ -15,6 +18,9 @@ interface StatisticsPanelProps {
   onCompare: (key: string | null) => void;
   onClose: () => void;
 }
+
+const STATISTICS_DEBOUNCE_MILLISECONDS = 150;
+const OVERALL_SERIES_COLOR = "var(--overall-series)";
 
 function minimumOf(thresholds: Thresholds, className: string): number {
   return thresholds.class_minimums[className] ?? thresholds.default_minimum;
@@ -83,53 +89,31 @@ export function StatisticsPanel({
   onCompare,
   onClose,
 }: StatisticsPanelProps) {
-  const [payload, setPayload] = useState<StatisticsPayload | null>(null);
   const [error, setError] = useState("");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isCurrent = true;
-    const timer = window.setTimeout(() => {
-      api
-        .statistics()
-        .then((loaded) => {
-          if (!isCurrent) return;
-          setPayload(loaded);
-          setError("");
-        })
-        .catch((caught: unknown) => isCurrent && setError(errorMessage(caught)));
-    }, 150);
-    return () => {
-      isCurrent = false;
-      window.clearTimeout(timer);
-    };
-  }, [refreshToken]);
+  const payload = useAsyncResource(refreshToken, api.statistics, {
+    debounceMilliseconds: STATISTICS_DEBOUNCE_MILLISECONDS,
+    onLoaded: () => setError(""),
+    onError: (caught) => setError(errorMessage(caught)),
+  });
 
   const statistics = payload?.statistics ?? null;
   const taskView = taskViewOf(payload?.task ?? DEFAULT_TASK);
   const selected = statistics?.classes.find((entry) => entry.class_name === selectedClass) ?? null;
   const histogram = selected?.histogram ?? statistics?.histogram ?? null;
   const histogramMinimum = selected === null ? thresholds.default_minimum : minimumOf(thresholds, selected.class_name);
-  const setClassMinimum = (className: string, value: number | null) => {
-    const classMinimums = { ...thresholds.class_minimums };
-    if (value === null) delete classMinimums[className];
-    else classMinimums[className] = value;
-    onThresholdsChange({ ...thresholds, class_minimums: classMinimums });
-  };
+  const setClassMinimum = (className: string, value: number | null) =>
+    onThresholdsChange({ ...thresholds, class_minimums: withEntry(thresholds.class_minimums, className, value) });
 
   return (
-    <div
-      className="dialog"
-      style={{ position: "fixed", right: 16, top: 56, bottom: 44, width: "min(700px, calc(100vw - 32px))", zIndex: 40 }}
-      role="dialog"
-    >
+    <div className="dialog statistics-panel" role="dialog">
       <div className="dialog-header">
         <span className="grow">Statistics</span>
         <button className="ghost icon" onClick={onClose} aria-label="Close">
           ✕
         </button>
       </div>
-      <div className="dialog-body" style={{ flex: 1 }}>
+      <div className="dialog-body">
         {error !== "" && <div className="error-text">{error}</div>}
         <div className="muted">
           {payload?.model ?? "No results shown."}
@@ -147,7 +131,7 @@ export function StatisticsPanel({
             {taskView.minimumConfidenceHint}
           </span>
         </div>
-        <div className="table-wrap" style={{ flex: "none", maxHeight: 260, border: "1px solid var(--border)", borderRadius: 6 }}>
+        <div className="table-wrap statistics-table">
           <table className="grid">
             <colgroup>
               <col style={{ width: 120 }} />
@@ -182,13 +166,8 @@ export function StatisticsPanel({
                 >
                   <td>
                     <span
-                      className="swatch"
-                      style={{
-                        background: classColors[entry.class_name] ?? "var(--border-strong)",
-                        display: "inline-block",
-                        marginRight: 5,
-                        verticalAlign: -1,
-                      }}
+                      className="swatch inline-swatch"
+                      style={{ background: classColorOf(classColors, entry.class_name, SWATCH_FALLBACK_COLOR) }}
                     />
                     {entry.class_name}
                   </td>
@@ -234,7 +213,11 @@ export function StatisticsPanel({
             <Histogram
               histogram={histogram}
               minimum={histogramMinimum}
-              color={selected === null ? "var(--overall-series)" : (classColors[selected.class_name] ?? "var(--overall-series)")}
+              color={
+                selected === null
+                  ? OVERALL_SERIES_COLOR
+                  : classColorOf(classColors, selected.class_name, OVERALL_SERIES_COLOR)
+              }
             />
           </div>
         )}
@@ -261,7 +244,7 @@ export function StatisticsPanel({
               {payload.comparison.picture_count} pictures inferred by both;{" "}
               {taskView.comparisonHintOf(payload.comparison.iou_threshold)}
             </div>
-            <div className="table-wrap" style={{ flex: "none", maxHeight: 220, border: "1px solid var(--border)", borderRadius: 6 }}>
+            <div className="table-wrap statistics-table comparison-table">
               <table className="grid">
                 <thead>
                   <tr>

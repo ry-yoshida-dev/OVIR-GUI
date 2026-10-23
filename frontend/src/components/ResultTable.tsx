@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TaskValue } from "../api/types";
+import { type ClassColors, classColorOf, SWATCH_FALLBACK_COLOR } from "../lib/frameView";
+import { clamp } from "../lib/numbers";
 import {
   type ColumnCondition,
   type ColumnDefinition,
@@ -35,11 +37,20 @@ interface ResultTableProps {
   selectedKey: string | null;
   onSelectRow: (row: TableRow) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
 }
 
 const ROW_HEIGHT = 25;
 const OVERSCAN = 12;
+const HEADER_HEIGHT = 28;
+
+function SpacerRow({ rowCount, columnCount }: { rowCount: number; columnCount: number }) {
+  return (
+    <tr style={{ height: rowCount * ROW_HEIGHT }}>
+      <td colSpan={columnCount} className="spacer-cell" />
+    </tr>
+  );
+}
 
 export function ResultTable({
   task,
@@ -82,10 +93,9 @@ export function ResultTable({
     const element = scroller.current;
     if (index < 0 || element === null) return;
     const top = index * ROW_HEIGHT;
-    const headerHeight = 28;
     if (top < element.scrollTop) element.scrollTop = top;
-    else if (top + ROW_HEIGHT > element.scrollTop + element.clientHeight - headerHeight) {
-      element.scrollTop = top + ROW_HEIGHT - element.clientHeight + headerHeight;
+    else if (top + ROW_HEIGHT > element.scrollTop + element.clientHeight - HEADER_HEIGHT) {
+      element.scrollTop = top + ROW_HEIGHT - element.clientHeight + HEADER_HEIGHT;
     }
   }, [selectedKey, rows]);
 
@@ -93,7 +103,7 @@ export function ResultTable({
   const last = Math.min(rows.length, Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN);
   const visibleRows = rows.slice(first, last);
   const filteredCount = Object.keys(filter).filter((key) => columns.some((column) => column.key === key)).length;
-  const findingRows = rows.filter((row) => row.kind === "finding");
+  const findingRows = useMemo(() => rows.filter((row) => row.kind === "finding"), [rows]);
 
   const setCondition = (key: ColumnKey, condition: ColumnCondition | undefined) => {
     const next = { ...filter };
@@ -127,7 +137,7 @@ export function ResultTable({
 
   const moveSelection = (delta: number) => {
     const index = rows.findIndex((row) => row.key === selectedKey);
-    const next = rows[Math.max(0, Math.min(rows.length - 1, (index < 0 ? -1 : index) + delta))];
+    const next = rows[clamp(index + delta, 0, rows.length - 1)];
     if (next !== undefined) onSelectRow(next);
   };
 
@@ -146,7 +156,7 @@ export function ResultTable({
       case "media":
         return (
           <>
-            {row.outdated !== null && <span style={{ color: "var(--warning)", marginRight: 4 }}>⚠</span>}
+            {row.outdated !== null && <span className="outdated-mark">⚠</span>}
             {row.mediaName}
           </>
         );
@@ -164,13 +174,8 @@ export function ResultTable({
         return (
           <>
             <span
-              className="swatch"
-              style={{
-                background: classColors[finding.class_name] ?? "var(--border-strong)",
-                display: "inline-block",
-                marginRight: 5,
-                verticalAlign: -1,
-              }}
+              className="swatch inline-swatch"
+              style={{ background: classColorOf(classColors, finding.class_name, SWATCH_FALLBACK_COLOR) }}
             />
             {finding.class_name}
           </>
@@ -190,9 +195,6 @@ export function ResultTable({
       }
     }
   };
-
-  const isNumeric = (key: ColumnKey) =>
-    key === "confidence" || key === "area" || key === "x1" || key === "y1" || key === "x2" || key === "y2";
 
   return (
     <div className="result-table">
@@ -291,11 +293,7 @@ export function ResultTable({
                   <td colSpan={columns.length}>{allRows.length > 0 ? "Nothing passes the filters." : emptyText}</td>
                 </tr>
               )}
-              {first > 0 && (
-                <tr style={{ height: first * ROW_HEIGHT }}>
-                  <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
-                </tr>
-              )}
+              {first > 0 && <SpacerRow rowCount={first} columnCount={columns.length} />}
               {visibleRows.map((row) => {
                 const isCurrent = pictureKeyOf(row.path, row.frame) === currentPictureKey;
                 const isSelected = row.key === selectedKey;
@@ -319,7 +317,7 @@ export function ResultTable({
                       columns.map((column) => (
                         <td
                           key={column.key}
-                          className={`${isNumeric(column.key) ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
+                          className={`${column.isNumeric ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
                           title={
                             column.key === "media"
                               ? row.outdated === null
@@ -335,11 +333,7 @@ export function ResultTable({
                   </tr>
                 );
               })}
-              {last < rows.length && (
-                <tr style={{ height: (rows.length - last) * ROW_HEIGHT }}>
-                  <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
-                </tr>
-              )}
+              {last < rows.length && <SpacerRow rowCount={rows.length - last} columnCount={columns.length} />}
             </tbody>
           </table>
         </div>

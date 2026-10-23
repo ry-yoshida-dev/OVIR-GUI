@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { MediaEntry } from "../api/types";
+import { type ClassColors, classColorOf } from "../lib/frameView";
 import {
   buildGalleryGroups,
   GALLERY_SORT_OPTIONS,
@@ -9,18 +10,17 @@ import {
   type GalleryTile,
 } from "../lib/galleryGroups";
 import { firstPosition, type GalleryDirection, moveInGallery, positionOf } from "../lib/galleryNavigation";
-import { FALLBACK_CLASS_COLOR } from "../lib/frameView";
 import { frameText, type TableRow } from "../lib/resultTable";
+import "./ClassificationGallery.css";
 import { GalleryInspector } from "./GalleryInspector";
 import { ScoreSpectrum } from "./ScoreSpectrum";
-import "./ClassificationGallery.css";
 
 export interface ClassificationGalleryProps {
   rows: TableRow[];
   media: MediaEntry[];
   currentPictureKey: string | null;
   selectedKey: string | null;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   onSelectRow: (row: TableRow) => void;
   onOpenPicture: (path: string, frame: number | null) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
@@ -172,7 +172,7 @@ export function ClassificationGallery({
   const tileCount: number = groups.reduce((total, group) => total + group.tiles.length, 0);
 
   const selectedTileKey: string | null = selectedTile?.row.key ?? null;
-  const colorOf = (className: string): string => classColors[className] ?? FALLBACK_CLASS_COLOR;
+  const colorOf = (className: string): string => classColorOf(classColors, className);
   const sourceOf = (tile: GalleryTile): string => imageSourceOf(tile, videoPaths.has(tile.row.path));
 
   useEffect(() => {

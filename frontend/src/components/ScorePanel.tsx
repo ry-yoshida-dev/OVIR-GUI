@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { FramePayload } from "../api/types";
 import type { DisplayOptions } from "../lib/displayOptions";
-import { comparedOf, FALLBACK_CLASS_COLOR } from "../lib/frameView";
+import { type ClassColors, classColorOf, comparedOf } from "../lib/frameView";
+import { clamp } from "../lib/numbers";
 
 interface ScorePanelProps {
   frame: FramePayload;
   listedIndices: Set<number> | null;
   options: DisplayOptions;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   onSelectFinding: (index: number) => void;
 }
 
@@ -21,7 +22,7 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
   const top = frame.findings[0];
   const isTopKept = top !== undefined && top.is_accepted && top.is_passing && (listedIndices?.has(0) ?? true);
   const compared = comparedOf(frame, options);
-  const colorOf = (className: string) => classColors[className] ?? FALLBACK_CLASS_COLOR;
+  const colorOf = (className: string) => classColorOf(classColors, className);
   return (
     <div className="score-panel">
       {(isExpanded ? scores : scores.slice(0, SCORE_LINES)).map((score, position) => (
@@ -34,7 +35,7 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
           <span className="swatch" style={{ background: colorOf(score.class_name) }} />
           <span className="name">{score.class_name}</span>
           <span className="bar">
-            <span style={{ width: `${Math.max(0, Math.min(1, score.score)) * 100}%`, background: colorOf(score.class_name) }} />
+            <span style={{ width: `${clamp(score.score, 0, 1) * 100}%`, background: colorOf(score.class_name) }} />
           </span>
           <span className="value">{score.score.toFixed(3)}</span>
         </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReviewMode } from "../lib/reviewModes";
 import type { ScoreHistogram } from "../lib/scoreHistogram";
-import { ResetGlyph } from "./ResetGlyph";
+import { ResetGlyph } from "./Glyphs";
 import { ScoreHistogramChart } from "./ScoreHistogramChart";
 
 export type ScoreChartLevel = "overall" | "class" | "phrase";
@@ -16,13 +16,13 @@ interface ScoreChartRowProps {
   parentThreshold: number | null;
   isOwn: boolean;
   keptCount: number;
-  isExpandable: boolean;
-  isExpanded: boolean;
-  isDisabled: boolean;
+  isExpandable?: boolean;
+  isExpanded?: boolean;
+  isDisabled?: boolean;
   resetLabel: string;
   onChange: (value: number) => void;
   onReset: (() => void) | null;
-  onToggleExpanded: () => void;
+  onToggleExpanded?: () => void;
 }
 
 const CHART_HEIGHTS: Record<ScoreChartLevel, number> = {
@@ -41,9 +41,9 @@ export function ScoreChartRow({
   parentThreshold,
   isOwn,
   keptCount,
-  isExpandable,
-  isExpanded,
-  isDisabled,
+  isExpandable = false,
+  isExpanded = false,
+  isDisabled = false,
   resetLabel,
   onChange,
   onReset,

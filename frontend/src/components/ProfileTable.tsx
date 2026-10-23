@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../api/types";
+import { clamp } from "../lib/numbers";
+import { withMembership } from "../lib/sets";
 import { useDialogs } from "./DialogHost";
-import { ProfilesGlyph } from "./ProfilesGlyph";
+import { ProfilesGlyph, TrashGlyph } from "./Glyphs";
 import { Section } from "./Section";
-import { TrashGlyph } from "./TrashGlyph";
 
 interface ProfileTableProps {
   profiles: Profile[];
@@ -82,12 +83,7 @@ export function ProfileTable({
   }, [isSomeChecked]);
 
   const setChecked = (key: string, isChecked: boolean) =>
-    setCheckedKeys((current) => {
-      const next = new Set(current);
-      if (isChecked) next.add(key);
-      else next.delete(key);
-      return next;
-    });
+    setCheckedKeys((current) => withMembership(current, key, isChecked));
 
   const remove = async () => {
     if (checked.length === 0) return;
@@ -135,7 +131,7 @@ export function ProfileTable({
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault();
             const index = profiles.findIndex((profile) => profile.key === shownKey);
-            const next = profiles[Math.max(0, Math.min(profiles.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)))];
+            const next = profiles[clamp(index + (event.key === "ArrowDown" ? 1 : -1), 0, profiles.length - 1)];
             if (next !== undefined && next.key !== shownKey) onSelect(next.key);
           }
         }}

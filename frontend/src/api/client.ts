@@ -6,17 +6,20 @@ import type {
   DirectoryListing,
   DuplicateSuppression,
   ExportPlan,
+  ExportRequest,
   FramePayload,
   InferenceModeValue,
   MarkEntry,
   ModelSelection,
   ObjectDocument,
+  PlaybackValue,
   PictureFindings,
   PictureKey,
   ReferenceDraft,
   ResultsPayload,
   ShowReply,
   StatisticsPayload,
+  TaskValue,
   Thresholds,
   TimelinePayload,
   VideoFramesPayload,
@@ -25,11 +28,21 @@ import type {
 
 export class ApiError extends Error {}
 
-async function request<T>(
+async function detailOf(response: Response): Promise<string> {
+  const payload = (await response.json().catch(() => null)) as {
+    detail?: unknown;
+  } | null;
+  const detail = payload?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return JSON.stringify(detail);
+  return `${response.status} ${response.statusText}`;
+}
+
+async function send(
   method: string,
   url: string,
   body?: unknown,
-): Promise<T> {
+): Promise<Response> {
   const init: RequestInit = { method };
   if (body instanceof FormData) {
     init.body = body;
@@ -38,21 +51,32 @@ async function request<T>(
     init.headers = { "Content-Type": "application/json" };
   }
   const response = await fetch(url, init);
-  if (!response.ok) {
-    let detail = `${response.status} ${response.statusText}`;
-    try {
-      const payload = (await response.json()) as { detail?: unknown };
-      if (typeof payload.detail === "string") {
-        detail = payload.detail;
-      } else if (Array.isArray(payload.detail)) {
-        detail = JSON.stringify(payload.detail);
-      }
-    } catch {
-      /* the body is not JSON */
-    }
-    throw new ApiError(detail);
-  }
+  if (!response.ok) throw new ApiError(await detailOf(response));
+  return response;
+}
+
+async function request<T>(
+  method: string,
+  url: string,
+  body?: unknown,
+): Promise<T> {
+  const response = await send(method, url, body);
   return (await response.json()) as T;
+}
+
+async function requestBlob(
+  method: string,
+  url: string,
+  body?: unknown,
+): Promise<Blob> {
+  const response = await send(method, url, body);
+  return response.blob();
+}
+
+function singleFileForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  return form;
 }
 
 const get = <T>(url: string) => request<T>("GET", url);
@@ -113,12 +137,12 @@ export const api = {
     ),
   imageUrl: (path: string, version: string | null) =>
     `/api/media/image?${query({ path, v: version ?? "" })}`,
-  videoUrl: (path: string, version: string | null, playback: string) =>
+  videoUrl: (path: string, version: string | null, playback: PlaybackValue) =>
     `/api/media/video?${query({ path, v: version ?? "", playback })}`,
   frameUrl: (path: string, frame: number, version: string | null) =>
     `/api/media/frame?${query({ path, frame: String(frame), v: version ?? "" })}`,
 
-  selectTask: (task: string) => put("/api/task", { task }),
+  selectTask: (task: TaskValue) => put("/api/task", { task }),
   selectModel: (selection: ModelSelection) => put("/api/model", selection),
   selectPreset: (backend: string, presetName: string) =>
     put("/api/model/preset", { backend, preset_name: presetName }),
@@ -139,26 +163,14 @@ export const api = {
 
   selectProfile: (key: string) => post("/api/profiles/select", { key }),
   removeProfiles: (keys: string[]) => post("/api/profiles/remove", { keys }),
-  clearResults: () => post("/api/profiles/clear"),
   compare: (key: string | null) => put("/api/comparison", { key }),
   setAccepted: (findings: PictureFindings[], isAccepted: boolean) =>
     post("/api/findings/acceptance", { findings, is_accepted: isAccepted }),
   setThresholds: (thresholds: Thresholds) => put("/api/thresholds", thresholds),
   setSuppression: (suppression: DuplicateSuppression) =>
     put("/api/suppression", suppression),
-  tableCsv: async (
-    findings: { path: string; frame: number | null; index: number }[],
-  ) => {
-    const response = await fetch("/api/findings/csv", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ findings }),
-    });
-    if (!response.ok) {
-      throw new ApiError(`${response.status} ${response.statusText}`);
-    }
-    return response.blob();
-  },
+  tableCsv: (findings: { path: string; frame: number | null; index: number }[]) =>
+    requestBlob("POST", "/api/findings/csv", { findings }),
 
   addClassRow: (text: string, classIndex: number | null, position: number) =>
     post("/api/classes/rows", { text, class_index: classIndex, position }),
@@ -197,18 +209,12 @@ export const api = {
     }),
   replaceClassesText: (text: string) => put("/api/classes/text", { text }),
   clearClasses: () => post("/api/classes/clear"),
-  loadClassFile: (file: File) => {
-    const form = new FormData();
-    form.append("file", file, file.name);
-    return post("/api/classes/file", form);
-  },
+  loadClassFile: (file: File) =>
+    post("/api/classes/file", singleFileForm(file)),
   referenceImageUrl: (name: string, digest: string) =>
     `/api/references/image?${query({ name, digest })}`,
-  uploadReference: (file: File) => {
-    const form = new FormData();
-    form.append("file", file, file.name);
-    return post<ReferenceDraft>("/api/references/drafts", form);
-  },
+  uploadReference: (file: File) =>
+    post<ReferenceDraft>("/api/references/drafts", singleFileForm(file)),
   openReference: (path: string) =>
     post<ReferenceDraft>("/api/references/drafts/path", { path }),
   currentReference: () =>
@@ -233,11 +239,8 @@ export const api = {
     put(`/api/class-sets/${encodeURIComponent(name)}`, { name: newName }),
   deleteClassSet: (name: string) =>
     remove(`/api/class-sets/${encodeURIComponent(name)}`),
-  importClassSet: (file: File) => {
-    const form = new FormData();
-    form.append("file", file, file.name);
-    return post("/api/class-sets/import", form);
-  },
+  importClassSet: (file: File) =>
+    post("/api/class-sets/import", singleFileForm(file)),
   classSetFileUrl: (name: string) =>
     `/api/class-sets/${encodeURIComponent(name)}/file`,
 
@@ -276,21 +279,27 @@ export const api = {
     get<ObjectDocument>(`/api/results/document${pathQuery(paths)}`),
 
   exportPlan: () => get<ExportPlan>("/api/export/plan"),
-  exportResults: (body: {
-    export_format: string;
-    output_directory: string;
-    is_confidence_included: boolean;
-    scope: string;
-    minimum_confidence: number;
-    is_annotated_image_saved: boolean;
-    is_annotated_video_saved: boolean;
-    listed_findings: PictureFindings[] | null;
-    is_label_confidence_shown: boolean;
-    is_skipping_approved: boolean;
-  }) => post<ActionReply>("/api/export", body),
+  exportResults: (body: ExportRequest) =>
+    post<ActionReply>("/api/export", body),
   exportDownloadUrl: "/api/export/download",
 };
 
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Runs an action, passing the message of any error it throws to onError, and tells whether it succeeded.
+ */
+export async function attempt(
+  action: () => Promise<unknown>,
+  onError: (message: string) => void,
+): Promise<boolean> {
+  try {
+    await action();
+    return true;
+  } catch (error) {
+    onError(errorMessage(error));
+    return false;
+  }
 }

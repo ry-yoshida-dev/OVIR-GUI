@@ -1,5 +1,6 @@
 import { useClassScores } from "../hooks/useClassScores";
 import type { GalleryTile } from "../lib/galleryGroups";
+import { clamp } from "../lib/numbers";
 import { frameText } from "../lib/resultTable";
 
 interface GalleryInspectorProps {
@@ -100,7 +101,7 @@ export function GalleryInspector({ tile, imageSource, colorOf, onOpen, onSetAcce
                 <span className="gallery-ranking-track">
                   <span
                     style={{
-                      width: `${Math.max(0, Math.min(1, score.score)) * 100}%`,
+                      width: `${clamp(score.score, 0, 1) * 100}%`,
                       background: colorOf(score.class_name),
                     }}
                   />

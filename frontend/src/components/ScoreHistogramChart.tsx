@@ -1,10 +1,7 @@
-import {
-  type KeyboardEvent,
-  type PointerEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, type PointerEvent, useRef } from "react";
+import { useEditableText } from "../hooks/useEditableText";
+import { usePointerDrag } from "../hooks/usePointerDrag";
+import { clamp } from "../lib/numbers";
 import type { ReviewMode } from "../lib/reviewModes";
 import { snappedValue } from "../lib/reviewModes";
 import { ScoreHistogram } from "../lib/scoreHistogram";
@@ -27,7 +24,7 @@ interface ScoreHistogramChartProps {
 const COARSE_STEP_FACTOR = 5;
 
 function percentOf(value: number): string {
-  return `${Math.min(1, Math.max(0, value)) * 100}%`;
+  return `${clamp(value, 0, 1) * 100}%`;
 }
 
 export function ScoreHistogramChart({
@@ -45,12 +42,9 @@ export function ScoreHistogramChart({
   onEditingChange,
 }: ScoreHistogramChartProps) {
   const area = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [text, setText] = useState(threshold.toFixed(2));
-
-  useEffect(() => {
-    if (isEditing) setText(threshold.toFixed(2));
-  }, [isEditing, threshold]);
+  const { text, setText } = useEditableText(
+    isEditing ? threshold.toFixed(2) : "",
+  );
 
   const valueAt = (clientX: number): number => {
     const bounds = area.current?.getBoundingClientRect();
@@ -58,25 +52,14 @@ export function ScoreHistogramChart({
     return snappedValue(mode, (clientX - bounds.left) / bounds.width);
   };
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (isDisabled || event.button !== 0 || event.detail > 1) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
-    const value = valueAt(event.clientX);
-    if (value !== threshold) onChange(value);
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    const value = valueAt(event.clientX);
-    if (value !== threshold) onChange(value);
-  };
-
-  const stopDragging = (event: PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    setIsDragging(false);
-  };
+  const drag = usePointerDrag<HTMLDivElement>({
+    canStart: (event: PointerEvent<HTMLDivElement>) =>
+      !isDisabled && event.button === 0 && event.detail <= 1,
+    onDrag: (event) => {
+      const value = valueAt(event.clientX);
+      if (value !== threshold) onChange(value);
+    },
+  });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (isDisabled || isEditing) return;
@@ -118,7 +101,7 @@ export function ScoreHistogramChart({
   const binCount = ScoreHistogram.BIN_COUNT;
   return (
     <div
-      className={`score-chart${isDisabled ? " disabled" : ""}${isDragging ? " dragging" : ""}`}
+      className={`score-chart${isDisabled ? " disabled" : ""}${drag.isDragging ? " dragging" : ""}`}
       style={{ height: height + 16 }}
       tabIndex={isDisabled ? -1 : 0}
       role="slider"
@@ -164,10 +147,10 @@ export function ScoreHistogramChart({
         className="score-chart-area"
         style={{ height }}
         title={`${mode.valueHint}\nDrag to move it, or use the arrow keys (Shift for larger steps); double-click to reset.`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={stopDragging}
-        onPointerCancel={stopDragging}
+        onPointerDown={drag.onPointerDown}
+        onPointerMove={drag.onPointerMove}
+        onPointerUp={drag.onPointerUp}
+        onPointerCancel={drag.onPointerCancel}
         onDoubleClick={() => {
           if (!isDisabled && onReset !== null) onReset();
         }}

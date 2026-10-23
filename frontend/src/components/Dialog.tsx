@@ -1,6 +1,10 @@
-import { type ReactNode, useEffect, useId } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useId } from "react";
 
 const openDialogs: string[] = [];
+
+export function isAnyDialogOpen(): boolean {
+  return openDialogs.length > 0;
+}
 
 interface DialogProps {
   title: ReactNode;
@@ -20,16 +24,17 @@ export function Dialog({ title, onClose, children, footer, width, height, isModa
       openDialogs.splice(openDialogs.indexOf(id), 1);
     };
   }, [id]);
+  const close = useEffectEvent(() => onClose());
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && openDialogs[openDialogs.length - 1] === id) {
         event.stopPropagation();
-        onClose();
+        close();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, id]);
+  }, [id]);
 
   return (
     <div

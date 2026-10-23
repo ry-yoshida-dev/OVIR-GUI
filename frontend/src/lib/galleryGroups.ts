@@ -1,4 +1,5 @@
 import type { Finding, RankedScore } from "../api/types";
+import type { ClassColors } from "./frameView";
 import {
   type FindingRow,
   pictureKeyOf,
@@ -108,7 +109,7 @@ function compareTiles(
 
 export function buildGalleryGroups(
   rows: TableRow[],
-  classColors: Record<string, string>,
+  classColors: ClassColors,
   sort: GallerySortValue,
 ): GalleryGroup[] {
   const classOrder: string[] = Object.keys(classColors);

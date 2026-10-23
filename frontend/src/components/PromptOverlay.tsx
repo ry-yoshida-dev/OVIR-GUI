@@ -1,10 +1,10 @@
 import type { PicturePrompt } from "../api/types";
-import { FALLBACK_CLASS_COLOR } from "../lib/frameView";
+import { type ClassColors, classColorOf } from "../lib/frameView";
 
 interface PromptOverlayProps {
   prompt: PicturePrompt;
   scale: number;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   activeObjectId: number | null;
   isExemplarShown: boolean;
   isMarkShown: boolean;
@@ -24,7 +24,7 @@ export function PromptOverlay({
   isMarkShown,
 }: PromptOverlayProps) {
   const unit = 1 / scale;
-  const colorOf = (className: string) => classColors[className] ?? FALLBACK_CLASS_COLOR;
+  const colorOf = (className: string) => classColorOf(classColors, className);
   return (
     <g style={{ pointerEvents: "none" }}>
       {isExemplarShown &&

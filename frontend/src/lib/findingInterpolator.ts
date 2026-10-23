@@ -1,5 +1,6 @@
 import type { Box, Finding, FrameInstance, FramePayload } from "../api/types";
 import { isInstance } from "./frameView";
+import { clamp } from "./numbers";
 
 interface InstancePair {
   shown: FrameInstance;
@@ -31,7 +32,7 @@ export class FindingInterpolator {
     const afterFrame = after.frame ?? frame;
     const span = afterFrame - beforeFrame;
     if (span <= 0) return before;
-    const ratio = Math.min(1, Math.max(0, (frame - beforeFrame) / span));
+    const ratio = clamp((frame - beforeFrame) / span, 0, 1);
     const isBeforeNearer = ratio <= 0.5;
     const shown = isBeforeNearer ? before : after;
     const other = isBeforeNearer ? after : before;

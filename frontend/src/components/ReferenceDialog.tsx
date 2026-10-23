@@ -11,11 +11,10 @@ interface ReferenceDialogProps {
   classIndex: number;
   classEntry: ClassEntry;
   hasShownPicture: boolean;
-  onAdded: (count: number) => void;
   onClose: () => void;
 }
 
-export function ReferenceDialog({ classIndex, classEntry, hasShownPicture, onAdded, onClose }: ReferenceDialogProps) {
+export function ReferenceDialog({ classIndex, classEntry, hasShownPicture, onClose }: ReferenceDialogProps) {
   const [queue, setQueue] = useState<ReferenceDraft[]>([]);
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [selectedBox, setSelectedBox] = useState<number | null>(null);
@@ -52,7 +51,6 @@ export function ReferenceDialog({ classIndex, classEntry, hasShownPicture, onAdd
     try {
       await api.addReference(current.draft_id, classIndex, submitted);
       setAddedCount((count) => count + 1);
-      onAdded(1);
       advance();
     } catch (caught) {
       setError(errorMessage(caught));

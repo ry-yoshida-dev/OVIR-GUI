@@ -12,8 +12,9 @@ import {
   type DisplayOptions,
 } from "./displayOptions";
 import {
+  type ClassColors,
+  classColorOf,
   comparedOf,
-  FALLBACK_CLASS_COLOR,
   labelOf,
   visibleInstancesOf,
 } from "./frameView";
@@ -37,13 +38,13 @@ export class FindingPainter {
   private readonly width: number;
   private readonly height: number;
   private readonly options: DisplayOptions;
-  private readonly classColors: Record<string, string>;
+  private readonly classColors: ClassColors;
 
   constructor(
     width: number,
     height: number,
     options: DisplayOptions,
-    classColors: Record<string, string>,
+    classColors: ClassColors,
   ) {
     this.width = width;
     this.height = height;
@@ -233,7 +234,7 @@ export class FindingPainter {
   }
 
   private colorOf(className: string): string {
-    return this.classColors[className] ?? FALLBACK_CLASS_COLOR;
+    return classColorOf(this.classColors, className);
   }
 
   private rectOf(transform: ViewportTransform, box: Box): Rect {

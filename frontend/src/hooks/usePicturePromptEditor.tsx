@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "../api/client";
+import { useCallback, useMemo, useState } from "react";
+import { api, errorMessage } from "../api/client";
 import type { Box, DrawingKindValue, MarkEntry, PictureKey, PicturePrompt, WorkspaceState } from "../api/types";
 import { PromptOverlay } from "../components/PromptOverlay";
 import type { ViewerDrawing } from "../lib/viewerDrawing";
+import type { Call } from "./useActionRunner";
 
 export interface PicturePromptEditor {
   kind: DrawingKindValue | null;
@@ -24,7 +25,7 @@ export interface PicturePromptEditor {
 
 interface PicturePromptEditorOptions {
   state: WorkspaceState | null;
-  call: (action: () => Promise<unknown>) => Promise<boolean>;
+  call: Call;
   report: (text: string) => void;
 }
 
@@ -51,15 +52,17 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
   const [chosenClass, setChosenClass] = useState<string | null>(null);
   const [activeObjectId, setActiveObjectId] = useState<number | null>(null);
   const className = chosenClass !== null && classNames.includes(chosenClass) ? chosenClass : (classNames[0] ?? null);
-  const picture: PictureKey | null = prompt === null ? null : { path: prompt.path, frame: prompt.frame };
+  const picture: PictureKey | null = useMemo(
+    () => (prompt === null ? null : { path: prompt.path, frame: prompt.frame }),
+    [prompt],
+  );
 
-  useEffect(() => {
-    if (activeObjectId === null || prompt === null) return;
+  if (activeObjectId !== null && prompt !== null) {
     const isKnown = isSequential
       ? prompt.objects.some((entry) => entry.object_id === activeObjectId)
       : prompt.marks.some((entry) => entry.object_id === activeObjectId);
     if (!isKnown) setActiveObjectId(null);
-  }, [activeObjectId, prompt, isSequential]);
+  }
 
   const activeMark: MarkEntry | null =
     prompt?.marks.find((entry) => entry.object_id === activeObjectId) ?? null;
@@ -71,7 +74,7 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
         const reply = await api.setMark(picture, mark);
         setActiveObjectId(reply.object_id);
       } catch (error) {
-        report(error instanceof Error ? error.message : String(error));
+        report(errorMessage(error));
       }
     },
     [picture, report],

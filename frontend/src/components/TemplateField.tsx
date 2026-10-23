@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEditableText } from "../hooks/useEditableText";
+import { clamp } from "../lib/numbers";
 
 interface TemplateFieldProps {
   templates: string[];
@@ -22,8 +23,7 @@ function templatesOf(text: string): string[] {
 
 export function TemplateField({ templates, isDisabled, onCommit }: TemplateFieldProps) {
   const committedText = textOf(templates);
-  const [text, setText] = useState(committedText);
-  useEffect(() => setText(committedText), [committedText]);
+  const { text, setText, reset } = useEditableText(committedText);
   const commit = () => {
     const next = templatesOf(text);
     if (next.join("\n") !== templates.join("\n")) onCommit(next);
@@ -32,7 +32,7 @@ export function TemplateField({ templates, isDisabled, onCommit }: TemplateField
     <textarea
       className="template-field"
       value={text}
-      rows={Math.min(4, Math.max(1, text.split("\n").length))}
+      rows={clamp(text.split("\n").length, 1, 4)}
       disabled={isDisabled}
       placeholder="None — phrases are used as written"
       spellCheck={false}
@@ -40,7 +40,7 @@ export function TemplateField({ templates, isDisabled, onCommit }: TemplateField
       onChange={(event) => setText(event.target.value)}
       onBlur={commit}
       onKeyDown={(event) => {
-        if (event.key === "Escape") setText(committedText);
+        if (event.key === "Escape") reset();
       }}
     />
   );

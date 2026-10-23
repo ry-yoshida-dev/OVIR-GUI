@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MediaEntry, PictureKey } from "../api/types";
 import { groupMedia } from "../lib/mediaGroups";
+import { clamp } from "../lib/numbers";
+import { toggledMembership } from "../lib/sets";
 import { MediaKindGlyph } from "./MediaKindGlyph";
 import { useMenu } from "./Menu";
 
@@ -19,10 +21,9 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
   const menu = useMenu();
   const groups = useMemo(() => groupMedia(media), [media]);
 
-  useEffect(() => {
-    const open = new Set(media.map((entry) => entry.path));
-    setSelectedPaths((current) => new Set([...current].filter((path) => open.has(path))));
-  }, [media]);
+  const openPaths = useMemo(() => new Set(media.map((entry) => entry.path)), [media]);
+  if ([...selectedPaths].some((path) => !openPaths.has(path)))
+    setSelectedPaths(new Set([...selectedPaths].filter((path) => openPaths.has(path))));
 
   useEffect(() => {
     if (currentPath === null) return;
@@ -37,7 +38,7 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
 
   const step = (delta: number) => {
     const index = media.findIndex((entry) => entry.path === currentPath);
-    const next = media[Math.min(media.length - 1, Math.max(0, index + delta))];
+    const next = media[clamp(index + delta, 0, media.length - 1)];
     if (next !== undefined && next.path !== currentPath) {
       setSelectedPaths(new Set());
       onSelect(next.path);
@@ -47,10 +48,8 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
   const onRowClick = (event: React.MouseEvent, path: string) => {
     if (event.metaKey || event.ctrlKey) {
       setSelectedPaths((current) => {
-        const next = new Set(current.size === 0 && currentPath !== null ? [currentPath] : current);
-        if (next.has(path)) next.delete(path);
-        else next.add(path);
-        return next;
+        const base: ReadonlySet<string> = current.size === 0 && currentPath !== null ? new Set([currentPath]) : current;
+        return toggledMembership(base, path);
       });
       anchor.current = path;
       return;

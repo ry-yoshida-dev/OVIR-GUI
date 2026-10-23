@@ -1,5 +1,7 @@
 import { memo, useMemo, useRef, useState } from "react";
-import { FALLBACK_CLASS_COLOR } from "../lib/frameView";
+import { usePointerDrag } from "../hooks/usePointerDrag";
+import { type ClassColors, classColorOf } from "../lib/frameView";
+import { clamp } from "../lib/numbers";
 import type { ClassTrack, VideoEventSummary } from "../lib/videoEvents";
 import { formatSeconds, tickSecondsOf } from "../lib/videoTime";
 
@@ -7,7 +9,7 @@ interface CountChartProps {
   summary: VideoEventSummary;
   frameCount: number;
   fps: number;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   hiddenClasses: ReadonlySet<string>;
   focusedClass: string | null;
   pinnedClass: string | null;
@@ -27,10 +29,6 @@ interface CountScale {
   ticks: number[];
 }
 
-const CHART_LABEL_WIDTH = 132;
-const CHART_AXIS_WIDTH = 28;
-export const CHART_PLOT_OFFSET = CHART_LABEL_WIDTH + CHART_AXIS_WIDTH;
-const RULER_HEIGHT = 18;
 const CHART_HEIGHT = 140;
 const PLOT_WIDTH = 1000;
 const PLOT_TOP = 8;
@@ -42,10 +40,6 @@ const TOOLTIP_FLIP_RATIO = 0.55;
 const DIMMED_OPACITY = 0.16;
 const FOCUSED_STROKE_WIDTH = 2.5;
 const STROKE_WIDTH = 1.5;
-
-function colorOf(classColors: Record<string, string>, className: string): string {
-  return classColors[className] ?? FALLBACK_CLASS_COLOR;
-}
 
 function scaleOf(largestCount: number): CountScale {
   const rough = Math.max(1, largestCount) / TICK_TARGET_COUNT;
@@ -100,7 +94,6 @@ export const CountChart = memo(function CountChart({
   onSeek,
 }: CountChartProps) {
   const plot = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const { tracks, events, sampleFrames } = summary;
   const durationSeconds = frameCount / fps;
@@ -113,15 +106,20 @@ export const CountChart = memo(function CountChart({
   const visibleTracks = tracks.filter((track) => !hiddenClasses.has(track.className));
   const focusedTrack = visibleTracks.find((track) => track.className === focusedClass) ?? null;
   const backgroundTracks = visibleTracks.filter((track) => track !== focusedTrack);
-  const focusedColor = focusedTrack === null ? null : colorOf(classColors, focusedTrack.className);
+  const focusedColor = focusedTrack === null ? null : classColorOf(classColors, focusedTrack.className);
   const firstX = xOf(sampleFrames[0] ?? 0);
 
   const frameAt = (clientX: number): number => {
     const bounds = plot.current?.getBoundingClientRect();
     if (bounds === undefined || bounds.width <= 0) return 0;
-    const ratio = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
+    const ratio = clamp((clientX - bounds.left) / bounds.width, 0, 1);
     return Math.min(frameCount - 1, Math.round(ratio * frameCount));
   };
+
+  const drag = usePointerDrag<HTMLDivElement>({
+    onDrag: (event) => onSeek(frameAt(event.clientX), false),
+    onDrop: (event) => onSeek(frameAt(event.clientX), true),
+  });
 
   const hoverFrame = hoverPosition === null ? null : (sampleFrames[hoverPosition] ?? null);
   const tooltipRows: TooltipRow[] =
@@ -135,9 +133,9 @@ export const CountChart = memo(function CountChart({
   const hoverRatio = hoverFrame === null ? 0 : hoverFrame / frameCount;
 
   return (
-    <div className="chart-grid" style={{ gridTemplateColumns: `${CHART_LABEL_WIDTH}px ${CHART_AXIS_WIDTH}px 1fr` }}>
-      <div className="track-corner" style={{ height: RULER_HEIGHT, gridColumn: "span 2" }} />
-      <div className="track-ruler" style={{ height: RULER_HEIGHT }}>
+    <div className="chart-grid">
+      <div className="track-corner" />
+      <div className="track-ruler">
         {tickSecondsOf(durationSeconds).map((seconds) => (
           <span key={seconds} style={{ left: `${(seconds / durationSeconds) * 100}%` }}>
             {formatSeconds(seconds)}
@@ -146,7 +144,7 @@ export const CountChart = memo(function CountChart({
       </div>
       <div className="chart-legend" style={{ height: CHART_HEIGHT }} onMouseLeave={() => onHoverClass(null)}>
         {tracks.map((track) => {
-          const color = colorOf(classColors, track.className);
+          const color = classColorOf(classColors, track.className);
           const isHidden = hiddenClasses.has(track.className);
           const classNames = [
             "chart-legend-row",
@@ -190,21 +188,14 @@ export const CountChart = memo(function CountChart({
         ref={plot}
         className="chart-plot"
         style={{ height: CHART_HEIGHT }}
-        onPointerDown={(event) => {
-          isDragging.current = true;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          onSeek(frameAt(event.clientX), false);
-        }}
+        onPointerDown={drag.onPointerDown}
         onPointerMove={(event) => {
-          const frame = frameAt(event.clientX);
-          setHoverPosition(sampleFrames.length === 0 ? null : nearestPositionOf(sampleFrames, frame));
-          if (isDragging.current) onSeek(frame, false);
+          setHoverPosition(
+            sampleFrames.length === 0 ? null : nearestPositionOf(sampleFrames, frameAt(event.clientX)),
+          );
+          drag.onPointerMove(event);
         }}
-        onPointerUp={(event) => {
-          if (!isDragging.current) return;
-          isDragging.current = false;
-          onSeek(frameAt(event.clientX), true);
-        }}
+        onPointerUp={drag.onPointerUp}
         onPointerLeave={() => setHoverPosition(null)}
       >
         <svg width="100%" height={CHART_HEIGHT} viewBox={`0 0 ${PLOT_WIDTH} ${CHART_HEIGHT}`} preserveAspectRatio="none">
@@ -240,7 +231,7 @@ export const CountChart = memo(function CountChart({
               key={track.className}
               d={linePaths.get(track.className)}
               fill="none"
-              stroke={colorOf(classColors, track.className)}
+              stroke={classColorOf(classColors, track.className)}
               strokeWidth={STROKE_WIDTH}
               strokeLinejoin="round"
               opacity={focusedTrack === null ? 0.9 : DIMMED_OPACITY}
@@ -292,7 +283,7 @@ export const CountChart = memo(function CountChart({
                   key={row.className}
                   className={`chart-tooltip-row${row.className === focusedTrack?.className ? " focused" : ""}`}
                 >
-                  <span className="swatch" style={{ background: colorOf(classColors, row.className) }} />
+                  <span className="swatch" style={{ background: classColorOf(classColors, row.className) }} />
                   <span className="name">{row.className}</span>
                   <span className="mono">{row.count}</span>
                 </div>

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CurrentPicture, MediaEntry } from "../api/types";
-import { FALLBACK_CLASS_COLOR } from "../lib/frameView";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
+import { type ClassColors, classColorOf } from "../lib/frameView";
 import type { PlaybackPosition } from "../lib/playbackPosition";
+import { toggledMembership } from "../lib/sets";
 import { VideoEventBuilder } from "../lib/videoEvents";
 import { formatSeconds } from "../lib/videoTime";
-import { CHART_PLOT_OFFSET, CountChart } from "./CountChart";
+import { CountChart } from "./CountChart";
 import { NumberField } from "./NumberField";
 import { ResultsHeading } from "./ResultsHeading";
 
@@ -15,19 +16,15 @@ interface VideoFindingsPanelProps {
   results: FrameResultIndex | null;
   position: PlaybackPosition;
   isFollowingPlayer: boolean;
-  classColors: Record<string, string>;
+  classColors: ClassColors;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
   onSeek: (frame: number, isFinal: boolean) => void;
 }
 
-function colorOf(classColors: Record<string, string>, className: string): string {
-  return classColors[className] ?? FALLBACK_CLASS_COLOR;
-}
-
 function PlaybackCursor({ frame, frameCount }: { frame: number; frameCount: number }) {
   return (
-    <div className="track-cursor-layer" style={{ left: CHART_PLOT_OFFSET }}>
+    <div className="track-cursor-layer">
       <div className="track-cursor" style={{ left: `${(frame / frameCount) * 100}%` }} />
     </div>
   );
@@ -97,12 +94,7 @@ export function VideoFindingsPanel({
 
   const toggleClass = useCallback(
     (className: string) =>
-      setHiddenClasses((hidden) => {
-        const next = new Set(hidden);
-        if (next.has(className)) next.delete(className);
-        else next.add(className);
-        return next;
-      }),
+      setHiddenClasses((hidden) => toggledMembership(hidden, className)),
     [],
   );
   const pinClass = useCallback(
@@ -165,7 +157,7 @@ export function VideoFindingsPanel({
             ) : (
               nowFindings.map(([className, count]) => (
                 <span key={className} className="now-chip">
-                  <span className="swatch" style={{ background: colorOf(classColors, className) }} />
+                  <span className="swatch" style={{ background: classColorOf(classColors, className) }} />
                   {className}
                   {count > 1 && <b>×{count}</b>}
                 </span>
@@ -228,7 +220,7 @@ export function VideoFindingsPanel({
                     title={`Frames #${event.startFrame}–#${event.endFrame} on ${event.sampleCount} sampled frames`}
                   >
                     <td>
-                      <span className="swatch event-swatch" style={{ background: colorOf(classColors, event.className) }} />
+                      <span className="swatch event-swatch" style={{ background: classColorOf(classColors, event.className) }} />
                       {event.className}
                     </td>
                     <td className="mono">{timeOf(event.startFrame)}</td>

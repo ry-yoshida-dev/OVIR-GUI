@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { PlaybackState, type PlayerController, type ReleaseHold } from "@video-player-ui/core";
 import { usePlayerController } from "@video-player-ui/web";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
 import { LivePace } from "../lib/livePace";
 
@@ -37,8 +37,6 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
   const appliedRate = useRef(1);
   const releaseHold = useRef<ReleaseHold | null>(null);
   const isEvaluating = useRef(false);
-  const latest = useRef({ live, results, framesPerSecond, frameCount });
-  latest.current = { live, results, framesPerSecond, frameCount };
   const [status, setStatus] = useState<LiveStatus | null>(null);
 
   const applyRate = useCallback(
@@ -56,8 +54,11 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
     if (releaseGateHold !== null) void releaseGateHold();
   }, []);
 
-  const update = useCallback(() => {
-    const { live: run, results: index, framesPerSecond: fps, frameCount: count } = latest.current;
+  const update = () => {
+    const run = live;
+    const index = results;
+    const fps = framesPerSecond;
+    const count = frameCount;
     const snapshot = controller.getSnapshot();
     const timeId = snapshot.timeId;
     if (!snapshot.isHeld) releaseHold.current = null;
@@ -94,9 +95,9 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
       }
       return { isWaiting, frontier, rate: roundedRate };
     });
-  }, [controller, applyRate, release]);
+  };
 
-  const evaluate = useCallback(() => {
+  const evaluate = useEffectEvent(() => {
     if (isEvaluating.current) return;
     isEvaluating.current = true;
     try {
@@ -104,15 +105,16 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
     } finally {
       isEvaluating.current = false;
     }
-  }, [update]);
+  });
 
-  useEffect(() => controller.subscribe(evaluate), [controller, evaluate]);
+  useEffect(() => controller.subscribe(() => evaluate()), [controller]);
 
+  const liveSerial = live?.serial ?? null;
   useEffect(() => {
-    if (live === null) return;
+    if (liveSerial === null) return;
     pace.current.reset();
     evaluate();
-  }, [live?.serial, evaluate]);
+  }, [liveSerial]);
 
   useEffect(() => {
     if (live === null || !live.isRunning || results === null) {
@@ -123,7 +125,7 @@ export function LivePlaybackGate({ live, results, framesPerSecond, frameCount }:
     const frontier = timeId === null ? null : results.coveredUntil(timeId, live.frameStep);
     if (frontier !== null) pace.current.record(frontier, Date.now());
     evaluate();
-  }, [live, results, controller, evaluate]);
+  }, [live, results, controller]);
 
   useEffect(
     () => () => {

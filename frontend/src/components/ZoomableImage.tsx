@@ -1,5 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Box } from "../api/types";
+import { clamp } from "../lib/numbers";
 
 interface View {
   scale: number;
@@ -43,7 +44,7 @@ export function ZoomableImage({
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [draft, setDraft] = useState<Box | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadedViewKey, setLoadedViewKey] = useState<string | null>(null);
   const isUserZoomed = useRef(false);
   const gesture = useRef<
     | { kind: "pan"; startX: number; startY: number; view: View; hasMoved: boolean }
@@ -61,14 +62,11 @@ export function ZoomableImage({
   }, [width, height]);
 
   const viewKey = fitKey ?? src;
+  const isLoaded = loadedViewKey === viewKey;
 
   useLayoutEffect(() => {
     fit();
   }, [fit, viewKey]);
-
-  useEffect(() => {
-    setIsLoaded(false);
-  }, [viewKey]);
 
   useEffect(() => {
     const element = container.current;
@@ -90,7 +88,7 @@ export function ZoomableImage({
       const pointerY = event.clientY - bounds.top;
       const factor = Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0015));
       setView((current) => {
-        const scale = Math.min(64, Math.max(0.02, current.scale * factor));
+        const scale = clamp(current.scale * factor, 0.02, 64);
         const ratio = scale / current.scale;
         return { scale, x: pointerX - (pointerX - current.x) * ratio, y: pointerY - (pointerY - current.y) * ratio };
       });
@@ -106,7 +104,7 @@ export function ZoomableImage({
     const top = bounds?.top ?? 0;
     const x = (clientX - left - view.x) / view.scale;
     const y = (clientY - top - view.y) / view.scale;
-    return [Math.min(width, Math.max(0, x)), Math.min(height, Math.max(0, y))];
+    return [clamp(x, 0, width), clamp(y, 0, height)];
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -190,7 +188,7 @@ export function ZoomableImage({
             width={width}
             height={height}
             preserveAspectRatio="none"
-            onLoad={() => setIsLoaded(true)}
+            onLoad={() => setLoadedViewKey(viewKey)}
             style={{ imageRendering: view.scale > 3 ? "pixelated" : "auto" }}
           />
           {isLoaded && children?.(view.scale)}

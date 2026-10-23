@@ -1,24 +1,19 @@
-import { useEffect, useState } from "react";
+import { useAsyncResource } from "./useAsyncResource";
 
-export function usePreloadedSource(source: string | null): string | null {
-  const [loaded, setLoaded] = useState<string | null>(source);
-  useEffect(() => {
-    if (source === null) {
-      setLoaded(null);
-      return;
-    }
-    let isCurrent = true;
+function preload(source: string): Promise<string> {
+  return new Promise((resolve) => {
     const image = new Image();
-    image.onload = () => {
-      if (isCurrent) setLoaded(source);
-    };
-    image.onerror = () => {
-      if (isCurrent) setLoaded(source);
-    };
+    image.onload = () => resolve(source);
+    image.onerror = () => resolve(source);
     image.src = source;
-    return () => {
-      isCurrent = false;
-    };
-  }, [source]);
-  return loaded;
+  });
+}
+
+/**
+ * Returns the image source once the browser has loaded it, keeping the previous source shown meanwhile.
+ */
+export function usePreloadedSource(source: string | null): string | null {
+  return useAsyncResource(source, () => preload(source ?? ""), {
+    initialValue: source ?? undefined,
+  });
 }

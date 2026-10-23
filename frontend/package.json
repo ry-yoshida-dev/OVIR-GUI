@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "lint/node_modules/.bin/eslint --config lint/eslint.config.js --max-warnings 0 src vite.config.ts",
+    "postinstall": "npm --prefix lint install --no-audit --no-fund"
   },
   "dependencies": {
     "@video-player-ui/core": "https://github.com/ry-yoshida-dev/VideoPlayerUI/releases/download/v0.1.1/video-player-ui-core-0.1.1.tgz",

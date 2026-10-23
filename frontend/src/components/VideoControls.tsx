@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { CurrentPicture, TimelinePayload } from "../api/types";
+import { clamp } from "../lib/numbers";
+import { formatSeconds } from "../lib/videoTime";
 import { NumberField } from "./NumberField";
 import { VideoTimeline } from "./VideoTimeline";
 
@@ -14,12 +16,9 @@ interface VideoControlsProps {
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
+const MINIMUM_PLAY_INTERVAL_MILLISECONDS = 60;
 
-function formatTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds - minutes * 60;
-  return `${minutes}:${rest.toFixed(2).padStart(5, "0")}`;
-}
+const TIME_FRACTION_DIGITS = 2;
 
 export function VideoControls({
   current,
@@ -32,35 +31,37 @@ export function VideoControls({
 }: VideoControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const frameRef = useRef(frame);
-  frameRef.current = frame;
+  const [playedPath, setPlayedPath] = useState(current.path);
   const frameCount = current.frame_count ?? 1;
   const fps = current.fps ?? 30;
   const lastFrame = frameCount - 1;
 
+  if (playedPath !== current.path) {
+    setPlayedPath(current.path);
+    setIsPlaying(false);
+  }
+
+  const playNextSample = useEffectEvent(() => {
+    const next = Math.floor(frame / frameStep) * frameStep + frameStep;
+    if (next > lastFrame) {
+      setIsPlaying(false);
+      onSeek(lastFrame, true);
+      return;
+    }
+    onSeek(next, true);
+  });
+
+  const interval = Math.max(MINIMUM_PLAY_INTERVAL_MILLISECONDS, (1000 * frameStep) / (fps * speed));
   useEffect(() => {
     if (!isPlaying || !isPlaybackShown) return;
-    const interval = Math.max(60, (1000 * frameStep) / (fps * speed));
-    const timer = window.setInterval(() => {
-      const next = Math.floor(frameRef.current / frameStep) * frameStep + frameStep;
-      if (next > lastFrame) {
-        setIsPlaying(false);
-        onSeek(lastFrame, true);
-        return;
-      }
-      onSeek(next, true);
-    }, interval);
+    const timer = window.setInterval(() => playNextSample(), interval);
     return () => window.clearInterval(timer);
-  }, [isPlaying, isPlaybackShown, frameStep, fps, speed, lastFrame, onSeek]);
-
-  useEffect(() => {
-    setIsPlaying(false);
-  }, [current.path]);
+  }, [isPlaying, isPlaybackShown, interval]);
 
   const stepSampled = (direction: number) => {
     const base = Math.floor(frame / frameStep) * frameStep;
     const next = direction > 0 ? base + frameStep : frame > base ? base : base - frameStep;
-    onSeek(Math.min(lastFrame, Math.max(0, next)), true);
+    onSeek(clamp(next, 0, lastFrame), true);
   };
 
   return (
@@ -97,7 +98,7 @@ export function VideoControls({
           ))}
         </select>
         <span className="mono small">
-          {formatTime(frame / fps)} / {formatTime(frameCount / fps)}
+          {formatSeconds(frame / fps, TIME_FRACTION_DIGITS)} / {formatSeconds(frameCount / fps, TIME_FRACTION_DIGITS)}
         </span>
         <span className="small muted">frame</span>
         <NumberField value={frame} minimum={0} maximum={lastFrame} step={1} width={76} onCommit={(value) => onSeek(Math.round(value), true)} />

@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 
 interface PlayerErrorBoundaryProps {
   onError: (error: Error) => void;
@@ -16,7 +16,7 @@ export class PlayerErrorBoundary extends Component<PlayerErrorBoundaryProps, Pla
     return { isFailed: true };
   }
 
-  componentDidCatch(error: Error, _info: ErrorInfo): void {
+  componentDidCatch(error: Error): void {
     this.props.onError(error);
   }
 

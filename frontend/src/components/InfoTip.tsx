@@ -1,5 +1,5 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { InfoGlyph } from "./InfoGlyph";
+import { InfoGlyph } from "./Glyphs";
 
 interface InfoTipProps {
   label: string;

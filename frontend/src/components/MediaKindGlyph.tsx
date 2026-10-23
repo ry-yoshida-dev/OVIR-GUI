@@ -1,4 +1,5 @@
 import type { MediaKindValue } from "../api/types";
+import { Glyph } from "./Glyphs";
 
 interface MediaKindGlyphProps {
   kind: MediaKindValue;
@@ -6,7 +7,7 @@ interface MediaKindGlyphProps {
 
 export function MediaKindGlyph({ kind }: MediaKindGlyphProps) {
   return (
-    <svg className="media-kind-glyph" viewBox="0 0 24 24" aria-hidden="true">
+    <Glyph className="media-kind-glyph" viewBox="0 0 24 24">
       {kind === "image" && (
         <>
           <rect x="3" y="4.5" width="18" height="15" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -34,6 +35,6 @@ export function MediaKindGlyph({ kind }: MediaKindGlyphProps) {
           <path d="M7.5 9.6v4.8l4-2.4z" fill="currentColor" />
         </>
       )}
-    </svg>
+    </Glyph>
   );
 }

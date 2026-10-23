@@ -1,4 +1,5 @@
 import type { TaskValue } from "../api/types";
+import { Glyph } from "./Glyphs";
 
 interface TaskGlyphProps {
   task: TaskValue;
@@ -6,7 +7,7 @@ interface TaskGlyphProps {
 
 export function TaskGlyph({ task }: TaskGlyphProps) {
   return (
-    <svg className="task-glyph" viewBox="0 0 20 20" aria-hidden="true">
+    <Glyph className="task-glyph" viewBox="0 0 20 20">
       {task === "classification" && (
         <>
           <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -34,6 +35,6 @@ export function TaskGlyph({ task }: TaskGlyphProps) {
           strokeWidth="1.6"
         />
       )}
-    </svg>
+    </Glyph>
   );
 }
