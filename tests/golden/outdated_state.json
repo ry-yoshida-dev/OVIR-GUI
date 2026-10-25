@@ -81,56 +81,43 @@
     "pause_reason": null
   },
   "is_busy": false,
-  "label_mode": {
-    "choice": "automatic",
-    "modes": [
-      {
-        "title": "Single label",
-        "value": "single_label"
-      },
-      {
-        "title": "Multi-label",
-        "value": "multi_label"
-      }
-    ],
-    "native": null
-  },
+  "label_mode": null,
   "last_export": null,
   "media": [
     {
-      "color": "#f58231",
-      "count_text": "4",
       "description": "Inferred with other classes",
+      "expected_count": 1,
       "fps": null,
       "frame_count": null,
       "kept_count": 4,
       "kind": "image",
       "name": "a_first.png",
       "path": "<tmp>/media/a_first.png",
+      "recognized_count": 0,
       "state": "outdated"
     },
     {
-      "color": "#f58231",
-      "count_text": "4",
       "description": "Inferred with other classes",
+      "expected_count": 1,
       "fps": null,
       "frame_count": null,
       "kept_count": 4,
       "kind": "image",
       "name": "b_second.png",
       "path": "<tmp>/media/b_second.png",
+      "recognized_count": 0,
       "state": "outdated"
     },
     {
-      "color": "#f58231",
-      "count_text": "0/3",
       "description": "0/3 frames inferred · 3 outdated",
+      "expected_count": 3,
       "fps": 10.0,
       "frame_count": 12,
       "kept_count": 12,
       "kind": "video",
       "name": "c_clip.mp4",
       "path": "<tmp>/media/c_clip.mp4",
+      "recognized_count": 0,
       "state": "outdated"
     }
   ],
@@ -970,7 +957,7 @@
   "thresholds": {
     "class_minimums": {},
     "default_minimum": 0.25,
-    "phrase_minimums": {}
+    "prompt_minimums": {}
   },
   "upload_directory": "<tmp>/data/uploads"
 }

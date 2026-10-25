@@ -2,12 +2,11 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 
-from ..export import ExportItem, ExportReport, ExportScope, ExportSelection, ResultExporter
-from ..media import FrameKey
+from ..export import ExportItem, ExportReport, ExportSelection, ResultExporter
+from ..media import FrameKey, MediaKind
 from ..models import ModelProfile
 from ..results import ResultCatalog, ResultLibrary, StoredResult
 from .action_reply import ActionReply
-from .action_status import ActionStatus
 from .class_workbench import ClassWorkbench
 from .export_plan import ExportPlan
 from .export_preview_source import ExportPreviewSource
@@ -22,10 +21,10 @@ from .workspace_topic import WorkspaceTopic
 
 class ExportCoordinator:
     """
-    Plans exports of the stored results and writes them off the owning thread.
+    Plans exports of the stored results of the images or the videos and writes them off the owning thread.
 
-    An export waiting for pictures to be recognized first is kept as the pending request until its job ends. While the
-    files are written the workspace counts as busy; the last finished export is kept for downloading.
+    Only pictures with a stored result are written; pictures still to be inferred are counted in the plan and left out.
+    While the files are written the workspace counts as busy; the last finished export is kept for downloading.
     """
 
     def __init__(
@@ -40,7 +39,6 @@ class ExportCoordinator:
         is_worker_idle: Callable[[], bool],
         current_profile: Callable[[], ModelProfile],
         is_busy: Callable[[], bool],
-        start_job: Callable[[tuple[FrameKey, ...], bool], ActionReply],
         resume_background: Callable[[], None],
     ) -> None:
         """
@@ -66,11 +64,8 @@ class ExportCoordinator:
             Profile of the chosen model, the only one able to recognize pending pictures.
         is_busy : Callable[[], bool]
             Whether a foreground job or an export runs.
-        start_job : Callable[[tuple[FrameKey, ...], bool], ActionReply]
-            Starts the export job recognizing some pictures first, given whether the user approved leaving out
-            classes the model cannot query.
         resume_background : Callable[[], None]
-            Resumes background recognition once an export written at once ended.
+            Resumes background recognition once an export ended.
         """
         self._scheduler: TaskScheduler = scheduler
         self._notifier: StatusNotifier = notifier
@@ -82,11 +77,9 @@ class ExportCoordinator:
         self._is_worker_idle: Callable[[], bool] = is_worker_idle
         self._current_profile: Callable[[], ModelProfile] = current_profile
         self._is_busy: Callable[[], bool] = is_busy
-        self._start_job: Callable[[tuple[FrameKey, ...], bool], ActionReply] = start_job
         self._resume_background: Callable[[], None] = resume_background
         self._is_exporting: bool = False
         self._last_export: ExportReport | None = None
-        self._pending_request: ExportRequest | None = None
 
     @property
     def is_exporting(self) -> bool:
@@ -129,61 +122,69 @@ class ExportCoordinator:
         """
         return working_directory / "exports" / datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
 
-    def plan(self) -> ExportPlan:
+    def plan(self, media_kind: MediaKind) -> ExportPlan:
         """
-        What an export of the shown profile, or of the chosen model without one, would write now.
+        What an export of the images or the videos of the shown profile, or of the chosen model without one, would
+        write now.
+
+        Parameters
+        ----------
+        media_kind : MediaKind
+            Whether the images or the videos are exported.
 
         Returns
         -------
         ExportPlan
-            Profile, counts and why the export cannot start, if it cannot.
+            Profile, counts of the media kind and why the export cannot start, if it cannot.
         """
         current_profile: ModelProfile = self._current_profile()
         profile: ModelProfile = self._working.shown_profile or current_profile
-        pending: tuple[FrameKey, ...] = self._read_model.pending_keys(profile, self._working.media.values())
+        pending: tuple[FrameKey, ...] = tuple(
+            key
+            for key in self._read_model.pending_keys(profile, self._working.media.values())
+            if key.media_kind is media_kind
+        )
         catalog: ResultCatalog | None = self._library.catalog_of(profile) if profile in self._library else None
-        picture_count: int = 0 if catalog is None else len(self._read_model.recognized_keys(catalog))
+        picture_count: int = (
+            0
+            if catalog is None
+            else sum(1 for key in self._read_model.recognized_keys(catalog) if key.media_kind is media_kind)
+        )
         issue: str = ""
-        if not self._working.media:
-            issue = "Open images or videos first."
-        elif self._is_busy():
-            issue = "An inference is already running."
-        elif pending and profile != current_profile:
-            issue = (
-                f"{len(pending)} pictures have no up-to-date result of {profile.label} ({profile.options_text}); "
-                + "choose these model settings to run inference on them before exporting."
-            )
+        if self._is_busy():
+            issue = "An inference or export is running."
+        elif picture_count == 0:
+            issue = "Nothing is inferred yet."
         return ExportPlan(
             profile=profile,
-            picture_count=picture_count + sum(1 for key in pending if catalog is None or key not in catalog),
+            media_kind=media_kind,
+            picture_count=picture_count,
             pending_count=len(pending),
+            is_pending_inferable=profile == current_profile,
             issue=issue,
         )
 
     def preview_source(
-        self, scope: ExportScope, minimum_confidence: float, listed_indices: Mapping[FrameKey, frozenset[int]] | None
+        self, media_kind: MediaKind, listed_indices: Mapping[FrameKey, frozenset[int]] | None
     ) -> ExportPreviewSource:
         """
         What a label preview of the stored results of the planned profile is written from now.
 
         Parameters
         ----------
-        scope : ExportScope
-            Every kept finding, or only those the result table lists.
-        minimum_confidence : float
-            Findings below this confidence are left out.
+        media_kind : MediaKind
+            Whether the images or the videos are exported.
         listed_indices : Mapping[FrameKey, frozenset[int]] | None
-            Findings the result table lists per picture.
+            Pictures the image table lists with their listed findings; ``None`` for videos.
 
         Returns
         -------
         ExportPreviewSource
-            Exported pictures, task, classes, shown picture and open media; pictures still to be recognized are left
-            out.
+            Exported pictures, task, classes, shown picture and open media.
         """
-        profile: ModelProfile = self.plan().profile
+        profile: ModelProfile = self.plan(media_kind).profile
         items: tuple[ExportItem, ...] = (
-            tuple(self._items(profile, scope, minimum_confidence, listed_indices)) if profile in self._library else ()
+            tuple(self._items(profile, media_kind, listed_indices)) if profile in self._library else ()
         )
         return ExportPreviewSource(
             items=items,
@@ -193,59 +194,25 @@ class ExportCoordinator:
             media=self._working.media,
         )
 
-    def start(self, request: ExportRequest, is_skipping_approved: bool) -> ActionReply:
+    def start(self, request: ExportRequest) -> ActionReply:
         """
-        Write the stored results of the shown profile, recognizing the pictures without an up-to-date result first.
+        Write the stored results of the images or the videos of the shown profile.
 
         Parameters
         ----------
         request : ExportRequest
             Options chosen by the user.
-        is_skipping_approved : bool
-            Whether the user approved leaving out classes the model cannot query.
 
         Returns
         -------
         ActionReply
-            Started, refused, or waiting for approval.
+            Started or refused.
         """
-        plan: ExportPlan = self.plan()
-        issue: str = plan.issue_for(request)
-        if issue:
-            return self._notifier.reject(issue)
-        if not plan.pending_count:
-            self.write(plan.profile, request, self._resume_background)
-            return ActionReply.done()
-        self.hold(request)
-        pending: tuple[FrameKey, ...] = self._read_model.pending_keys(plan.profile, self._working.media.values())
-        reply: ActionReply = self._start_job(pending, is_skipping_approved)
-        if reply.status is not ActionStatus.DONE:
-            self.hold(None)
-        return reply
-
-    def hold(self, request: ExportRequest | None) -> None:
-        """
-        Keep an export until the pictures it needs are recognized, or forget the kept one.
-
-        Parameters
-        ----------
-        request : ExportRequest | None
-            Export to write when its job ends; ``None`` forgets it.
-        """
-        self._pending_request = request
-
-    def take_pending(self) -> ExportRequest | None:
-        """
-        Export kept for the job that just ended, forgetting it.
-
-        Returns
-        -------
-        ExportRequest | None
-            ``None`` when none was kept.
-        """
-        request: ExportRequest | None = self._pending_request
-        self._pending_request = None
-        return request
+        plan: ExportPlan = self.plan(request.media_kind)
+        if plan.issue:
+            return self._notifier.reject(plan.issue)
+        self.write(plan.profile, request, self._resume_background)
+        return ActionReply.done()
 
     def write(self, profile: ModelProfile, request: ExportRequest, on_ended: Callable[[], None]) -> None:
         """
@@ -263,9 +230,7 @@ class ExportCoordinator:
         if profile not in self._library:
             self._notifier.inform("Nothing to export.")
             return
-        items: list[ExportItem] = self._items(
-            profile, request.options.scope, request.options.minimum_confidence, request.listed_indices
-        )
+        items: list[ExportItem] = self._items(profile, request.media_kind, request.listed_indices)
         exporter: ResultExporter = ResultExporter(
             self._working.media, self._workbench.class_colors(), request.is_label_confidence_shown
         )
@@ -282,20 +247,18 @@ class ExportCoordinator:
     def _items(
         self,
         profile: ModelProfile,
-        scope: ExportScope,
-        minimum_confidence: float,
+        media_kind: MediaKind,
         listed_indices: Mapping[FrameKey, frozenset[int]] | None,
     ) -> list[ExportItem]:
         catalog: ResultCatalog = self._library.catalog_of(profile)
         selection: ExportSelection = ExportSelection(
-            review_filter=self._review.filter_of(profile.task),
-            minimum_confidence=minimum_confidence,
-            listed_indices=(
-                listed_indices if scope is ExportScope.LISTED and profile == self._working.shown_profile else None
-            ),
+            review_filter=self._review.filter_of(profile.task), listed_indices=listed_indices
         )
         items: list[ExportItem] = []
         for frame_key in self._read_model.recognized_keys(catalog):
+            is_unlisted: bool = listed_indices is not None and frame_key not in listed_indices
+            if frame_key.media_kind is not media_kind or is_unlisted:
+                continue
             stored: StoredResult | None = catalog.stored_of(frame_key)
             if stored is not None:
                 seconds: float | None = self._working.media[frame_key.path].seconds_at(frame_key)

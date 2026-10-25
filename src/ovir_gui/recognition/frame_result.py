@@ -112,7 +112,7 @@ class FrameResult:
             return Finding(
                 index=index,
                 class_name=score.class_name,
-                query_label=score.query_label,
+                matched_prompt=score.matched_prompt,
                 confidence=score.score,
                 box=None,
                 area=None,
@@ -122,7 +122,7 @@ class FrameResult:
         return Finding(
             index=index,
             class_name=instance.class_name,
-            query_label=instance.query_label,
+            matched_prompt=instance.matched_prompt,
             confidence=instance.confidence,
             box=instance.box,
             area=instance.area,

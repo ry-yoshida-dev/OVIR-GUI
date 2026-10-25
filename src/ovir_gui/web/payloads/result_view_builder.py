@@ -277,7 +277,7 @@ class ResultViewBuilder:
                     "score": score.score,
                     "logit": score.logit,
                     "similarity": score.similarity,
-                    "query": score.query_label,
+                    "matched_prompt": score.matched_prompt,
                 }
                 for score in stored.result.ranked_scores
             ],
@@ -317,7 +317,7 @@ class ResultViewBuilder:
         return {
             "index": index,
             "class_name": instance.class_name,
-            "query": instance.query_label,
+            "matched_prompt": instance.matched_prompt,
             "confidence": instance.confidence,
             "box": list[JsonValue](instance.box.xyxy),
             "area": instance.area,
@@ -326,7 +326,7 @@ class ResultViewBuilder:
             "polygons": polygons,
             "color": ClassColors.hex_of(index)
             if instance.class_name == MaskGenerationModel.REGION_CLASS_NAME
-            and instance.query_label == MaskGenerationModel.QUERY_LABEL
+            and instance.matched_prompt == MaskGenerationModel.PROMPT_LABEL
             else None,
         }
 
@@ -341,7 +341,7 @@ class ResultViewBuilder:
         return {
             "index": finding.index,
             "class_name": finding.class_name,
-            "query": finding.query_label,
+            "matched_prompt": finding.matched_prompt,
             "confidence": finding.confidence,
             "box": None if finding.box is None else list[JsonValue](finding.box.xyxy),
             "area": finding.area,

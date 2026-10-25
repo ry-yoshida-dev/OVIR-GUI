@@ -15,6 +15,8 @@ export type SectionName =
   | "model"
   | "classes"
   | "media"
+  | "image-media"
+  | "video-media"
   | "models"
   | "results"
   | "review"

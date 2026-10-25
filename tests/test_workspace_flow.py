@@ -3,6 +3,7 @@ import json
 import time
 from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 
 import cv2
 import numpy as np
@@ -60,7 +61,7 @@ class TestWorkspaceFlow:
     def test_reviewed_payloads(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:
         assert client.put(
             "/api/thresholds",
-            json={"default_minimum": 0.6, "class_minimums": {"dog": 0.4}, "phrase_minimums": {}},
+            json={"default_minimum": 0.6, "class_minimums": {"dog": 0.4}, "prompt_minimums": {}},
         ).is_success
         assert client.put(
             "/api/suppression",
@@ -93,18 +94,34 @@ class TestWorkspaceFlow:
         golden.assert_matches("updated_state", self._state(client))
 
     def test_csv_export(self, client: TestClient, tmp_path: Path, golden: GoldenSnapshot) -> None:
-        golden.assert_matches("export_plan", client.get("/api/export/plan").json())
-        written: JsonDict = self._export(client, tmp_path / "export_csv", "csv")
+        golden.assert_matches("export_plan", client.get("/api/export/plan", params={"media": "image"}).json())
+        written: JsonDict = self._export(client, tmp_path / "export_csv", "csv", self._listed_images(client))
         golden.assert_matches("export_csv", written)
 
     def test_coco_export(self, client: TestClient, tmp_path: Path, golden: GoldenSnapshot) -> None:
-        written: JsonDict = self._export(client, tmp_path / "export_coco", "coco")
+        written: JsonDict = self._export(client, tmp_path / "export_coco", "coco", self._listed_images(client))
         golden.assert_matches("export_coco", written)
+
+    def test_video_export(self, client: TestClient, tmp_path: Path) -> None:
+        plan: JsonDict = client.get("/api/export/plan", params={"media": "video"}).json()
+        assert plan["picture_count"] == FRAME_COUNT // FRAME_STEP
+        assert plan["pending_count"] == 0
+        written: JsonDict = self._export(client, tmp_path / "export_video", "csv", {"media": "video"})
+        last_export: object = written["last_export"]
+        assert isinstance(last_export, dict)
+        assert last_export["picture_count"] == FRAME_COUNT // FRAME_STEP
+
+    def test_image_export_needs_listed_pictures(self, client: TestClient, tmp_path: Path) -> None:
+        body: JsonDict = {"export_format": "csv", "output_directory": str(tmp_path / "unlisted"), "media": "image"}
+        assert client.post("/api/export", json=body).status_code == 400
 
     def test_cropped_objects_export(self, client: TestClient, tmp_path: Path, golden: GoldenSnapshot) -> None:
         directory: Path = tmp_path / "export_crops"
         written: JsonDict = self._export(
-            client, directory, "cropped_objects", {"crop_image_format": "png", "crop_margin_percent": 25.0}
+            client,
+            directory,
+            "cropped_objects",
+            {"crop_image_format": "png", "crop_margin_percent": 25.0, **self._listed_images(client)},
         )
         golden.assert_matches("export_cropped_objects", written)
         with (directory / "crops.csv").open(encoding="utf-8", newline="") as table_file:
@@ -121,7 +138,8 @@ class TestWorkspaceFlow:
     def test_label_preview(self, client: TestClient, media_directory: Path) -> None:
         image_path: str = str(media_directory / "b_second.png")
         assert client.post("/api/media/show", json={"path": image_path, "frame": None}).is_success
-        coco: JsonDict = client.post("/api/export/preview", json={"export_format": "coco"}).json()
+        listed: JsonDict = self._listed_images(client)
+        coco: JsonDict = client.post("/api/export/preview", json={"export_format": "coco", **listed}).json()
         assert coco["file_name"] == "annotations.json"
         assert coco["is_shown_picture_only"] is False
         coco_text: object = coco["text"]
@@ -129,34 +147,38 @@ class TestWorkspaceFlow:
         document: object = json.loads(coco_text)
         assert isinstance(document, dict)
         assert [category["name"] for category in document["categories"]] == ["person", "car", "dog"]
-        assert len(document["images"]) == 5
-        yolo: JsonDict = client.post("/api/export/preview", json={"export_format": "yolo"}).json()
+        assert len(document["images"]) == 2
+        yolo: JsonDict = client.post("/api/export/preview", json={"export_format": "yolo", **listed}).json()
         assert yolo["file_name"] == "b_second.txt"
         assert yolo["is_shown_picture_only"] is True
         yolo_text: object = yolo["text"]
         assert isinstance(yolo_text, str)
         assert len(yolo_text.splitlines()) == 4
+        confident: JsonDict = self._listed_images(client, minimum_confidence=0.8)
         crops: JsonDict = client.post(
-            "/api/export/preview", json={"export_format": "cropped_objects", "minimum_confidence": 0.8}
+            "/api/export/preview", json={"export_format": "cropped_objects", **confident}
         ).json()
         assert crops["file_name"] == "crops.csv"
         crops_text: object = crops["text"]
         assert isinstance(crops_text, str)
         assert [row.split(",")[0] for row in crops_text.splitlines()[1:]] == ["crops/person/b_second_001.jpg"]
 
-    def test_listed_export_without_pending(self, client: TestClient, tmp_path: Path, media_directory: Path) -> None:
+    def test_listed_image_export(self, client: TestClient, tmp_path: Path, media_directory: Path) -> None:
         image_path: str = str(media_directory / "a_first.png")
         written: JsonDict = self._export(
             client,
             tmp_path / "export_listed",
             "csv",
-            {"scope": "listed", "listed_findings": [{"path": image_path, "frame": None, "indices": [0]}]},
+            {"media": "image", "listed_findings": [{"path": image_path, "frame": None, "indices": [0]}]},
         )
         files: object = written["files"]
         assert isinstance(files, dict)
         rows: object = files["results.csv"]
         assert isinstance(rows, list)
         assert len(rows) == 2
+        last_export: object = written["last_export"]
+        assert isinstance(last_export, dict)
+        assert last_export["picture_count"] == 1
 
     def test_restart_restores_results(self, tmp_path: Path, media_directory: Path, golden: GoldenSnapshot) -> None:
         with self._client_of(tmp_path, [media_directory]) as client:
@@ -238,10 +260,27 @@ class TestWorkspaceFlow:
         golden.assert_matches(f"{name}_statistics", client.get("/api/statistics").json())
         golden.assert_matches(f"{name}_objects", client.get("/api/results/document").json())
 
-    def _export(
-        self, client: TestClient, directory: Path, export_format: str, extra: JsonDict | None = None
-    ) -> JsonDict:
-        body: JsonDict = {"export_format": export_format, "output_directory": str(directory), **(extra or {})}
+    @staticmethod
+    def _listed_images(client: TestClient, minimum_confidence: float = 0.0) -> JsonDict:
+        results: JsonDict = client.get("/api/results").json()
+        pictures: object = results["pictures"]
+        assert isinstance(pictures, list)
+        listed: list[JsonDict] = []
+        for picture in cast(list[JsonDict], pictures):
+            if picture["frame"] is not None:
+                continue
+            findings: object = picture["findings"]
+            assert isinstance(findings, list)
+            indices: list[object] = [
+                finding["index"]
+                for finding in cast(list[JsonDict], findings)
+                if cast(float, finding["confidence"]) >= minimum_confidence
+            ]
+            listed.append({"path": picture["path"], "frame": None, "indices": indices})
+        return {"media": "image", "listed_findings": listed}
+
+    def _export(self, client: TestClient, directory: Path, export_format: str, extra: JsonDict) -> JsonDict:
+        body: JsonDict = {"export_format": export_format, "output_directory": str(directory), **extra}
         reply: JsonDict = client.post("/api/export", json=body).json()
         assert reply["status"] == "done", reply
         deadline: float = time.monotonic() + TIMEOUT_SECONDS

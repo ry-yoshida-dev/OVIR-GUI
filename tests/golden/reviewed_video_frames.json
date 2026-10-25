@@ -17,8 +17,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -34,8 +34,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -51,8 +51,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": false,
-          "polygons": [],
-          "query": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -68,8 +68,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "frame": 4,
@@ -98,8 +98,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -115,8 +115,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -132,8 +132,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": false,
-          "polygons": [],
-          "query": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -149,8 +149,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "polygons": [],
-          "query": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "frame": 8,

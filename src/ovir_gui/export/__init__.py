@@ -5,7 +5,6 @@ from .export_item import ExportItem
 from .export_options import ExportOptions
 from .export_purpose import ExportPurpose
 from .export_report import ExportReport
-from .export_scope import ExportScope
 from .export_selection import ExportSelection
 from .label_preview import LabelPreview
 from .label_previewer import LabelPreviewer
@@ -21,7 +20,6 @@ __all__ = [
     "ExportOptions",
     "ExportPurpose",
     "ExportReport",
-    "ExportScope",
     "ExportSelection",
     "LabelPreview",
     "LabelPreviewer",

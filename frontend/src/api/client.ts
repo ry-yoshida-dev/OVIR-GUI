@@ -10,9 +10,10 @@ import type {
   ExportRequest,
   FramePayload,
   InferenceModeValue,
-  LabelModeChoice,
+  LabelModeValue,
   LabelPreview,
   MarkEntry,
+  MediaKindValue,
   ModelSelection,
   ObjectDocument,
   PlaybackValue,
@@ -172,7 +173,7 @@ export const api = {
   setThresholds: (thresholds: Thresholds) => put("/api/thresholds", thresholds),
   setSuppression: (suppression: DuplicateSuppression) =>
     put("/api/suppression", suppression),
-  setLabelMode: (labelMode: LabelModeChoice) =>
+  setLabelMode: (labelMode: LabelModeValue) =>
     put("/api/label-mode", { label_mode: labelMode }),
   tableCsv: (findings: { path: string; frame: number | null; index: number }[]) =>
     requestBlob("POST", "/api/findings/csv", { findings }),
@@ -283,7 +284,8 @@ export const api = {
   resultDocument: (paths: string[] | null) =>
     get<ObjectDocument>(`/api/results/document${pathQuery(paths)}`),
 
-  exportPlan: () => get<ExportPlan>("/api/export/plan"),
+  exportPlan: (media: MediaKindValue) =>
+    get<ExportPlan>(`/api/export/plan?media=${media}`),
   exportPreview: (body: ExportPreviewRequest) =>
     post<LabelPreview>("/api/export/preview", body),
   exportResults: (body: ExportRequest) =>

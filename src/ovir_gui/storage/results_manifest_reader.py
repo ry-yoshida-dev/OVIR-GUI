@@ -224,7 +224,7 @@ class ResultsManifestReader:
                         class_name=JsonFields.string_of(fields[0], "class"),
                         score=JsonFields.number_of(fields[1], "score"),
                         logit=JsonFields.number_of(fields[2], "logit"),
-                        query_label=JsonFields.string_of(fields[3], "query"),
+                        matched_prompt=JsonFields.string_of(fields[3], "matched prompt"),
                         similarity=None if similarity is None else JsonFields.number_of(similarity, "similarity"),
                     )
                 )
@@ -269,7 +269,7 @@ class ResultsManifestReader:
             )
         return RecognizedInstance(
             class_name=JsonFields.string_of(fields[0], "class"),
-            query_label=JsonFields.string_of(fields[1], "query"),
+            matched_prompt=JsonFields.string_of(fields[1], "matched prompt"),
             confidence=JsonFields.number_of(fields[2], "confidence"),
             box=PixelBox.of(corners),
             mask=mask,

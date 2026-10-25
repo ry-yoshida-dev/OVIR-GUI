@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TaskValue } from "../api/types";
 import { type ClassColors, classColorOf, SWATCH_FALLBACK_COLOR } from "../lib/frameView";
+import { type ColumnFonts, fittedColumnWidthsOf } from "../lib/columnWidths";
 import { clamp } from "../lib/numbers";
 import {
   type ColumnCondition,
@@ -17,7 +18,10 @@ import {
   type TableRow,
 } from "../lib/resultTable";
 import { FilterPopup } from "./FilterPopup";
+import { ExportGlyph, FilterGlyph } from "./Glyphs";
 import { useMenu } from "./Menu";
+import { MediaKindGlyph } from "./MediaKindGlyph";
+import { MixedCheckbox } from "./MixedCheckbox";
 import { ResultsHeading } from "./ResultsHeading";
 
 interface ResultTableProps {
@@ -38,6 +42,9 @@ interface ResultTableProps {
   onSelectRow: (row: TableRow) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
   classColors: ClassColors;
+  exportCount: number;
+  isExportDisabled: boolean;
+  onExport: () => void;
 }
 
 const ROW_HEIGHT = 25;
@@ -70,13 +77,19 @@ export function ResultTable({
   onSelectRow,
   onSetAccepted,
   classColors,
+  exportCount,
+  isExportDisabled,
+  onExport,
 }: ResultTableProps) {
   const menu = useMenu();
   const scroller = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(400);
   const [popup, setPopup] = useState<{ column: ColumnDefinition; x: number; y: number } | null>(null);
-  const columns = columnsOf(task, scope);
+  const headerRow = useRef<HTMLTableRowElement>(null);
+  const [fonts, setFonts] = useState<ColumnFonts | null>(null);
+  const [paddings, setPaddings] = useState<number[]>([]);
+  const columns = useMemo(() => columnsOf(task, scope), [task, scope]);
   const statusLeadCount = columns.findIndex((column) => column.key === "class");
 
   useLayoutEffect(() => {
@@ -99,11 +112,39 @@ export function ResultTable({
     }
   }, [selectedKey, rows]);
 
+  useLayoutEffect(() => {
+    const row = headerRow.current;
+    if (row === null) return;
+    const headers = [...row.cells].slice(0, columns.length);
+    const firstHeader = headers[0];
+    const table = row.closest("table");
+    if (firstHeader === undefined || table === null) return;
+    setFonts({ cell: getComputedStyle(table).font, header: getComputedStyle(firstHeader).font });
+    setPaddings(
+      headers.map((header) => {
+        const style = getComputedStyle(header);
+        return parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      }),
+    );
+  }, [isCollapsed, columns]);
+
+  const widths = useMemo(
+    () =>
+      fonts === null
+        ? columns.map((column) => column.maxWidth)
+        : fittedColumnWidthsOf(columns, allRows, fonts, paddings, {
+            sortedKey: order?.key ?? null,
+            filteredKeys: new Set(columns.map((column) => column.key).filter((key) => filter[key] !== undefined)),
+          }),
+    [columns, allRows, fonts, paddings, order, filter],
+  );
+
   const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
   const last = Math.min(rows.length, Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN);
   const visibleRows = rows.slice(first, last);
   const filteredCount = Object.keys(filter).filter((key) => columns.some((column) => column.key === key)).length;
   const findingRows = useMemo(() => rows.filter((row) => row.kind === "finding"), [rows]);
+  const keptCount = findingRows.filter((row) => row.finding.is_accepted).length;
 
   const setCondition = (key: ColumnKey, condition: ColumnCondition | undefined) => {
     const next = { ...filter };
@@ -164,8 +205,8 @@ export function ResultTable({
             {finding.class_name}
           </>
         );
-      case "query":
-        return finding.query;
+      case "prompt":
+        return finding.matched_prompt;
       case "confidence":
         return formatNumber(finding.confidence, "confidence");
       case "area":
@@ -182,11 +223,18 @@ export function ResultTable({
 
   return (
     <div className="result-table">
-      <ResultsHeading title={title} isCollapsed={isCollapsed} onToggle={onToggleCollapsed}>
+      <ResultsHeading
+        title={title}
+        icon={<MediaKindGlyph kind={scope === "images" ? "image" : "video"} />}
+        isCollapsed={isCollapsed}
+        onToggle={onToggleCollapsed}
+      >
         {!isCollapsed && (
           <>
             <button
-              className="ghost small"
+              className={`ghost small filter-button${filteredCount > 0 ? " active" : ""}`}
+              title="Filter the listed rows by column"
+              aria-label="Filter"
               onClick={(event) => {
                 const bounds = event.currentTarget.getBoundingClientRect();
                 menu.openBelow(
@@ -199,7 +247,8 @@ export function ResultTable({
                 );
               }}
             >
-              Filter{filteredCount > 0 ? ` (${filteredCount})` : ""}
+              <FilterGlyph />
+              {filteredCount > 0 && filteredCount}
             </button>
             {filteredCount > 0 && (
               <button className="ghost small" onClick={() => onFilterChange({})}>
@@ -209,25 +258,16 @@ export function ResultTable({
           </>
         )}
         <span className="grow" />
-        {!isCollapsed && findingRows.length > 0 && (
-          <>
-            <button
-              className="ghost small"
-              title="Keep every listed finding so it is exported"
-              onClick={() => onSetAccepted(findingRows, true)}
-            >
-              Keep All
-            </button>
-            <button
-              className="ghost small"
-              title="Reject every listed finding so it is left out of the export"
-              onClick={() => onSetAccepted(findingRows, false)}
-            >
-              Reject All
-            </button>
-          </>
-        )}
         <span className="muted small">{findingRows.length} listed</span>
+        <button
+          className="small export-button"
+          disabled={isExportDisabled}
+          onClick={onExport}
+          title="Export the listed pictures with their kept findings (Ctrl+E)"
+        >
+          <ExportGlyph />
+          Export {exportCount}
+        </button>
       </ResultsHeading>
       {!isCollapsed && (
         <div
@@ -251,19 +291,25 @@ export function ResultTable({
         >
           <table className="grid">
             <colgroup>
-              {columns.map((column) => (
-                <col key={column.key} style={{ width: column.width }} />
+              {columns.map((column, index) => (
+                <col key={column.key} style={{ width: widths[index] }} />
               ))}
+              <col />
             </colgroup>
             <thead>
-              <tr>
+              <tr ref={headerRow}>
                 {columns.map((column) => (
-                  <th
-                    key={column.key}
-                    title="Click to sort"
-                    onClick={() => cycleOrder(column.key)}
-                  >
-                    {column.label}
+                  <th key={column.key} title="Click to sort" onClick={() => cycleOrder(column.key)}>
+                    {column.key === "keep" ? (
+                      <MixedCheckbox
+                        checkedCount={keptCount}
+                        totalCount={findingRows.length}
+                        title="Keep every listed finding; uncheck to reject them all"
+                        onChange={(isChecked) => onSetAccepted(findingRows, isChecked)}
+                      />
+                    ) : (
+                      column.label
+                    )}
                     {order?.key === column.key && (order.isDescending ? " ▾" : " ▴")}
                     {filter[column.key] !== undefined && (
                       <span
@@ -273,20 +319,21 @@ export function ResultTable({
                           setPopup({ column, x: event.clientX, y: event.clientY });
                         }}
                       >
-                        ⏷
+                        <FilterGlyph />
                       </span>
                     )}
                   </th>
                 ))}
+                <th className="filler" />
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr className="status">
-                  <td colSpan={columns.length}>{allRows.length > 0 ? "Nothing passes the filters." : emptyText}</td>
+                  <td colSpan={columns.length + 1}>{allRows.length > 0 ? "Nothing passes the filters." : emptyText}</td>
                 </tr>
               )}
-              {first > 0 && <SpacerRow rowCount={first} columnCount={columns.length} />}
+              {first > 0 && <SpacerRow rowCount={first} columnCount={columns.length + 1} />}
               {visibleRows.map((row) => {
                 const isCurrent = pictureKeyOf(row.path, row.frame) === currentPictureKey;
                 const isSelected = row.key === selectedKey;
@@ -304,29 +351,32 @@ export function ResultTable({
                             {renderCell(row, column)}
                           </td>
                         ))}
-                        <td colSpan={columns.length - statusLeadCount}>{row.text}</td>
+                        <td colSpan={columns.length - statusLeadCount + 1}>{row.text}</td>
                       </>
                     ) : (
-                      columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className={`${column.isNumeric ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
-                          title={
-                            column.key === "media"
-                              ? row.outdated === null
-                                ? row.path
-                                : `${row.path}\nInferred with other classes: ${row.outdated}`
-                              : undefined
-                          }
-                        >
-                          {renderCell(row, column)}
-                        </td>
-                      ))
+                      <>
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={`${column.isNumeric ? "number" : ""}${column.key === "keep" ? "" : " strike"}`}
+                            title={
+                              column.key === "media"
+                                ? row.outdated === null
+                                  ? row.path
+                                  : `${row.path}\nInferred with other classes: ${row.outdated}`
+                                : undefined
+                            }
+                          >
+                            {renderCell(row, column)}
+                          </td>
+                        ))}
+                        <td className="filler" />
+                      </>
                     )}
                   </tr>
                 );
               })}
-              {last < rows.length && <SpacerRow rowCount={rows.length - last} columnCount={columns.length} />}
+              {last < rows.length && <SpacerRow rowCount={rows.length - last} columnCount={columns.length + 1} />}
             </tbody>
           </table>
         </div>

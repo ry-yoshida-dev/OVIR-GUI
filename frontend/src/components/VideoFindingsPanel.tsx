@@ -7,6 +7,8 @@ import { toggledMembership } from "../lib/sets";
 import { VideoEventBuilder } from "../lib/videoEvents";
 import { formatSeconds } from "../lib/videoTime";
 import { CountChart } from "./CountChart";
+import { ExportGlyph } from "./Glyphs";
+import { MediaKindGlyph } from "./MediaKindGlyph";
 import { NumberField } from "./NumberField";
 import { ResultsHeading } from "./ResultsHeading";
 
@@ -20,6 +22,9 @@ interface VideoFindingsPanelProps {
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
   onSeek: (frame: number, isFinal: boolean) => void;
+  exportCount: number;
+  isExportDisabled: boolean;
+  onExport: () => void;
 }
 
 function PlaybackCursor({ frame, frameCount }: { frame: number; frameCount: number }) {
@@ -43,6 +48,9 @@ export function VideoFindingsPanel({
   isCollapsed,
   onToggleCollapsed,
   onSeek,
+  exportCount,
+  isExportDisabled,
+  onExport,
 }: VideoFindingsPanelProps) {
   const [allowedMissCount, setAllowedMissCount] = useState(1);
   const [hiddenClasses, setHiddenClasses] = useState<ReadonlySet<string>>(new Set());
@@ -107,7 +115,10 @@ export function VideoFindingsPanel({
 
   return (
     <div className="video-findings">
-      <ResultsHeading title="Videos" isCollapsed={isCollapsed} onToggle={onToggleCollapsed}>
+      <ResultsHeading
+        title="Videos"
+        icon={<MediaKindGlyph kind="video" />}
+        isCollapsed={isCollapsed} onToggle={onToggleCollapsed}>
         <span className="muted small results-heading-name" title={video.path}>
           {video.name}
         </span>
@@ -115,6 +126,15 @@ export function VideoFindingsPanel({
         <span className="muted small">
           {summary.events.length} events · {summary.recognizedCount} sampled frames
         </span>
+        <button
+          className="small export-button"
+          disabled={isExportDisabled}
+          onClick={onExport}
+          title="Export the kept findings of every video (Ctrl+E when no images are open)"
+        >
+          <ExportGlyph />
+          Export {exportCount}
+        </button>
       </ResultsHeading>
       {isCollapsed ? null : results === null || summary.recognizedCount === 0 ? (
         <div className="video-findings-empty muted">

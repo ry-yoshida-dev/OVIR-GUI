@@ -1,5 +1,5 @@
-from ..recognition import RecognitionTask
-from ..review import ClassThresholds, DuplicateSuppression, LabelModeChoice, ReviewFilter
+from ..recognition import LabelMode, RecognitionTask
+from ..review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ..storage import ClassThresholdStore, DuplicateSuppressionStore, LabelModeStore
 from .recognition_settings import RecognitionSettings
 from .status_notifier import StatusNotifier
@@ -41,7 +41,7 @@ class ReviewSettings:
         self._notifier: StatusNotifier = notifier
         self._thresholds: dict[RecognitionTask, ClassThresholds] = threshold_store.load()
         self._suppressions: dict[RecognitionTask, DuplicateSuppression] = suppression_store.load()
-        self._label_mode: LabelModeChoice = label_mode_store.load()
+        self._label_mode: LabelMode | None = label_mode_store.load()
 
     @property
     def class_thresholds(self) -> ClassThresholds:
@@ -68,14 +68,14 @@ class ReviewSettings:
         return self._suppressions.get(self._settings.task, DuplicateSuppression())
 
     @property
-    def label_mode(self) -> LabelModeChoice:
+    def label_mode(self) -> LabelMode | None:
         """
         Label mode chosen for classifications.
 
         Returns
         -------
-        LabelModeChoice
-            Chosen mode, automatic by default.
+        LabelMode | None
+            Chosen mode; ``None`` until the user chooses, each result then following its native mode.
         """
         return self._label_mode
 
@@ -108,7 +108,7 @@ class ReviewSettings:
         return ReviewFilter(
             self._thresholds.get(task, ClassThresholds()),
             self._suppressions.get(task, DuplicateSuppression()),
-            self._label_mode if task is RecognitionTask.CLASSIFICATION else LabelModeChoice.AUTOMATIC,
+            self._label_mode if task is RecognitionTask.CLASSIFICATION else None,
         )
 
     def set_class_thresholds(self, class_thresholds: ClassThresholds) -> None:
@@ -141,14 +141,14 @@ class ReviewSettings:
         )
         self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
 
-    def set_label_mode(self, label_mode: LabelModeChoice) -> None:
+    def set_label_mode(self, label_mode: LabelMode) -> None:
         """
         Change the label mode of classifications and remember it.
 
         Parameters
         ----------
-        label_mode : LabelModeChoice
-            Automatic, single- or multi-label.
+        label_mode : LabelMode
+            Single- or multi-label.
         """
         self._label_mode = label_mode
         self._notifier.save_reporting_failure(

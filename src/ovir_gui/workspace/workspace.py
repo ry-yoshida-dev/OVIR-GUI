@@ -23,7 +23,6 @@ from .export_coordinator import ExportCoordinator
 from .inference_engine import InferenceEngine
 from .inference_outcome_handler import InferenceOutcomeHandler
 from .inference_runner import InferenceRunner
-from .job_purpose import JobPurpose
 from .model_choice import ModelChoice
 from .playback_preparer import PlaybackPreparer
 from .prompt_assembler import PromptAssembler
@@ -56,7 +55,7 @@ class Workspace:
     With auto inference on, pictures without an up-to-date result of the selected model are recognized in the
     background as far as the inference mode allows: the shown picture only, or every picture with the shown media
     first. While the shown video plays, its frames ahead of playback are recognized first, so the player can show them
-    as it goes. A foreground job (Infer, Infer All, Update Outdated, export) interrupts it after the current
+    as it goes. A foreground job (Infer, Infer All, Update Outdated) interrupts it after the current
     mini-batch. Every task keeps its own classes and drawings, shown again when the task is chosen. Editing the classes
     keeps every result and reports pictures recognized with other classes as outdated.
     Results are saved shortly after every change, the session whenever it changes.
@@ -154,7 +153,6 @@ class Workspace:
             lambda: self._jobs.is_worker_idle,
             lambda: self._models.current_model().profile(),
             lambda: self._jobs.is_busy,
-            lambda pending, is_skipping_approved: self._jobs.start(JobPurpose.EXPORT, pending, is_skipping_approved),
             lambda: self._jobs.resume_background(),
         )
         self._profiles: ResultProfiles = ResultProfiles(
@@ -176,11 +174,9 @@ class Workspace:
                 self._library,
                 self._planner,
                 self._notifier,
-                self._exports,
                 self._results_save,
                 lambda: self._jobs.is_worker_idle,
                 lambda: self._jobs.continue_background(),
-                lambda: self._jobs.resume_background(),
             ),
             session,
         )

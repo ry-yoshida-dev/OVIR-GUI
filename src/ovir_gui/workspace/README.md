@@ -21,8 +21,8 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses what to recognize next in the background for the inference mode, frames ahead of a playing video first, and remembers what failed. |
 | [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes of the current task with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set; every task keeps its own. |
 | [deferred_save.py](./deferred_save.py) | `DeferredSave` writes one piece of workspace state shortly after it changes, off the owning thread, never overlapping or replacing a newer write. |
-| [export_coordinator.py](./export_coordinator.py) | `ExportCoordinator` plans and starts exports of the stored results, recognizing pending pictures through an export job first, writes them off the owning thread and gathers what a label preview is written from. |
-| [export_plan.py](./export_plan.py) | `ExportPlan` describes what an export would write now. |
+| [export_coordinator.py](./export_coordinator.py) | `ExportCoordinator` plans the export of the images or the videos, writes their stored results off the owning thread, leaving out pictures not yet inferred, and gathers what a label preview is written from. |
+| [export_plan.py](./export_plan.py) | `ExportPlan` describes what an export of the images or the videos would write now. |
 | [export_preview_source.py](./export_preview_source.py) | `ExportPreviewSource` holds what a label preview is written from, gathered on the owning thread. |
 | [export_request.py](./export_request.py) | `ExportRequest` is the export chosen by the user. |
 | [inference_engine.py](./inference_engine.py) | `InferenceEngine` runs recognition jobs on one worker thread, foreground jobs first and background jobs in between. |

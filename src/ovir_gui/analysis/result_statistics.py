@@ -122,7 +122,7 @@ class ResultStatistics:
                     rejected[finding.class_name] += 1
                     continue
                 accepted[finding.class_name].append(finding.confidence)
-                minimum: float = review_filter.thresholds.minimum_of(finding.class_name, finding.query_label)
+                minimum: float = review_filter.thresholds.minimum_of(finding.class_name, finding.matched_prompt)
                 if abs(finding.confidence - minimum) <= cls.BORDERLINE_MARGIN:
                     borderline_count += 1
                 if finding.index not in kept:

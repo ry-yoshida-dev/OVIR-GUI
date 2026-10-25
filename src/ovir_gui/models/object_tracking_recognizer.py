@@ -66,7 +66,7 @@ class ObjectTrackingRecognizer(Recognizer[ObjectTrackingModel]):
             instances.append(
                 RecognizedInstance(
                     class_name=class_names[object_id],
-                    query_label=f"object {object_id}",
+                    matched_prompt=f"object {object_id}",
                     confidence=float(visible.presence_scores[index]),
                     box=mask.box,
                     mask=mask,

@@ -24,10 +24,10 @@ class LabelMode(Enum):
         Returns
         -------
         str
-            E.g. ``"Multi-label"``.
+            E.g. ``"Multi"``.
         """
         match self:
             case LabelMode.SINGLE_LABEL:
-                return "Single label"
+                return "Single"
             case LabelMode.MULTI_LABEL:
-                return "Multi-label"
+                return "Multi"

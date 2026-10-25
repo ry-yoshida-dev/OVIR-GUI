@@ -13,12 +13,10 @@ class ExportPreviewBody(BaseModel):
         Value of the export format.
     is_confidence_included : bool
         Whether confidences are written.
-    scope : str
-        Value of the export scope.
-    minimum_confidence : float
-        Findings below this confidence are left out.
+    media : str
+        Value of the exported media kind: images or videos.
     listed_findings : list[PictureFindings] | None
-        Findings the result table lists, for previewing only those.
+        Pictures the image table lists with their listed findings; required for images, ignored for videos.
     crop_image_format : str
         Value of the image format of cropped objects.
     crop_margin_percent : float
@@ -27,8 +25,7 @@ class ExportPreviewBody(BaseModel):
 
     export_format: str
     is_confidence_included: bool = True
-    scope: str = "kept"
-    minimum_confidence: float = 0.0
+    media: str
     listed_findings: list[PictureFindings] | None = None
     crop_image_format: str = "jpeg"
     crop_margin_percent: float = 0.0

@@ -94,7 +94,7 @@ class ObjectDocumentBuilder:
         return {
             "index": index,
             "class_name": instance.class_name,
-            "source": instance.query_label,
+            "matched_prompt": instance.matched_prompt,
             "confidence": instance.confidence,
             "box": list[JsonValue](instance.box.xyxy),
             "area": instance.area,

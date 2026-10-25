@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from ...review import LabelModeChoice
+from ...recognition import LabelMode
 
 
 class LabelModeBody(BaseModel):
@@ -9,8 +9,8 @@ class LabelModeBody(BaseModel):
 
     Attributes
     ----------
-    label_mode : LabelModeChoice
-        Automatic, single- or multi-label.
+    label_mode : LabelMode
+        Single- or multi-label.
     """
 
-    label_mode: LabelModeChoice
+    label_mode: LabelMode

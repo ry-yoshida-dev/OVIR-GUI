@@ -32,10 +32,10 @@ class ResultsManifestWriter:
           ]}]
         }
 
-    A classification frame holds ``"scores": [[class, score, logit, query, similarity], ...]`` instead of instances,
-    ``similarity`` being ``null`` or left out for results stored before it was recorded. Rejected findings are indexed
-    by the position of their class score or instance; version 1 indexed the only finding of a classification, its
-    best class, by 0. The last
+    A classification frame holds ``"scores": [[class, score, logit, matched prompt, similarity], ...]`` instead of
+    instances, ``similarity`` being ``null`` or left out for results stored before it was recorded. Rejected findings
+    are indexed by the position of their class score or instance; version 1 indexed the only finding of a
+    classification, its best class, by 0. The last
     field of an instance indexes ``mask_bits`` (``-1`` without a mask) and is followed by the crop
     ``[left, top, width, height, area]`` of the mask.
     """
@@ -110,7 +110,7 @@ class ResultsManifestWriter:
         }
         if result.class_scores:
             entry["scores"] = [
-                [score.class_name, score.score, score.logit, score.query_label, score.similarity]
+                [score.class_name, score.score, score.logit, score.matched_prompt, score.similarity]
                 for score in result.class_scores
             ]
         else:
@@ -120,7 +120,7 @@ class ResultsManifestWriter:
     def _instance_entry(self, instance: RecognizedInstance) -> JsonValue:
         fields: list[JsonValue] = [
             instance.class_name,
-            instance.query_label,
+            instance.matched_prompt,
             instance.confidence,
             list(instance.box.xyxy),
         ]

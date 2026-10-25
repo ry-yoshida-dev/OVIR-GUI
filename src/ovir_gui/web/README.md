@@ -53,7 +53,7 @@ All routes below are prefixed with `/api`.
 | `RecognitionRoutes` | `GET /state`, `GET /results`, `GET /frame?path=&frame=`, `GET /video-frames?path=&after=&until=`, `GET /timeline?path=`, `GET /statistics`, `PUT /task`, `PUT /model`, `PUT /model/preset`, `POST /run`, `POST /run-all`, `POST /update-outdated`, `POST /cancel`, `POST /profiles/select`, `POST /profiles/remove`, `POST /profiles/clear`, `PUT /comparison`, `POST /findings/acceptance`, `PUT /thresholds`, `POST /findings/csv` |
 | `ClassRoutes` | `POST /classes/rows`, `PUT /classes/{class_index}/name`, `PUT /classes/{class_index}/phrases/{phrase_index}`, `POST /classes/remove`, `POST /classes/move-phrase`, `POST /classes/move-reference`, `PUT /classes/text`, `POST /classes/clear`, `POST /classes/file`, `GET /references/image`, `POST /references/drafts`, `POST /references/drafts/path`, `POST /references/drafts/current`, `GET /references/drafts/{draft_id}/image`, `POST /references`, `GET /class-sets`, `GET /class-sets/{name}`, `GET /class-sets/{name}/image`, `POST /class-sets/save`, `POST /class-sets/load`, `PUT /class-sets/{name}`, `DELETE /class-sets/{name}`, `POST /class-sets/import`, `GET /class-sets/{name}/file` |
 | `PicturePromptRoutes` | `POST /prompts/exemplars`, `POST /prompts/exemplars/remove`, `PUT /prompts/marks`, `POST /prompts/marks/remove`, `POST /prompts/clear` |
-| `ExportRoutes` | `GET /export/plan`, `POST /export`, `GET /export/download` |
+| `ExportRoutes` | `GET /export/plan?media=image\|video`, `POST /export/preview`, `POST /export`, `GET /export/download` |
 | `EmbeddingRoutes` | `GET /embedding`, `GET /results/document?path=` |
 | `WebApplication` | WebSocket `/api/events`; static frontend at `/` (without a `/api` prefix) |
 

@@ -2,6 +2,7 @@ import { api } from "../api/client";
 import type {
   CurrentPicture,
   MediaEntry,
+  MediaKindValue,
   ResultsPayload,
   TaskValue,
   WorkspaceState,
@@ -15,7 +16,7 @@ import type { ClassColors } from "../lib/frameView";
 import type { PlaybackPosition } from "../lib/playbackPosition";
 import type { TableRow } from "../lib/resultTable";
 import type { TaskView } from "../lib/taskViews";
-import { ExportGlyph, FindingsGlyph, StatisticsGlyph } from "./Glyphs";
+import { FindingsGlyph, StatisticsGlyph } from "./Glyphs";
 import { PaneHeader } from "./PaneHeader";
 import { ProfileTable } from "./ProfileTable";
 import { ResultTable } from "./ResultTable";
@@ -44,7 +45,7 @@ interface ResultsPaneProps {
   call: Call;
   runAction: RunAction;
   onToggleStatistics: () => void;
-  onOpenExport: () => void;
+  onOpenExport: (media: MediaKindValue) => void;
   onSelectRow: (row: TableRow) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
   onSeekChartedVideo: (frame: number, isFinal: boolean) => void;
@@ -90,15 +91,6 @@ export function ResultsPane({
         >
           <StatisticsGlyph />
           Statistics
-        </button>
-        <button
-          className="sheet-button"
-          disabled={state.is_busy}
-          onClick={onOpenExport}
-          title="Export results or download the listed findings as CSV (Ctrl+E)"
-        >
-          <ExportGlyph />
-          Export
         </button>
       </PaneHeader>
       <div
@@ -160,7 +152,6 @@ export function ResultsPane({
                     suppression={
                       review.suppression.value ?? state.suppression
                     }
-                    labelMode={state.label_mode}
                     standardMinimum={state.standard_minimum}
                     standardOverlap={state.standard_overlap_threshold}
                     isScoreBased={taskView.isScoreBased}
@@ -168,9 +159,6 @@ export function ResultsPane({
                     onToggleCollapsed={() => toggleSection("review")}
                     onThresholdsChange={review.thresholds.change}
                     onSuppressionChange={review.suppression.change}
-                    onLabelModeChange={(labelMode) =>
-                      call(() => api.setLabelMode(labelMode))
-                    }
                   />
                 </div>
                 {!isCollapsed("review") && (
@@ -203,6 +191,9 @@ export function ResultsPane({
                 onSelectRow={onSelectRow}
                 onSetAccepted={onSetAccepted}
                 classColors={classColors}
+                exportCount={resultRows.imageExportRows.length}
+                isExportDisabled={state.is_busy}
+                onExport={() => onOpenExport("image")}
               />
             </div>
           )}
@@ -237,6 +228,9 @@ export function ResultsPane({
                   isCollapsed={isCollapsed("video-results")}
                   onToggleCollapsed={() => toggleSection("video-results")}
                   onSeek={onSeekChartedVideo}
+                  exportCount={resultRows.videoExportRows.length}
+                  isExportDisabled={state.is_busy}
+                  onExport={() => onOpenExport("video")}
                 />
               )}
             </div>

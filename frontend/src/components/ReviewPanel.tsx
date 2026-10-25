@@ -2,8 +2,6 @@ import { useMemo, useState } from "react";
 import type {
   ClassEntry,
   DuplicateSuppression,
-  LabelModeChoice,
-  LabelModeState,
   ResultsPayload,
   Thresholds,
 } from "../api/types";
@@ -30,7 +28,6 @@ interface ReviewPanelProps {
   reviewFilter: ReviewFilter;
   thresholds: Thresholds;
   suppression: DuplicateSuppression;
-  labelMode: LabelModeState;
   standardMinimum: number;
   standardOverlap: number;
   isScoreBased: boolean;
@@ -38,52 +35,6 @@ interface ReviewPanelProps {
   onToggleCollapsed: () => void;
   onThresholdsChange: (thresholds: Thresholds) => void;
   onSuppressionChange: (suppression: DuplicateSuppression) => void;
-  onLabelModeChange: (labelMode: LabelModeChoice) => void;
-}
-
-interface LabelModeSelectProps {
-  labelMode: LabelModeState;
-  onLabelModeChange: (labelMode: LabelModeChoice) => void;
-}
-
-const LABEL_MODE_HINT =
-  "Single label keeps only the best class of a picture; multi-label keeps every class reaching its minimum. " +
-  "Automatic follows the model: multi-label for sigmoid scores (SigLIP), single label for softmax scores (CLIP).";
-
-function LabelModeSelect({
-  labelMode,
-  onLabelModeChange,
-}: LabelModeSelectProps) {
-  const choices: LabelModeChoice[] = [
-    "automatic",
-    ...labelMode.modes.map((mode) => mode.value),
-  ];
-  const nativeTitle =
-    labelMode.modes.find((mode) => mode.value === labelMode.native)?.title ??
-    null;
-  return (
-    <label className="review-switch" title={LABEL_MODE_HINT}>
-      Labels
-      <select
-        value={labelMode.choice}
-        onChange={(event) => {
-          const chosen = choices.find(
-            (choice) => choice === event.target.value,
-          );
-          if (chosen !== undefined) onLabelModeChange(chosen);
-        }}
-      >
-        <option value="automatic">
-          {nativeTitle === null ? "Automatic" : `Automatic (${nativeTitle})`}
-        </option>
-        {labelMode.modes.map((mode) => (
-          <option key={mode.value} value={mode.value}>
-            {mode.title}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 }
 
 interface ConfidenceChartRowsProps {
@@ -144,22 +95,22 @@ function ConfidenceChartRows({
       ...thresholds,
       class_minimums: withEntry(thresholds.class_minimums, className, minimum),
     });
-  const setPhraseMinimum = (
+  const setPromptMinimum = (
     className: string,
-    phrase: string,
+    prompt: string,
     minimum: number | null,
   ) => {
-    const byPhrase = withEntry(
-      thresholds.phrase_minimums[className] ?? {},
-      phrase,
+    const byPrompt = withEntry(
+      thresholds.prompt_minimums[className] ?? {},
+      prompt,
       minimum,
     );
     onThresholdsChange({
       ...thresholds,
-      phrase_minimums: withEntry(
-        thresholds.phrase_minimums,
+      prompt_minimums: withEntry(
+        thresholds.prompt_minimums,
         className,
-        Object.keys(byPhrase).length === 0 ? null : byPhrase,
+        Object.keys(byPrompt).length === 0 ? null : byPrompt,
       ),
     });
   };
@@ -192,7 +143,7 @@ function ConfidenceChartRows({
       {confidences.classes.map((entry) => {
         const ownMinimum = thresholds.class_minimums[entry.className];
         const classThreshold = reviewFilter.minimumOf(entry.className);
-        const isExpandable = entry.phrases.length > 1;
+        const isExpandable = entry.prompts.length > 1;
         const isExpanded = isExpandable && expandedClasses.has(entry.className);
         const color = colorOf(entry.className);
         return (
@@ -221,37 +172,37 @@ function ConfidenceChartRows({
               onToggleExpanded={() => onToggleExpanded(entry.className)}
             />
             {isExpanded &&
-              entry.phrases.map((phrase) => {
-                const ownPhraseMinimum =
-                  thresholds.phrase_minimums[entry.className]?.[phrase.phrase];
+              entry.prompts.map((prompt) => {
+                const ownPromptMinimum =
+                  thresholds.prompt_minimums[entry.className]?.[prompt.prompt];
                 return (
                   <ScoreChartRow
-                    key={phrase.phrase}
-                    title={phrase.phrase}
-                    level="phrase"
+                    key={prompt.prompt}
+                    title={prompt.prompt}
+                    level="prompt"
                     mode={mode}
                     color={color}
-                    histogram={phrase.histogram}
+                    histogram={prompt.histogram}
                     threshold={reviewFilter.minimumOf(
                       entry.className,
-                      phrase.phrase,
+                      prompt.prompt,
                     )}
                     parentThreshold={
-                      ownPhraseMinimum === undefined ? null : classThreshold
+                      ownPromptMinimum === undefined ? null : classThreshold
                     }
-                    isOwn={ownPhraseMinimum !== undefined}
-                    keptCount={phrase.keptCount}
+                    isOwn={ownPromptMinimum !== undefined}
+                    keptCount={prompt.keptCount}
                     resetLabel="Follow Class"
                     onChange={(value) =>
-                      setPhraseMinimum(entry.className, phrase.phrase, value)
+                      setPromptMinimum(entry.className, prompt.prompt, value)
                     }
                     onReset={
-                      ownPhraseMinimum === undefined
+                      ownPromptMinimum === undefined
                         ? null
                         : () =>
-                            setPhraseMinimum(
+                            setPromptMinimum(
                               entry.className,
-                              phrase.phrase,
+                              prompt.prompt,
                               null,
                             )
                     }
@@ -290,7 +241,7 @@ function SimilarityChartRows({
         keptCount={similarities.overallKeptCount}
       />
       {similarities.classes.map((entry) => {
-        const isExpandable = entry.phrases.length > 1;
+        const isExpandable = entry.prompts.length > 1;
         const isExpanded = isExpandable && expandedClasses.has(entry.className);
         const color = colorOf(entry.className);
         return (
@@ -307,15 +258,15 @@ function SimilarityChartRows({
               onToggleExpanded={() => onToggleExpanded(entry.className)}
             />
             {isExpanded &&
-              entry.phrases.map((phrase) => (
+              entry.prompts.map((prompt) => (
                 <DistributionChartRow
-                  key={phrase.phrase}
-                  title={phrase.phrase}
-                  level="phrase"
+                  key={prompt.prompt}
+                  title={prompt.prompt}
+                  level="prompt"
                   color={color}
-                  histogram={phrase.histogram}
+                  histogram={prompt.histogram}
                   hint={mode.valueHint}
-                  keptCount={phrase.keptCount}
+                  keptCount={prompt.keptCount}
                 />
               ))}
           </div>
@@ -414,7 +365,6 @@ export function ReviewPanel({
   reviewFilter,
   thresholds,
   suppression,
-  labelMode,
   standardMinimum,
   standardOverlap,
   isScoreBased,
@@ -422,7 +372,6 @@ export function ReviewPanel({
   onToggleCollapsed,
   onThresholdsChange,
   onSuppressionChange,
-  onLabelModeChange,
 }: ReviewPanelProps) {
   const [modeValue, setModeValue] = useState<ReviewModeValue>("confidence");
   const [expandedClasses, setExpandedClasses] = useState<ReadonlySet<string>>(
@@ -448,20 +397,32 @@ export function ReviewPanel({
     classes.find((entry) => entry.name === className)?.color ??
     FALLBACK_CLASS_COLOR;
 
-  const classPhrases = useMemo(
-    () => new Map(classes.map((entry) => [entry.name, entry.phrases] as const)),
+  const classPrompts = useMemo(
+    () =>
+      new Map(
+        classes.map(
+          (entry) =>
+            [
+              entry.name,
+              [
+                ...entry.phrases,
+                ...entry.references.map((reference) => reference.name),
+              ],
+            ] as const,
+        ),
+      ),
     [classes],
   );
   const confidences = useMemo(
-    () => ConfidenceOverview.of(results, classPhrases),
-    [results, classPhrases],
+    () => ConfidenceOverview.of(results, classPrompts),
+    [results, classPrompts],
   );
   const similarities = useMemo(
     () =>
       shownModeValue === "similarity" && !isCollapsed
-        ? ConfidenceOverview.of(results, classPhrases, "similarity")
+        ? ConfidenceOverview.of(results, classPrompts, "similarity")
         : null,
-    [shownModeValue, isCollapsed, results, classPhrases],
+    [shownModeValue, isCollapsed, results, classPrompts],
   );
   const overlaps = useMemo(
     () =>
@@ -477,7 +438,7 @@ export function ReviewPanel({
   const isConfidenceDeparted =
     !isSameValue(thresholds.default_minimum, standardMinimum, mode.step) ||
     Object.keys(thresholds.class_minimums).length > 0 ||
-    Object.keys(thresholds.phrase_minimums).length > 0;
+    Object.keys(thresholds.prompt_minimums).length > 0;
   const isOverlapDeparted =
     !isSameValue(suppression.overlap_threshold, standardOverlap, mode.step) ||
     Object.keys(suppression.class_overlap_thresholds).length > 0;
@@ -498,7 +459,7 @@ export function ReviewPanel({
         onThresholdsChange({
           default_minimum: standardMinimum,
           class_minimums: {},
-          phrase_minimums: {},
+          prompt_minimums: {},
         });
         break;
       case "similarity":
@@ -541,12 +502,6 @@ export function ReviewPanel({
           </div>
         )}
         <span className="grow" />
-        {!isCollapsed && isScoreBased && (
-          <LabelModeSelect
-            labelMode={labelMode}
-            onLabelModeChange={onLabelModeChange}
-          />
-        )}
         {!isCollapsed && shownModeValue === "overlap" && (
           <label
             className="review-switch"

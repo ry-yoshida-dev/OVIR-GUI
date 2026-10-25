@@ -10,7 +10,7 @@ from ovir_gui.models import ModelProfile
 from ovir_gui.prompting import PromptSignature, QueriedClass
 from ovir_gui.recognition import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
 from ovir_gui.results import ResultCatalog, ResultLibrary, StoredResult
-from ovir_gui.review import ClassThresholds, DuplicateSuppression, LabelModeChoice, ReviewFilter
+from ovir_gui.review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ovir_gui.storage import JsonValue, LabelModeStore, ResultsSnapshot, ResultsStore
 from ovir_gui.storage.results_manifest_reader import ResultsManifestReader
 
@@ -22,14 +22,14 @@ def classification_of(scores: tuple[float, ...], native_label_mode: LabelMode) -
         task=RecognitionTask.CLASSIFICATION,
         image_size=ImageSize(24, 16),
         class_scores=tuple(
-            ClassScore(class_name=name, score=score, logit=0.0, query_label=name, similarity=None)
+            ClassScore(class_name=name, score=score, logit=0.0, matched_prompt=name, similarity=None)
             for name, score in zip(CLASS_NAMES, scores, strict=True)
         ),
         native_label_mode=native_label_mode,
     )
 
 
-def filter_of(label_mode: LabelModeChoice, minimum: float = 0.5) -> ReviewFilter:
+def filter_of(label_mode: LabelMode | None, minimum: float = 0.5) -> ReviewFilter:
     return ReviewFilter(ClassThresholds(minimum), DuplicateSuppression(), label_mode)
 
 
@@ -47,34 +47,34 @@ def classification_profile(backend: str) -> ModelProfile:
 
 class TestLabelModes:
     """
-    A classification lists its best class in single-label mode and every class in multi-label mode; automatic follows
-    the scores of the model.
+    A classification lists its best class in single-label mode and every class in multi-label mode; until a mode is
+    chosen, each result follows the scores of its model.
     """
 
     def test_multi_label_keeps_every_class_reaching_its_minimum(self) -> None:
         result: FrameResult = classification_of((0.2, 0.9, 0.6), LabelMode.MULTI_LABEL)
-        review_filter: ReviewFilter = filter_of(LabelModeChoice.AUTOMATIC)
+        review_filter: ReviewFilter = filter_of(None)
         assert [finding.index for finding in review_filter.findings_of(result)] == [1, 2, 0]
         assert review_filter.passing_indices_of(result) == frozenset({1, 2})
 
     def test_single_label_keeps_only_the_best_class(self) -> None:
         result: FrameResult = classification_of((0.2, 0.9, 0.6), LabelMode.MULTI_LABEL)
-        review_filter: ReviewFilter = filter_of(LabelModeChoice.SINGLE_LABEL)
+        review_filter: ReviewFilter = filter_of(LabelMode.SINGLE_LABEL)
         assert [finding.index for finding in review_filter.findings_of(result)] == [1]
         assert review_filter.passing_indices_of(result) == frozenset({1})
 
-    def test_automatic_follows_softmax_scores(self) -> None:
+    def test_unchosen_mode_follows_softmax_scores(self) -> None:
         result: FrameResult = classification_of((0.2, 0.5, 0.3), LabelMode.SINGLE_LABEL)
-        assert filter_of(LabelModeChoice.AUTOMATIC).label_mode_of(result) is LabelMode.SINGLE_LABEL
-        assert filter_of(LabelModeChoice.MULTI_LABEL).label_mode_of(result) is LabelMode.MULTI_LABEL
+        assert filter_of(None).label_mode_of(result) is LabelMode.SINGLE_LABEL
+        assert filter_of(LabelMode.MULTI_LABEL).label_mode_of(result) is LabelMode.MULTI_LABEL
 
     def test_rejection_is_kept_by_class_position(self) -> None:
         result: FrameResult = classification_of((0.2, 0.9, 0.6), LabelMode.MULTI_LABEL)
         stored: StoredResult = StoredResult(result=result, signature=PromptSignature(())).with_accepted(
             frozenset({2}), False
         )
-        assert stored.kept_indices(filter_of(LabelModeChoice.MULTI_LABEL)) == frozenset({1})
-        assert stored.kept_indices(filter_of(LabelModeChoice.SINGLE_LABEL)) == frozenset({1})
+        assert stored.kept_indices(filter_of(LabelMode.MULTI_LABEL)) == frozenset({1})
+        assert stored.kept_indices(filter_of(LabelMode.SINGLE_LABEL)) == frozenset({1})
 
     def test_comparison_matches_each_kept_class(self) -> None:
         frame_key: FrameKey = FrameKey(Path("picture.png"))
@@ -84,7 +84,7 @@ class TestLabelModes:
         shown.record(frame_key, classification_of((0.2, 0.9, 0.6), LabelMode.MULTI_LABEL), signature)
         compared.record(frame_key, classification_of((0.7, 0.8, 0.1), LabelMode.MULTI_LABEL), signature)
         comparison: ProfileComparison = ProfileComparison.between(
-            shown, compared, [frame_key], CLASS_NAMES, filter_of(LabelModeChoice.AUTOMATIC)
+            shown, compared, [frame_key], CLASS_NAMES, filter_of(None)
         )
         assert comparison.pictures[0].shown_count == 2
         assert comparison.pictures[0].compared_count == 2
@@ -141,6 +141,6 @@ class TestLabelModes:
 
     def test_store_remembers_the_choice(self, tmp_path: Path) -> None:
         store: LabelModeStore = LabelModeStore(tmp_path)
-        assert store.load() is LabelModeChoice.AUTOMATIC
-        store.save(LabelModeChoice.MULTI_LABEL)
-        assert LabelModeStore(tmp_path).load() is LabelModeChoice.MULTI_LABEL
+        assert store.load() is None
+        store.save(LabelMode.MULTI_LABEL)
+        assert LabelModeStore(tmp_path).load() is LabelMode.MULTI_LABEL

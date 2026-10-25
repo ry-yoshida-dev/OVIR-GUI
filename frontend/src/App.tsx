@@ -110,8 +110,6 @@ export function App() {
     results: shown.markedResults,
     belowMinimum: display.belowMinimum,
     task,
-    isImageResultsShown,
-    hasVideos,
   });
   const { selectedRow, setSelectedRowKey } = resultRows;
   const classColors = useMemo(
@@ -160,7 +158,11 @@ export function App() {
   useEmbedding(state?.current?.path ?? null, state?.current?.frame ?? null);
   useGlobalShortcuts({
     onSelectTask: selectTask,
-    onExport: () => setOpenDialog({ kind: "export" }),
+    onExport: () =>
+      setOpenDialog({
+        kind: "export",
+        media: isImageResultsShown ? "image" : "video",
+      }),
     onToggleStatistics: () => setIsStatisticsOpen((isOpen) => !isOpen),
     onBrowse: () => setOpenDialog({ kind: "browse" }),
   });
@@ -302,7 +304,7 @@ export function App() {
               onToggleStatistics={() =>
                 setIsStatisticsOpen((isOpen) => !isOpen)
               }
-              onOpenExport={() => setOpenDialog({ kind: "export" })}
+              onOpenExport={(media) => setOpenDialog({ kind: "export", media })}
               onSelectRow={selectRow}
               onSetAccepted={setAccepted}
               onSeekChartedVideo={
@@ -350,10 +352,9 @@ export function App() {
         dialog={openDialog}
         state={state}
         classSetsVersion={workspace.classSetsVersion}
-        hasVideos={hasVideos}
-        isFiltered={resultRows.isFiltered}
-        filteredRows={resultRows.filteredRows}
-        listedFindingRows={resultRows.listedFindingRows}
+        imageExportRows={resultRows.imageExportRows}
+        imageListedRows={resultRows.images.listed}
+        videoExportRows={resultRows.videoExportRows}
         isLabelConfidenceShown={display.isConfidenceShown}
         call={call}
         runAction={runAction}

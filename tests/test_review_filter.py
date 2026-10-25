@@ -5,11 +5,11 @@ from ovir_gui.review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ovir_gui.storage import ClassThresholdStore, DuplicateSuppressionStore
 
 
-def finding_of(index: int, class_name: str, query_label: str, confidence: float, left: float) -> Finding:
+def finding_of(index: int, class_name: str, matched_prompt: str, confidence: float, left: float) -> Finding:
     return Finding(
         index=index,
         class_name=class_name,
-        query_label=query_label,
+        matched_prompt=matched_prompt,
         confidence=confidence,
         box=PixelBox(left, 0.0, left + 10.0, 10.0),
         area=100.0,
@@ -22,14 +22,14 @@ class TestReviewFilter:
     Findings pass when they reach the minimum of their phrase and are not a lower-scored duplicate of their class.
     """
 
-    def test_phrase_minimum_replaces_class_minimum(self) -> None:
+    def test_prompt_minimum_replaces_class_minimum(self) -> None:
         thresholds: ClassThresholds = ClassThresholds(0.2, {"car": 0.4}, {"car": {"suv": 0.8}})
         assert thresholds.minimum_of("car") == 0.4
         assert thresholds.minimum_of("car", "taxi") == 0.4
         assert thresholds.minimum_of("car", "suv") == 0.8
         assert thresholds.minimum_of("dog", "dog") == 0.2
 
-    def test_findings_below_their_phrase_minimum_fail(self) -> None:
+    def test_findings_below_their_prompt_minimum_fail(self) -> None:
         review_filter: ReviewFilter = ReviewFilter(
             ClassThresholds(0.3, {}, {"car": {"suv": 0.7}}), DuplicateSuppression()
         )
@@ -71,7 +71,7 @@ class TestReviewStores:
     Phrase minimums and suppressions survive a restart per task.
     """
 
-    def test_phrase_minimums_are_remembered(self, tmp_path: Path) -> None:
+    def test_prompt_minimums_are_remembered(self, tmp_path: Path) -> None:
         store: ClassThresholdStore = ClassThresholdStore(tmp_path)
         thresholds: ClassThresholds = ClassThresholds(0.3, {"car": 0.4}, {"car": {"suv": 0.6}})
         saved: dict[RecognitionTask, ClassThresholds] = store.load()

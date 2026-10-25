@@ -27,7 +27,7 @@ class PromptClass:
         If the class has no query.
     """
 
-    EXEMPLAR_LABEL: ClassVar[str] = "exemplars"
+    EXEMPLAR_LABEL: ClassVar[str] = "Exemplar boxes"
 
     name: str
     phrases: tuple[str, ...]
@@ -51,7 +51,7 @@ class PromptClass:
         return not self.phrases and not self.visual_examples
 
     @property
-    def query_labels(self) -> tuple[str, ...]:
+    def prompt_labels(self) -> tuple[str, ...]:
         """
         Labels of the queries in query order: phrases first, then reference images.
 

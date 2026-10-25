@@ -22,7 +22,7 @@ export function ScoreChartLabel({
       className={`score-chart-label${isExpandable ? " expandable" : ""}`}
       title={
         isExpandable
-          ? `${title}: click to ${isExpanded ? "fold" : "unfold"} its phrases`
+          ? `${title}: click to ${isExpanded ? "fold" : "unfold"} its prompts`
           : title
       }
       onClick={isExpandable ? onToggleExpanded : undefined}
@@ -34,11 +34,11 @@ export function ScoreChartLabel({
           ▸
         </span>
       )}
-      {level !== "phrase" && (
+      {level !== "prompt" && (
         <span className="score-chart-dot" style={{ background: color }} />
       )}
       <span className="score-chart-name">
-        {level === "phrase" ? `“${title}”` : title}
+        {level === "prompt" ? `“${title}”` : title}
       </span>
     </div>
   );

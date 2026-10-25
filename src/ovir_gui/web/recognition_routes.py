@@ -168,7 +168,7 @@ class RecognitionRoutes:
         @router.put("/thresholds")
         async def set_thresholds(body: ThresholdsBody) -> JsonObject:
             context.workspace.review.set_class_thresholds(
-                ClassThresholds(body.default_minimum, body.class_minimums, body.phrase_minimums)
+                ClassThresholds(body.default_minimum, body.class_minimums, body.prompt_minimums)
             )
             return {}
 

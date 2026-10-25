@@ -15,15 +15,12 @@ class JobPurpose(Enum):
         Every picture of the open media.
     UPDATE_OUTDATED : str
         Pictures recognized with other classes than the current ones.
-    EXPORT : str
-        Pictures without an up-to-date result, recognized before an export is written.
     """
 
     BACKGROUND = "background"
     RUN_CURRENT = "run_current"
     RUN_ALL = "run_all"
     UPDATE_OUTDATED = "update_outdated"
-    EXPORT = "export"
 
     @property
     def title(self) -> str:
@@ -44,8 +41,6 @@ class JobPurpose(Enum):
                 return "Infer All"
             case JobPurpose.UPDATE_OUTDATED:
                 return "Update Outdated"
-            case JobPurpose.EXPORT:
-                return "Export"
 
     @property
     def is_foreground(self) -> bool:
@@ -58,15 +53,3 @@ class JobPurpose(Enum):
             False only for background jobs.
         """
         return self is not JobPurpose.BACKGROUND
-
-    @property
-    def is_blocking(self) -> bool:
-        """
-        Whether the interface shows the job as a modal progress the user can only cancel.
-
-        Returns
-        -------
-        bool
-            True for exports.
-        """
-        return self is JobPurpose.EXPORT

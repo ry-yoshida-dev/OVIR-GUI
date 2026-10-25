@@ -101,7 +101,7 @@ class FakeRecognizerSession(RecognizerSession):
                         class_name=name,
                         score=round(0.9 - 0.2 * position - frame_offset, 4),
                         logit=float(position),
-                        query_label=name,
+                        matched_prompt=name,
                         similarity=round(0.3 - 0.05 * position, 4),
                     )
                     for position, name in enumerate(names)
@@ -110,7 +110,7 @@ class FakeRecognizerSession(RecognizerSession):
         instances: list[RecognizedInstance] = [
             RecognizedInstance(
                 class_name=name,
-                query_label=name,
+                matched_prompt=name,
                 confidence=round(0.9 - 0.2 * position - frame_offset, 4),
                 box=PixelBox(2.0 + 8.0 * position, 2.0, 10.0 + 8.0 * position, 20.0),
             )
@@ -120,7 +120,7 @@ class FakeRecognizerSession(RecognizerSession):
             instances.append(
                 RecognizedInstance(
                     class_name=names[0],
-                    query_label=names[0],
+                    matched_prompt=names[0],
                     confidence=self.DUPLICATE_CONFIDENCE,
                     box=PixelBox(3.0, 2.0, 11.0, 20.0),
                 )

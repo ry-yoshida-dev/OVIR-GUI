@@ -1,7 +1,7 @@
 import { api, errorMessage } from "../api/client";
-import type { ExportChoice, ExportScopeValue, PictureFindings, WorkspaceState } from "../api/types";
+import type { ExportChoice, MediaKindValue, PictureFindings, WorkspaceState } from "../api/types";
 import type { Call, RunAction } from "../hooks/useActionRunner";
-import { groupFindings, type TableRow } from "../lib/resultTable";
+import { listedPictures, type TableRow } from "../lib/resultTable";
 import { ClassSetDialog } from "./ClassSetDialog";
 import { ClassTextDialog } from "./ClassTextDialog";
 import { ExportDialog } from "./ExportDialog";
@@ -10,7 +10,7 @@ import { ServerBrowserDialog } from "./ServerBrowserDialog";
 
 export type AppDialog =
   | { kind: "browse" }
-  | { kind: "export" }
+  | { kind: "export"; media: MediaKindValue }
   | { kind: "class-sets" }
   | { kind: "class-text" }
   | { kind: "reference"; classIndex: number };
@@ -19,10 +19,9 @@ interface AppDialogsProps {
   dialog: AppDialog | null;
   state: WorkspaceState;
   classSetsVersion: number;
-  hasVideos: boolean;
-  isFiltered: boolean;
-  filteredRows: TableRow[];
-  listedFindingRows: TableRow[];
+  imageExportRows: TableRow[];
+  imageListedRows: TableRow[];
+  videoExportRows: TableRow[];
   isLabelConfidenceShown: boolean;
   call: Call;
   runAction: RunAction;
@@ -46,26 +45,25 @@ export function AppDialogs({
   dialog,
   state,
   classSetsVersion,
-  hasVideos,
-  isFiltered,
-  filteredRows,
-  listedFindingRows,
+  imageExportRows,
+  imageListedRows,
+  videoExportRows,
   isLabelConfidenceShown,
   call,
   runAction,
   onReport,
   onClose,
 }: AppDialogsProps) {
-  const listedPayloadOf = (scope: ExportScopeValue): PictureFindings[] | null =>
-    scope === "listed" && isFiltered ? groupFindings(filteredRows) : null;
+  const listedPayloadOf = (media: MediaKindValue): PictureFindings[] | null =>
+    media === "image" ? listedPictures(imageListedRows) : null;
 
-  const exportResults = (choice: ExportChoice): Promise<boolean> => {
-    return runAction((isSkippingApproved) =>
+  const exportResults = (media: MediaKindValue, choice: ExportChoice): Promise<boolean> => {
+    return runAction(() =>
       api.exportResults({
         ...choice,
-        listed_findings: listedPayloadOf(choice.scope),
+        media,
+        listed_findings: listedPayloadOf(media),
         is_label_confidence_shown: isLabelConfidenceShown,
-        is_skipping_approved: isSkippingApproved,
       }),
     );
   };
@@ -98,19 +96,24 @@ export function AppDialogs({
           onClose={onClose}
         />
       );
-    case "export":
+    case "export": {
+      const { media } = dialog;
+      const exportRows = media === "image" ? imageExportRows : videoExportRows;
       return (
         <ExportDialog
-          hasVideos={hasVideos}
-          listedFindingCount={listedFindingRows.length}
-          onExport={exportResults}
+          media={media}
+          exportRows={exportRows}
+          listedPictureCount={media === "image" ? listedPictures(imageListedRows).length : null}
+          onExport={(choice) => exportResults(media, choice)}
           onLoadPreview={(choice) =>
-            api.exportPreview({ ...choice, listed_findings: listedPayloadOf(choice.scope) })
+            api.exportPreview({ ...choice, media, listed_findings: listedPayloadOf(media) })
           }
-          onDownloadCsv={() => void saveCsv(listedFindingRows)}
+          onInferAll={() => void runAction((isSkippingApproved) => api.runAll(isSkippingApproved))}
+          onDownloadCsv={() => void saveCsv(exportRows)}
           onClose={onClose}
         />
       );
+    }
     case "class-sets":
       return (
         <ClassSetDialog

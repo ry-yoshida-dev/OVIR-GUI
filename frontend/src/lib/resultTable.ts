@@ -165,8 +165,8 @@ export function cellValue(
       return finding.is_accepted ? KEPT_TEXT : REJECTED_TEXT;
     case "class":
       return finding.class_name;
-    case "query":
-      return finding.query;
+    case "prompt":
+      return finding.matched_prompt;
     case "confidence":
       return finding.confidence;
     case "area":
@@ -289,6 +289,27 @@ export function groupFindings(rows: TableRow[]): PictureFindings[] {
       groups.set(pictureKey, group);
     }
     group.indices.push(row.finding.index);
+  }
+  return [...groups.values()];
+}
+
+export function isExportedRow(row: TableRow): boolean {
+  return row.kind === "finding" && row.finding.is_accepted && row.finding.is_passing;
+}
+
+/**
+ * Pictures some rows list, each with its exported findings; a picture listed without any keeps an empty list.
+ */
+export function listedPictures(rows: TableRow[]): PictureFindings[] {
+  const groups = new Map<string, PictureFindings>();
+  for (const row of rows) {
+    const pictureKey = pictureKeyOf(row.path, row.frame);
+    let group = groups.get(pictureKey);
+    if (group === undefined) {
+      group = { path: row.path, frame: row.frame, indices: [] };
+      groups.set(pictureKey, group);
+    }
+    if (row.kind === "finding" && isExportedRow(row)) group.indices.push(row.finding.index);
   }
   return [...groups.values()];
 }

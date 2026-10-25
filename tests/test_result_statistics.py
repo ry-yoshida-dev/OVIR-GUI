@@ -24,7 +24,7 @@ SIZE: ImageSize = ImageSize(200, 100)
 def instance_of(class_name: str, confidence: float, left: float, width: float = 40.0) -> RecognizedInstance:
     return RecognizedInstance(
         class_name=class_name,
-        query_label=class_name,
+        matched_prompt=class_name,
         confidence=confidence,
         box=PixelBox(left, 0.0, left + width, 40.0),
     )
@@ -39,7 +39,7 @@ def classification_of(*scores: tuple[str, float]) -> FrameResult:
         task=RecognitionTask.CLASSIFICATION,
         image_size=SIZE,
         class_scores=tuple(
-            ClassScore(class_name=name, score=score, logit=score, query_label=name, similarity=None)
+            ClassScore(class_name=name, score=score, logit=score, matched_prompt=name, similarity=None)
             for name, score in scores
         ),
     )

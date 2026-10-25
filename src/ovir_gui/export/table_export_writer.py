@@ -74,7 +74,7 @@ class TableExportWriter:
                         row.extend(f"{scores[name]:.6f}" if name in scores else "" for name in class_names)
                     writer.writerow(row)
                 return target
-            header = ["media", "frame", "seconds", "class", "query"]
+            header = ["media", "frame", "seconds", "class", "matched_prompt"]
             if self._is_confidence_included:
                 header.append("confidence")
             header.extend(["x_min", "y_min", "x_max", "y_max", "area"])
@@ -87,7 +87,7 @@ class TableExportWriter:
                         self._frame_text(item),
                         self._seconds_text(item),
                         finding.class_name,
-                        finding.query_label,
+                        finding.matched_prompt,
                     ]
                     if self._is_confidence_included:
                         row.append(f"{finding.confidence:.6f}")
@@ -137,7 +137,7 @@ class TableExportWriter:
                             "score": score.score,
                             "logit": score.logit,
                             "similarity": score.similarity,
-                            "query": score.query_label,
+                            "matched_prompt": score.matched_prompt,
                         }
                         for score in item.result.class_scores
                     }
@@ -146,7 +146,7 @@ class TableExportWriter:
                 for instance in item.result.instances:
                     instance_entry: dict[str, JsonValue] = {
                         "class": instance.class_name,
-                        "query": instance.query_label,
+                        "matched_prompt": instance.matched_prompt,
                         "box": list(instance.box.xyxy),
                     }
                     if self._is_confidence_included:

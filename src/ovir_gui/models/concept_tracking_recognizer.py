@@ -49,7 +49,7 @@ class ConceptTrackingRecognizer(Recognizer[ConceptTrackingModel]):
             self._stream = self._tracker.start_stream(library_prompt)
         self._position.advance(picture.frame_key, prompt)
         frame: ConceptFrame = self._stream.track_next(picture.image)
-        query_labels: tuple[str, ...] = prompt.query_labels
+        prompt_labels: tuple[str, ...] = prompt.prompt_labels
         class_ids: list[int] = [int(class_id) for class_id in frame.instances.class_ids.tolist()]
         query_ids: list[int] = [int(query_id) for query_id in frame.instances.query_ids.tolist()]
         confidences: list[float] = [float(confidence) for confidence in frame.instances.confidences.tolist()]
@@ -62,7 +62,7 @@ class ConceptTrackingRecognizer(Recognizer[ConceptTrackingModel]):
             instances.append(
                 RecognizedInstance(
                     class_name=frame.instances.class_names[class_ids[index]],
-                    query_label=f"{query_labels[query_ids[index]]} · track {track_ids[index]}",
+                    matched_prompt=f"{prompt_labels[query_ids[index]]} · track {track_ids[index]}",
                     confidence=confidence,
                     box=mask.box,
                     mask=mask,

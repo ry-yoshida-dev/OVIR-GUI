@@ -130,7 +130,6 @@ class InferenceRunner:
             title=f"{job.purpose.title}: {job.frame_keys[0].path.name}",
             processed_count=job.control.processed_count,
             total_count=len(job.frame_keys),
-            is_blocking=False,
         )
 
     @property
@@ -328,9 +327,7 @@ class InferenceRunner:
         self._planner.unpin()
         self._planner.resume()
         self._profiles.switch_to(job.profile)
-        self._working.progress = RunProgress(
-            title=purpose.title, processed_count=0, total_count=len(frame_keys), is_blocking=purpose.is_blocking
-        )
+        self._working.progress = RunProgress(title=purpose.title, processed_count=0, total_count=len(frame_keys))
         self._engine.submit(job)
         return ActionReply.done()
 

@@ -1,6 +1,11 @@
 import { type DragEvent, useMemo, useRef, useState } from "react";
 import { api, attempt } from "../api/client";
-import type { ClassEntry, ClassSetState } from "../api/types";
+import type {
+  ClassEntry,
+  ClassSetState,
+  LabelModeState,
+  LabelModeValue,
+} from "../api/types";
 import { SWATCH_FALLBACK_COLOR } from "../lib/frameView";
 import { toggledMembership } from "../lib/sets";
 import { ClassRow } from "./classTree/ClassRow";
@@ -18,12 +23,15 @@ import { PhraseRow } from "./classTree/PhraseRow";
 import { ReferenceRow } from "./classTree/ReferenceRow";
 import { useDialogs } from "./DialogHost";
 import { SaveGlyph, TrashGlyph } from "./Glyphs";
+import { LabelModeSwitch } from "./LabelModeSwitch";
 import { type MenuEntry, useMenu } from "./Menu";
 
 interface ClassEditorProps {
   classes: ClassEntry[];
   classSet: ClassSetState;
   isImagePromptSupported: boolean;
+  labelMode: LabelModeState | null;
+  onLabelModeChange: (labelMode: LabelModeValue) => void;
   onReport: (message: string) => void;
   onAddImagePrompt: (classIndex: number) => void;
   onOpenLibrary: () => void;
@@ -36,6 +44,8 @@ export function ClassEditor({
   classes,
   classSet,
   isImagePromptSupported,
+  labelMode,
+  onLabelModeChange,
   onReport,
   onAddImagePrompt,
   onOpenLibrary,
@@ -306,6 +316,12 @@ export function ClassEditor({
           ⋯
         </button>
       </div>
+      {labelMode !== null && (
+        <div className="row label-mode-row">
+          <span className="muted small">Label type</span>
+          <LabelModeSwitch labelMode={labelMode} onChange={onLabelModeChange} />
+        </div>
+      )}
       <div
         ref={treeElement}
         className="list class-tree"

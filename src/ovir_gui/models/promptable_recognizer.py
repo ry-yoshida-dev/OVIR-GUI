@@ -74,7 +74,7 @@ class PromptableRecognizer(Recognizer[PromptableSegmentationModel]):
             return None
         return RecognizedInstance(
             class_name=mark.class_name,
-            query_label=mark.label,
+            matched_prompt=mark.label,
             confidence=float(segmentation.score),
             box=mask.box,
             mask=mask,

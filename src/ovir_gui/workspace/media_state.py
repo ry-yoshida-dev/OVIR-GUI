@@ -25,28 +25,6 @@ class MediaState(Enum):
     OUTDATED = "outdated"
     FAILED = "failed"
 
-    @property
-    def color(self) -> str:
-        """
-        Color of the status dot.
-
-        Returns
-        -------
-        str
-            ``#rrggbb``.
-        """
-        match self:
-            case MediaState.NOT_ANALYZED:
-                return "#9aa0a6"
-            case MediaState.PARTIAL:
-                return "#4363d8"
-            case MediaState.DONE:
-                return "#3cb44b"
-            case MediaState.OUTDATED:
-                return "#f58231"
-            case MediaState.FAILED:
-                return "#e6194b"
-
     @classmethod
     def of_counts(
         cls, expected_count: int, recognized_count: int, outdated_count: int, failed_count: int

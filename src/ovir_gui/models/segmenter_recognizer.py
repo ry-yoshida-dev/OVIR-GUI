@@ -85,7 +85,7 @@ class SegmenterRecognizer(Recognizer[SegmentationModel]):
         results: list[SegmentationResult] = self._segmenter.segment_images(
             [picture.image for picture in pictures], library_prompt, exemplars
         )
-        return [self._convert(result, prompt.query_labels) for result in results]
+        return [self._convert(result, prompt.prompt_labels) for result in results]
 
     @classmethod
     def _exemplars_of(cls, prompt: LabeledPrompt, frame_prompt: FramePrompt) -> ImageExemplars | None:
@@ -120,7 +120,7 @@ class SegmenterRecognizer(Recognizer[SegmentationModel]):
         )
 
     @staticmethod
-    def _convert(result: SegmentationResult, query_labels: tuple[str, ...]) -> FrameResult:
+    def _convert(result: SegmentationResult, prompt_labels: tuple[str, ...]) -> FrameResult:
         class_ids: list[int] = [int(class_id) for class_id in result.class_ids.tolist()]
         query_ids: list[int] = [int(query_id) for query_id in result.query_ids.tolist()]
         confidences: list[float] = [float(confidence) for confidence in result.confidences.tolist()]
@@ -132,7 +132,7 @@ class SegmenterRecognizer(Recognizer[SegmentationModel]):
             instances.append(
                 RecognizedInstance(
                     class_name=result.class_names[class_ids[index]],
-                    query_label=query_labels[query_ids[index]],
+                    matched_prompt=prompt_labels[query_ids[index]],
                     confidence=confidence,
                     box=mask.box,
                     mask=mask,

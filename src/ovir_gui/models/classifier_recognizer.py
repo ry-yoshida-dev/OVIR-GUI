@@ -36,17 +36,17 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         images: list[Image.Image] = [picture.image for picture in pictures]
         library_prompt: Prompt = self._prompts.build(prompt)
-        query_labels: tuple[str, ...] = prompt.query_labels
+        prompt_labels: tuple[str, ...] = prompt.prompt_labels
         results: list[ClassificationResult] = self._classifier.classify_images(
             images, library_prompt, self._model.tiling
         )
         return [
-            self._convert(result, query_labels, ImageSize(width=image.width, height=image.height))
+            self._convert(result, prompt_labels, ImageSize(width=image.width, height=image.height))
             for image, result in zip(images, results, strict=True)
         ]
 
     def _convert(
-        self, result: ClassificationResult, query_labels: tuple[str, ...], image_size: ImageSize
+        self, result: ClassificationResult, prompt_labels: tuple[str, ...], image_size: ImageSize
     ) -> FrameResult:
         matched_query_ids: list[int] = [int(query_id) for query_id in result.matched_query_ids.tolist()]
         logit_scale: float = self._classifier.logit_scale
@@ -59,7 +59,7 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
                     class_name=class_name,
                     score=float(result.scores[class_id]),
                     logit=float(result.class_logits[class_id]),
-                    query_label=query_labels[matched_query_ids[class_id]],
+                    matched_prompt=prompt_labels[matched_query_ids[class_id]],
                     similarity=(float(result.class_logits[class_id]) - logit_bias) / logit_scale,
                 )
                 for class_id, class_name in enumerate(result.class_names)

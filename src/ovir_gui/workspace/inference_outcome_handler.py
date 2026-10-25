@@ -7,8 +7,6 @@ from ..results import ResultLibrary
 from ..storage import ResultsSnapshot
 from .background_planner import BackgroundPlanner
 from .deferred_save import DeferredSave
-from .export_coordinator import ExportCoordinator
-from .export_request import ExportRequest
 from .inference_job import InferenceJob
 from .job_purpose import JobPurpose
 from .job_summary import JobSummary
@@ -21,7 +19,7 @@ from .workspace_topic import WorkspaceTopic
 class InferenceOutcomeHandler:
     """
     ``InferenceListener`` of the workspace: stores what the ``InferenceEngine`` recognized, reports the progress and
-    the end of every job, writes the export a job ran for, and continues in the background once a job ended.
+    the end of every job, and continues in the background once a job ended.
     """
 
     def __init__(
@@ -30,11 +28,9 @@ class InferenceOutcomeHandler:
         library: ResultLibrary,
         planner: BackgroundPlanner,
         notifier: StatusNotifier,
-        exports: ExportCoordinator,
         results_save: DeferredSave[ResultsSnapshot],
         is_worker_idle: Callable[[], bool],
         continue_background: Callable[[], None],
-        resume_background: Callable[[], None],
     ) -> None:
         """
         Parameters
@@ -47,26 +43,20 @@ class InferenceOutcomeHandler:
             Background state, remembering failures and pauses.
         notifier : StatusNotifier
             Views told about the jobs.
-        exports : ExportCoordinator
-            Export waiting for its job.
         results_save : DeferredSave[ResultsSnapshot]
             Save of the results after every change.
         is_worker_idle : Callable[[], bool]
             Whether the inference worker has nothing to do, so the activity message can be cleared.
         continue_background : Callable[[], None]
             Starts the next background job, if any.
-        resume_background : Callable[[], None]
-            Resumes the background and starts its next job.
         """
         self._working: WorkingState = working
         self._library: ResultLibrary = library
         self._planner: BackgroundPlanner = planner
         self._notifier: StatusNotifier = notifier
-        self._exports: ExportCoordinator = exports
         self._results_save: DeferredSave[ResultsSnapshot] = results_save
         self._is_worker_idle: Callable[[], bool] = is_worker_idle
         self._continue_background: Callable[[], None] = continue_background
-        self._resume_background: Callable[[], None] = resume_background
 
     def on_busy_changed(self, is_busy: bool) -> None:
         """
@@ -133,13 +123,12 @@ class InferenceOutcomeHandler:
             title=job.purpose.title,
             processed_count=job.control.processed_count,
             total_count=len(job.frame_keys),
-            is_blocking=job.purpose.is_blocking,
         )
         self._notifier.changed(WorkspaceTopic.STATE)
 
     def on_finished(self, job: InferenceJob, summary: JobSummary) -> None:
         """
-        Report an ended job, write the export it ran for, and continue in the background.
+        Report an ended job and continue in the background.
 
         Parameters
         ----------
@@ -165,12 +154,6 @@ class InferenceOutcomeHandler:
                 self._notifier.inform(
                     f"{job.purpose.title} {verb} {summary.recognized_count} pictures{unreadable_note}."
                 )
-            case JobPurpose.EXPORT:
-                request: ExportRequest | None = self._exports.take_pending()
-                if summary.is_cancelled:
-                    self._notifier.inform(f"Export cancelled after {summary.recognized_count} pictures.")
-                elif request is not None:
-                    self._exports.write(job.profile, request, self._resume_background)
         self._clear_activity_when_idle()
         self._notifier.changed(WorkspaceTopic.STATE)
         self._continue_background()
@@ -187,8 +170,6 @@ class InferenceOutcomeHandler:
             Error message.
         """
         self._clear_activity_when_idle()
-        if job.purpose is JobPurpose.EXPORT:
-            self._exports.hold(None)
         if job.purpose.is_foreground:
             self._notifier.alert(f"{job.purpose.title} failed", message)
         else:

@@ -5,6 +5,7 @@ import {
   buildRows,
   filterOfScope,
   filterRows,
+  isExportedRow,
   isRowInScope,
   listedIndices,
   type ResultScope,
@@ -18,8 +19,6 @@ interface ResultRowsOptions {
   results: ResultsPayload | null;
   belowMinimum: BelowMinimumStyle;
   task: TaskValue;
-  isImageResultsShown: boolean;
-  hasVideos: boolean;
 }
 
 export interface ScopedRows {
@@ -33,7 +32,8 @@ export interface ResultRows {
   rows: TableRow[];
   images: ScopedRows;
   videos: ScopedRows;
-  listedFindingRows: TableRow[];
+  imageExportRows: TableRow[];
+  videoExportRows: TableRow[];
   listed: Map<string, Set<number>>;
   isFiltered: boolean;
   filter: TableFilter;
@@ -70,8 +70,6 @@ export function useResultRows({
   results,
   belowMinimum,
   task,
-  isImageResultsShown,
-  hasVideos,
 }: ResultRowsOptions): ResultRows {
   const [filter, setFilter] = useState<TableFilter>({});
   const [order, setOrder] = useState<SortOrder | null>(null);
@@ -98,13 +96,13 @@ export function useResultRows({
   );
   const images = useScopedRows(allRows, "images", filter, order);
   const videos = useScopedRows(allRows, "videos", filter, order);
-  const listedFindingRows = useMemo(
-    () =>
-      [
-        ...(isImageResultsShown ? images.listed : []),
-        ...(hasVideos ? videos.listed : []),
-      ].filter((row) => row.kind === "finding" && row.finding.is_passing),
-    [isImageResultsShown, images.listed, hasVideos, videos.listed],
+  const imageExportRows = useMemo(
+    () => images.listed.filter(isExportedRow),
+    [images.listed],
+  );
+  const videoExportRows = useMemo(
+    () => videos.inScope.filter(isExportedRow),
+    [videos.inScope],
   );
   const listed = useMemo(() => listedIndices(filteredRows), [filteredRows]);
   const rowsByKey = useMemo(
@@ -130,7 +128,8 @@ export function useResultRows({
     rows,
     images,
     videos,
-    listedFindingRows,
+    imageExportRows,
+    videoExportRows,
     listed,
     isFiltered: Object.keys(filter).length > 0,
     filter,

@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from ..recognition import Finding, FrameResult, LabelMode, PixelBox
 from .class_thresholds import ClassThresholds
 from .duplicate_suppression import DuplicateSuppression
-from .label_mode_choice import LabelModeChoice
 
 
 class ReviewFilter:
@@ -19,7 +18,7 @@ class ReviewFilter:
         self,
         thresholds: ClassThresholds,
         suppression: DuplicateSuppression,
-        label_mode: LabelModeChoice = LabelModeChoice.AUTOMATIC,
+        label_mode: LabelMode | None = None,
     ) -> None:
         """
         Parameters
@@ -28,12 +27,13 @@ class ReviewFilter:
             Minimum confidences.
         suppression : DuplicateSuppression
             Removal of overlapping boxes of one class.
-        label_mode : LabelModeChoice, optional
-            How many classes a classified picture may keep.
+        label_mode : LabelMode | None, optional
+            How many classes a classified picture may keep; ``None`` until the user chooses, following the native
+            mode of each result.
         """
         self._thresholds: ClassThresholds = thresholds
         self._suppression: DuplicateSuppression = suppression
-        self._label_mode: LabelModeChoice = label_mode
+        self._label_mode: LabelMode | None = label_mode
 
     @property
     def thresholds(self) -> ClassThresholds:
@@ -60,14 +60,14 @@ class ReviewFilter:
         return self._suppression
 
     @property
-    def label_mode(self) -> LabelModeChoice:
+    def label_mode(self) -> LabelMode | None:
         """
         Label mode chosen for classifications.
 
         Returns
         -------
-        LabelModeChoice
-            Chosen mode, possibly automatic.
+        LabelMode | None
+            Chosen mode; ``None`` until the user chooses one.
         """
         return self._label_mode
 
@@ -83,9 +83,9 @@ class ReviewFilter:
         Returns
         -------
         LabelMode
-            Chosen mode, or the native mode of the result when automatic.
+            Chosen mode, or the native mode of the result until one is chosen.
         """
-        return self._label_mode.resolved(result.native_label_mode)
+        return result.native_label_mode if self._label_mode is None else self._label_mode
 
     def findings_of(self, result: FrameResult) -> tuple[Finding, ...]:
         """
@@ -136,7 +136,7 @@ class ReviewFilter:
         return frozenset(
             finding.index
             for finding in findings
-            if self._thresholds.is_reaching_minimum(finding.class_name, finding.query_label, finding.confidence)
+            if self._thresholds.is_reaching_minimum(finding.class_name, finding.matched_prompt, finding.confidence)
         )
 
     def passing_indices(self, findings: Sequence[Finding]) -> frozenset[int]:

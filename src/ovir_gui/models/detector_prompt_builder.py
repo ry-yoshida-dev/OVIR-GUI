@@ -30,7 +30,7 @@ class DetectorPromptBuilder:
         Returns
         -------
         Prompt
-            Prompt whose queries follow ``prompt.query_labels``.
+            Prompt whose queries follow ``prompt.prompt_labels``.
         """
         used_queries: dict[VisualExample, VisualQuery] = {}
         class_queries: dict[str, tuple[PromptQuery, ...]] = {}

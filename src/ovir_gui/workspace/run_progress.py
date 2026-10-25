@@ -14,11 +14,8 @@ class RunProgress:
         Pictures handed back so far.
     total_count : int
         Pictures of the job.
-    is_blocking : bool
-        Whether the interface shows a modal progress.
     """
 
     title: str
     processed_count: int
     total_count: int
-    is_blocking: bool

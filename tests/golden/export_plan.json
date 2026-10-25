@@ -1,57 +1,90 @@
 {
+  "crop_image_formats": [
+    {
+      "label": "JPEG",
+      "value": "jpeg"
+    },
+    {
+      "label": "PNG (lossless)",
+      "value": "png"
+    }
+  ],
   "default_directory": "<volatile>",
   "formats": [
     {
+      "group_label": "Tables",
       "is_confidence_supported": true,
-      "label": "CSV table",
+      "label": "CSV",
+      "purpose": "annotations",
       "value": "csv"
     },
     {
+      "group_label": "Tables",
       "is_confidence_supported": true,
-      "label": "JSON document",
+      "label": "JSON",
+      "purpose": "annotations",
       "value": "json"
     },
     {
+      "group_label": "Training formats",
       "is_confidence_supported": true,
       "label": "MS COCO boxes (JSON)",
+      "purpose": "annotations",
       "value": "coco"
     },
     {
+      "group_label": "Training formats",
       "is_confidence_supported": true,
       "label": "YOLO boxes (TXT)",
+      "purpose": "annotations",
       "value": "yolo"
     },
     {
+      "group_label": "Training formats",
       "is_confidence_supported": false,
       "label": "Pascal VOC (XML)",
+      "purpose": "annotations",
       "value": "pascal_voc"
     },
     {
+      "group_label": "Training formats",
       "is_confidence_supported": false,
       "label": "LabelMe rectangles (JSON)",
+      "purpose": "annotations",
       "value": "labelme"
     },
     {
+      "group_label": "Training formats",
       "is_confidence_supported": false,
       "label": "Create ML (JSON)",
+      "purpose": "annotations",
       "value": "create_ml"
+    },
+    {
+      "group_label": "",
+      "is_confidence_supported": true,
+      "label": "Cropped objects per class",
+      "purpose": "crops",
+      "value": "cropped_objects"
     }
   ],
+  "is_pending_inferable": true,
   "issue": "",
+  "media": "image",
   "model_name": "grounding_dino/original_tiny",
   "options_text": "auto · fp32 · NMS off",
   "pending_count": 0,
-  "picture_count": 5,
-  "scopes": [
+  "picture_count": 2,
+  "purposes": [
     {
-      "description": "Leaves out rejected findings and those below the class minimums.",
-      "label": "Every kept finding",
-      "value": "kept"
+      "description": "Files listing every finding",
+      "label": "Annotations",
+      "value": "annotations"
     },
     {
-      "description": "Also leaves out findings hidden by the filters of the result table.",
-      "label": "Only listed findings",
-      "value": "listed"
+      "description": "Each object as its own image, in a folder per class",
+      "label": "Crops",
+      "value": "crops"
     }
   ],
   "task": "detection"

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { MediaEntry, PictureKey } from "../api/types";
+import type { SectionName } from "../hooks/useLayoutState";
 import { groupMedia } from "../lib/mediaGroups";
 import { effectiveMediaSelection } from "../lib/mediaSelection";
 import { clamp } from "../lib/numbers";
 import { withMembership } from "../lib/sets";
 import { MediaKindGlyph } from "./MediaKindGlyph";
+import { MediaStatusMark } from "./MediaStatusMark";
+import { MediaStatusNote } from "./MediaStatusNote";
 import { useMenu } from "./Menu";
 import { MixedCheckbox } from "./MixedCheckbox";
 
@@ -13,6 +16,8 @@ interface MediaListProps {
   currentPath: string | null;
   backgroundKey: PictureKey | null;
   checkedPaths: ReadonlySet<string>;
+  isCollapsed: (section: SectionName) => boolean;
+  onToggleGroup: (section: SectionName) => void;
   onCheckedChange: (paths: Set<string>) => void;
   onSelect: (path: string) => void;
   onRemove: (paths: string[]) => void;
@@ -23,6 +28,8 @@ export function MediaList({
   currentPath,
   backgroundKey,
   checkedPaths,
+  isCollapsed,
+  onToggleGroup,
   onCheckedChange,
   onSelect,
   onRemove,
@@ -30,16 +37,24 @@ export function MediaList({
   const container = useRef<HTMLDivElement>(null);
   const menu = useMenu();
   const groups = useMemo(() => groupMedia(media), [media]);
+  const shownMedia = groups.filter((group) => !isCollapsed(group.section)).flatMap((group) => group.entries);
+
+  const currentGroup = groups.find((group) => group.entries.some((entry) => entry.path === currentPath));
+  const isCurrentFolded = currentGroup !== undefined && isCollapsed(currentGroup.section);
 
   useEffect(() => {
-    if (currentPath === null) return;
-    const element = container.current?.querySelector<HTMLElement>(`[data-path="${CSS.escape(currentPath)}"]`);
-    element?.scrollIntoView({ block: "nearest" });
+    if (currentGroup !== undefined && isCurrentFolded) onToggleGroup(currentGroup.section);
   }, [currentPath]);
 
+  useEffect(() => {
+    if (currentPath === null || isCurrentFolded) return;
+    const element = container.current?.querySelector<HTMLElement>(`[data-path="${CSS.escape(currentPath)}"]`);
+    element?.scrollIntoView({ block: "nearest" });
+  }, [currentPath, isCurrentFolded]);
+
   const step = (delta: number) => {
-    const index = media.findIndex((entry) => entry.path === currentPath);
-    const next = media[clamp(index + delta, 0, media.length - 1)];
+    const index = shownMedia.findIndex((entry) => entry.path === currentPath);
+    const next = shownMedia[clamp(index + delta, 0, shownMedia.length - 1)];
     if (next !== undefined && next.path !== currentPath) onSelect(next.path);
   };
 
@@ -73,9 +88,20 @@ export function MediaList({
         }}
       >
         {media.length === 0 && <div className="list-item faint">Nothing open.</div>}
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const isGroupCollapsed = isCollapsed(group.section);
+          const doneCount = group.entries.filter((entry) => entry.state === "done").length;
+          return (
           <div key={group.kind} className="list-group" role="group" aria-label={group.label}>
-            <div className="list-group-heading">
+            <div
+              className="list-group-heading is-toggle"
+              aria-expanded={!isGroupCollapsed}
+              title={isGroupCollapsed ? `Show the ${group.label.toLowerCase()}` : `Fold the ${group.label.toLowerCase()}`}
+              onClick={() => onToggleGroup(group.section)}
+            >
+              <span className="list-group-toggle" aria-hidden="true">
+                {isGroupCollapsed ? "▸" : "▾"}
+              </span>
               <MixedCheckbox
                 checkedCount={group.entries.filter((entry) => checkedPaths.has(entry.path)).length}
                 totalCount={group.entries.length}
@@ -85,11 +111,14 @@ export function MediaList({
               <MediaKindGlyph kind={group.kind} />
               <span>{group.label}</span>
               <span className="faint">{group.entries.length}</span>
+              <span className="list-group-progress faint">
+                {doneCount}/{group.entries.length} inferred
+              </span>
             </div>
-            {group.entries.map((entry) => {
+            {!isGroupCollapsed && group.entries.map((entry) => {
               const isCurrent = entry.path === currentPath;
               const isChecked = checkedPaths.has(entry.path);
-              const isRecognizing = backgroundKey?.path === entry.path;
+              const isInferring = backgroundKey?.path === entry.path;
               return (
                 <div
                   key={entry.path}
@@ -117,21 +146,15 @@ export function MediaList({
                     onClick={(event) => event.stopPropagation()}
                     onChange={(event) => onCheckedChange(withMembership(checkedPaths, entry.path, event.target.checked))}
                   />
-                  <span
-                    className="dot"
-                    style={{
-                      borderColor: entry.color,
-                      background: entry.state === "done" || entry.state === "outdated" ? entry.color : "transparent",
-                    }}
-                  />
+                  <MediaStatusMark entry={entry} isInferring={isInferring} />
                   <span className="name">{entry.name}</span>
-                  {isRecognizing && <span className="faint small">inferring…</span>}
-                  <span className="muted small">{entry.count_text}</span>
+                  <MediaStatusNote entry={entry} isInferring={isInferring} />
                 </div>
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
       {menu.element}
     </>

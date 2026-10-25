@@ -5,7 +5,7 @@ import { ResetGlyph } from "./Glyphs";
 import { ScoreChartLabel } from "./ScoreChartLabel";
 import { ScoreHistogramChart } from "./ScoreHistogramChart";
 
-export type ScoreChartLevel = "overall" | "class" | "phrase";
+export type ScoreChartLevel = "overall" | "class" | "prompt";
 
 interface ScoreChartRowProps {
   title: string;
@@ -29,7 +29,7 @@ interface ScoreChartRowProps {
 export const CHART_HEIGHTS: Record<ScoreChartLevel, number> = {
   overall: 44,
   class: 44,
-  phrase: 30,
+  prompt: 30,
 };
 
 export function ScoreChartRow({

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from .media_kind import MediaKind
+
 
 @dataclass(frozen=True, order=True)
 class FrameKey:
@@ -38,6 +40,18 @@ class FrameKey:
             File name, followed by ``#<frame>`` for a video frame.
         """
         return self.path.name if self.frame_index is None else f"{self.path.name}#{self.frame_index}"
+
+    @property
+    def media_kind(self) -> MediaKind:
+        """
+        Kind of the media file of the picture.
+
+        Returns
+        -------
+        MediaKind
+            ``IMAGE`` for an image, ``VIDEO`` for a video frame.
+        """
+        return MediaKind.IMAGE if self.frame_index is None else MediaKind.VIDEO
 
     def sort_key(self) -> tuple[str, int]:
         """

@@ -1,14 +1,18 @@
 {
-  "current": "<tmp>/media/a_first.png",
-  "frame": null,
   "frame_step": 4,
   "inference_mode": "all",
   "is_auto_inference": true,
-  "media": [
-    "<tmp>/media/a_first.png",
-    "<tmp>/media/b_second.png",
-    "<tmp>/media/c_clip.mp4"
-  ],
+  "media": {
+    "detection": {
+      "current": "<tmp>/media/a_first.png",
+      "frame": null,
+      "paths": [
+        "<tmp>/media/a_first.png",
+        "<tmp>/media/b_second.png",
+        "<tmp>/media/c_clip.mp4"
+      ]
+    }
+  },
   "selections": [
     {
       "backend": "grounding_dino",

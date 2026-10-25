@@ -3,7 +3,7 @@ export type ColumnKey =
   | "media"
   | "frame"
   | "class"
-  | "query"
+  | "prompt"
   | "confidence"
   | "runner_up"
   | "area"
@@ -20,7 +20,7 @@ export interface ColumnDefinition {
   key: ColumnKey;
   label: string;
   kind: ColumnKind;
-  width: number;
+  maxWidth: number;
   isNumeric: boolean;
 }
 
@@ -28,42 +28,42 @@ const KEEP: ColumnDefinition = {
   key: "keep",
   label: "Keep",
   kind: "values",
-  width: 50,
+  maxWidth: 40,
   isNumeric: false,
 };
 const MEDIA: ColumnDefinition = {
   key: "media",
   label: "Media",
   kind: "values",
-  width: 140,
+  maxWidth: 240,
   isNumeric: false,
 };
 const FRAME: ColumnDefinition = {
   key: "frame",
   label: "Frame",
   kind: "range",
-  width: 92,
+  maxWidth: 120,
   isNumeric: false,
 };
 const CLASS: ColumnDefinition = {
   key: "class",
   label: "Class",
   kind: "values",
-  width: 110,
+  maxWidth: 180,
   isNumeric: false,
 };
 const QUERY: ColumnDefinition = {
-  key: "query",
-  label: "Query",
+  key: "prompt",
+  label: "Matched prompt",
   kind: "values",
-  width: 104,
+  maxWidth: 180,
   isNumeric: false,
 };
 const CONFIDENCE: ColumnDefinition = {
   key: "confidence",
   label: "Confidence",
   kind: "range",
-  width: 82,
+  maxWidth: 100,
   isNumeric: true,
 };
 const BOX_COLUMNS: ColumnDefinition[] = [
@@ -71,28 +71,28 @@ const BOX_COLUMNS: ColumnDefinition[] = [
     key: "x1",
     label: "x1",
     kind: "range",
-    width: 54,
+    maxWidth: 72,
     isNumeric: true,
   },
   {
     key: "y1",
     label: "y1",
     kind: "range",
-    width: 54,
+    maxWidth: 72,
     isNumeric: true,
   },
   {
     key: "x2",
     label: "x2",
     kind: "range",
-    width: 54,
+    maxWidth: 72,
     isNumeric: true,
   },
   {
     key: "y2",
     label: "y2",
     kind: "range",
-    width: 54,
+    maxWidth: 72,
     isNumeric: true,
   },
 ];
@@ -107,14 +107,14 @@ export const SCORE_COLUMNS: ColumnDefinition[] = [
     key: "confidence",
     label: "Score",
     kind: "range",
-    width: 72,
+    maxWidth: 90,
     isNumeric: true,
   },
   {
     key: "runner_up",
     label: "Runner-up",
     kind: "values",
-    width: 120,
+    maxWidth: 180,
     isNumeric: false,
   },
 ];
@@ -140,7 +140,7 @@ export const MASK_FINDING_COLUMNS: ColumnDefinition[] = [
     key: "area",
     label: "Area",
     kind: "range",
-    width: 70,
+    maxWidth: 90,
     isNumeric: true,
   },
   ...BOX_COLUMNS,

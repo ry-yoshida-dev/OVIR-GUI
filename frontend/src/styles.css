@@ -20,6 +20,7 @@
   --warning: oklch(0.72 0.15 65);
   --warning-soft: oklch(0.72 0.15 65 / 0.16);
   --success: oklch(0.6 0.13 160);
+  --progress: oklch(0.55 0.17 265);
   --row-hover: oklch(0.4 0.02 260 / 0.045);
   --row-current: oklch(0.955 0.04 50);
   --row-selected: oklch(0.9 0.075 50);
@@ -114,6 +115,7 @@
     --warning: oklch(0.78 0.12 75);
     --warning-soft: oklch(0.78 0.12 75 / 0.15);
     --success: oklch(0.72 0.11 155);
+    --progress: oklch(0.7 0.13 265);
     --row-hover: oklch(1 0 0 / 0.04);
     --row-current: oklch(0.72 0.11 266 / 0.09);
     --row-selected: oklch(0.72 0.11 266 / 0.18);
@@ -585,6 +587,23 @@ label {
   color: var(--accent-text);
 }
 
+.label-mode-row {
+  justify-content: space-between;
+}
+
+.label-mode-switch button {
+  padding: 1px 10px;
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.label-mode-switch button.active {
+  background: var(--text);
+  color: var(--panel);
+  font-weight: 600;
+}
+
 .pane-canvas > .pane-header .segmented button.active {
   background: var(--pane-heading-active);
   color: var(--pane-heading-active-text);
@@ -983,10 +1002,37 @@ label {
   padding-left: 28px;
 }
 
+.section-body .list:has(> .list-group) {
+  scroll-padding-top: 32px;
+}
+
 .section-body .list .list-group-heading {
-  padding: 6px 12px 4px;
+  top: -4px;
+  margin-bottom: 4px;
+  padding: 6px 12px 5px;
   border: 0;
+  border-bottom: 1px solid var(--border);
   background: var(--well);
+}
+
+.list-group-heading.is-toggle {
+  cursor: pointer;
+}
+
+.list-group-toggle {
+  position: absolute;
+  left: 1px;
+  width: 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.list-group-progress {
+  margin-left: auto;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .section-body .list .list-group + .list-group .list-group-heading {
@@ -1132,12 +1178,36 @@ label {
   text-overflow: ellipsis;
 }
 
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+.media-status-mark {
+  display: block;
   flex: none;
-  border: 2px solid;
+  width: 14px;
+  height: 14px;
+}
+
+.media-status-mark.inferring {
+  animation: media-status-spin 0.9s linear infinite;
+}
+
+@keyframes media-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.media-status-note {
+  margin-left: auto;
+  flex: none;
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.media-status-note.outdated {
+  color: var(--warning);
+}
+
+.media-status-note.failed {
+  color: var(--danger);
 }
 
 .swatch {
@@ -1277,8 +1347,21 @@ table.grid th {
 }
 
 table.grid th .funnel {
+  display: inline-block;
+  vertical-align: -2px;
   color: var(--accent);
   margin-left: 4px;
+}
+
+table.grid th.filler,
+table.grid td.filler {
+  padding: 0;
+  cursor: default;
+}
+
+table.grid th .funnel .icon-glyph {
+  width: 12px;
+  height: 12px;
 }
 
 table.grid td {
@@ -1789,6 +1872,16 @@ table.grid tr.status td {
 
 .export-extras {
   gap: 14px;
+}
+
+.export-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  font-size: var(--font-size-small);
 }
 
 .label-snippet {
@@ -2573,6 +2666,13 @@ td.ellipsis {
   user-select: none;
 }
 
+.results-heading .media-kind-glyph {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--text-muted);
+}
+
 .results-heading-title {
   font-weight: 600;
   font-size: var(--font-size-small);
@@ -2587,6 +2687,35 @@ td.ellipsis {
 
 .results-heading button.small {
   padding: 1px 6px;
+}
+
+.results-heading .export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  white-space: nowrap;
+}
+
+.results-heading .filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+}
+
+.results-heading .filter-button .icon-glyph {
+  width: 13px;
+  height: 13px;
+}
+
+.results-heading .filter-button.active {
+  color: var(--accent);
+}
+
+.results-heading .export-button .panel-glyph {
+  width: 13px;
+  height: 13px;
 }
 
 
@@ -2709,7 +2838,7 @@ td.ellipsis {
   background: var(--row-current);
 }
 
-.score-chart-row.phrase {
+.score-chart-row.prompt {
   padding-left: 22px;
 }
 
@@ -2723,7 +2852,7 @@ td.ellipsis {
   font-weight: 600;
 }
 
-.score-chart-row.phrase .score-chart-label {
+.score-chart-row.prompt .score-chart-label {
   font-weight: 400;
   color: var(--text-muted);
 }

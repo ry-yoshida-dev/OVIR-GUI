@@ -16,7 +16,7 @@ class LabeledPrompt:
     What a run recognizes, independent of the model library: the classes with their queries, the exemplar boxes and
     object marks drawn on the pictures, and how to tell later whether a result is still current.
 
-    Model adapters turn it into the prompt type of their library; class queries keep the order of ``query_labels``
+    Model adapters turn it into the prompt type of their library; class queries keep the order of ``prompt_labels``
     (every class in order, its phrases first, then its reference images), so a matched query index names its label.
     Models taking object marks ask for the marks of each picture instead, and automatic mask generation ignores the
     prompt.
@@ -55,7 +55,7 @@ class LabeledPrompt:
         return tuple(prompt_class.name for prompt_class in self.classes)
 
     @property
-    def query_labels(self) -> tuple[str, ...]:
+    def prompt_labels(self) -> tuple[str, ...]:
         """
         Label of every class query in query order.
 
@@ -64,7 +64,7 @@ class LabeledPrompt:
         tuple[str, ...]
             Phrases, reference image names and exemplar labels.
         """
-        return tuple(label for prompt_class in self.classes for label in prompt_class.query_labels)
+        return tuple(label for prompt_class in self.classes for label in prompt_class.prompt_labels)
 
     @property
     def has_exemplars(self) -> bool:

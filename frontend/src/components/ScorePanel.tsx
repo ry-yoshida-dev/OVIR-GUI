@@ -38,7 +38,7 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
         <div
           key={score.class_name}
           className={`score-line${isKept(score.class_name) ? " top" : ""}${isRejected(score.class_name) ? " rejected" : ""}`}
-          title={`${score.class_name}: score ${score.score.toFixed(4)}, logit ${score.logit.toFixed(3)}${score.similarity === null ? "" : `, similarity ${score.similarity.toFixed(4)}`}, query "${score.query}"`}
+          title={`${score.class_name}: score ${score.score.toFixed(4)}, logit ${score.logit.toFixed(3)}${score.similarity === null ? "" : `, similarity ${score.similarity.toFixed(4)}`}, matched prompt "${score.matched_prompt}"`}
           onClick={() => {
             const finding = findingOf.get(score.class_name);
             if (finding !== undefined) onSelectFinding(finding.index);

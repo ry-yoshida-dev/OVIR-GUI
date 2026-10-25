@@ -16,7 +16,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -31,7 +32,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "query": "car"
+          "matched_prompt": "car",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -46,7 +48,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": true,
-          "query": "dog"
+          "matched_prompt": "dog",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -61,7 +64,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         }
       ],
       "frame": null,
@@ -87,7 +91,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -102,7 +107,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "query": "car"
+          "matched_prompt": "car",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -117,7 +123,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": true,
-          "query": "dog"
+          "matched_prompt": "dog",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -132,7 +139,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         }
       ],
       "frame": null,
@@ -158,7 +166,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -173,7 +182,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "query": "car"
+          "matched_prompt": "car",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -188,7 +198,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": true,
-          "query": "dog"
+          "matched_prompt": "dog",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -203,7 +214,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         }
       ],
       "frame": 0,
@@ -229,7 +241,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -244,7 +257,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "query": "car"
+          "matched_prompt": "car",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -259,7 +273,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -274,7 +289,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "query": "dog"
+          "matched_prompt": "dog",
+          "similarity": null
         }
       ],
       "frame": 4,
@@ -300,7 +316,8 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -315,7 +332,8 @@
           "index": 1,
           "is_accepted": true,
           "is_passing": true,
-          "query": "car"
+          "matched_prompt": "car",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -330,7 +348,8 @@
           "index": 2,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "matched_prompt": "person",
+          "similarity": null
         },
         {
           "area": 144.0,
@@ -345,7 +364,8 @@
           "index": 3,
           "is_accepted": true,
           "is_passing": true,
-          "query": "dog"
+          "matched_prompt": "dog",
+          "similarity": null
         }
       ],
       "frame": 8,

@@ -18,8 +18,8 @@
           "class_name": "person",
           "confidence": 0.9,
           "index": 0,
-          "polygons": [],
-          "source": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -32,8 +32,8 @@
           "class_name": "dog",
           "confidence": 0.5,
           "index": 2,
-          "polygons": [],
-          "source": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "path": "<tmp>/media/a_first.png",
@@ -54,8 +54,8 @@
           "class_name": "person",
           "confidence": 0.9,
           "index": 0,
-          "polygons": [],
-          "source": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -68,8 +68,8 @@
           "class_name": "car",
           "confidence": 0.7,
           "index": 1,
-          "polygons": [],
-          "source": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -82,8 +82,8 @@
           "class_name": "dog",
           "confidence": 0.5,
           "index": 2,
-          "polygons": [],
-          "source": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "path": "<tmp>/media/b_second.png",
@@ -104,8 +104,8 @@
           "class_name": "person",
           "confidence": 0.9,
           "index": 0,
-          "polygons": [],
-          "source": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -118,8 +118,8 @@
           "class_name": "car",
           "confidence": 0.7,
           "index": 1,
-          "polygons": [],
-          "source": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -132,8 +132,8 @@
           "class_name": "dog",
           "confidence": 0.5,
           "index": 2,
-          "polygons": [],
-          "source": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "path": "<tmp>/media/c_clip.mp4",
@@ -154,8 +154,8 @@
           "class_name": "person",
           "confidence": 0.86,
           "index": 0,
-          "polygons": [],
-          "source": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -168,8 +168,8 @@
           "class_name": "car",
           "confidence": 0.66,
           "index": 1,
-          "polygons": [],
-          "source": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -182,8 +182,8 @@
           "class_name": "dog",
           "confidence": 0.46,
           "index": 3,
-          "polygons": [],
-          "source": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "path": "<tmp>/media/c_clip.mp4",
@@ -204,8 +204,8 @@
           "class_name": "person",
           "confidence": 0.82,
           "index": 0,
-          "polygons": [],
-          "source": "person"
+          "matched_prompt": "person",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -218,8 +218,8 @@
           "class_name": "car",
           "confidence": 0.62,
           "index": 1,
-          "polygons": [],
-          "source": "car"
+          "matched_prompt": "car",
+          "polygons": []
         },
         {
           "area": 144.0,
@@ -232,8 +232,8 @@
           "class_name": "dog",
           "confidence": 0.42,
           "index": 3,
-          "polygons": [],
-          "source": "dog"
+          "matched_prompt": "dog",
+          "polygons": []
         }
       ],
       "path": "<tmp>/media/c_clip.mp4",

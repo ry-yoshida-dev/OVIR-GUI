@@ -19,8 +19,8 @@ export interface MediaEntry {
   name: string;
   kind: MediaKindValue;
   state: MediaStateValue;
-  color: string;
-  count_text: string;
+  expected_count: number;
+  recognized_count: number;
   kept_count: number;
   description: string;
   frame_count: number | null;
@@ -206,16 +206,13 @@ export interface ClassSetState {
 export interface Thresholds {
   default_minimum: number;
   class_minimums: Record<string, number>;
-  phrase_minimums: Record<string, Record<string, number>>;
+  prompt_minimums: Record<string, Record<string, number>>;
 }
 
 export type LabelModeValue = "single_label" | "multi_label";
 
-export type LabelModeChoice = "automatic" | LabelModeValue;
-
 export interface LabelModeState {
-  choice: LabelModeChoice;
-  native: LabelModeValue | null;
+  value: LabelModeValue;
   modes: { value: LabelModeValue; title: string }[];
 }
 
@@ -229,7 +226,6 @@ export interface Progress {
   title: string;
   processed_count: number;
   total_count: number;
-  is_blocking: boolean;
 }
 
 export interface ExportSummary {
@@ -294,7 +290,7 @@ export interface WorkspaceState {
   class_set: ClassSetState;
   thresholds: Thresholds;
   suppression: DuplicateSuppression;
-  label_mode: LabelModeState;
+  label_mode: LabelModeState | null;
   standard_minimum: number;
   standard_overlap_threshold: number;
   status: { message: string; serial: number };
@@ -314,7 +310,7 @@ export interface WorkspaceState {
 export interface Finding {
   index: number;
   class_name: string;
-  query: string;
+  matched_prompt: string;
   confidence: number;
   box: Box | null;
   area: number | null;
@@ -332,7 +328,7 @@ export interface FrameInstance extends Finding {
 export interface DocumentObject {
   index: number;
   class_name: string;
-  source: string;
+  matched_prompt: string;
   confidence: number;
   box: Box;
   area: number;
@@ -358,7 +354,7 @@ export interface ClassScore {
   score: number;
   logit: number;
   similarity: number | null;
-  query: string;
+  matched_prompt: string;
 }
 
 export interface RankedScore {
@@ -587,14 +583,10 @@ export type ExportPurposeValue = "annotations" | "crops" | "class_folders";
 
 export type CropImageFormatValue = "jpeg" | "png";
 
-export type ExportScopeValue = "kept" | "listed";
-
 export interface ExportChoice {
   export_format: string;
   output_directory: string;
   is_confidence_included: boolean;
-  scope: ExportScopeValue;
-  minimum_confidence: number;
   is_annotated_image_saved: boolean;
   is_annotated_video_saved: boolean;
   crop_image_format: CropImageFormatValue;
@@ -604,13 +596,12 @@ export interface ExportChoice {
 export interface ExportPreviewChoice {
   export_format: string;
   is_confidence_included: boolean;
-  scope: ExportScopeValue;
-  minimum_confidence: number;
   crop_image_format: CropImageFormatValue;
   crop_margin_percent: number;
 }
 
 export interface ExportPreviewRequest extends ExportPreviewChoice {
+  media: MediaKindValue;
   listed_findings: PictureFindings[] | null;
 }
 
@@ -622,21 +613,22 @@ export interface LabelPreview {
 }
 
 export interface ExportRequest extends ExportChoice {
+  media: MediaKindValue;
   listed_findings: PictureFindings[] | null;
   is_label_confidence_shown: boolean;
-  is_skipping_approved: boolean;
 }
 
 export interface ExportPlan {
   model_name: string;
   options_text: string;
   task: TaskValue;
+  media: MediaKindValue;
   picture_count: number;
   pending_count: number;
+  is_pending_inferable: boolean;
   issue: string;
   formats: ExportFormat[];
   purposes: { value: ExportPurposeValue; label: string; description: string }[];
-  scopes: { value: ExportScopeValue; label: string; description: string }[];
   crop_image_formats: { value: CropImageFormatValue; label: string }[];
   default_directory: string;
 }

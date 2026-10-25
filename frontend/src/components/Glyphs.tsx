@@ -123,6 +123,20 @@ export function ExportGlyph() {
   );
 }
 
+export function FilterGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M2.25 3h11.5L9.25 8.5v4.25l-2.5 1.25V8.5z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </Glyph>
+  );
+}
+
 export function FindingsGlyph() {
   return (
     <Glyph>

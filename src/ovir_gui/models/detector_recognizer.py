@@ -34,14 +34,14 @@ class DetectorRecognizer(Recognizer[DetectionModel]):
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         library_prompt: Prompt = self._prompts.build(prompt)
-        query_labels: tuple[str, ...] = prompt.query_labels
+        prompt_labels: tuple[str, ...] = prompt.prompt_labels
         results: list[DetectionResult] = self._detector.detect_images(
             [picture.image for picture in pictures], library_prompt
         )
-        return [self._convert(result, query_labels) for result in results]
+        return [self._convert(result, prompt_labels) for result in results]
 
     @staticmethod
-    def _convert(result: DetectionResult, query_labels: tuple[str, ...]) -> FrameResult:
+    def _convert(result: DetectionResult, prompt_labels: tuple[str, ...]) -> FrameResult:
         xyxy: list[list[float]] = np.asarray(result.xyxy, dtype=np.float64).reshape(-1, 4).tolist()
         class_ids: list[int] = [int(class_id) for class_id in result.class_ids.tolist()]
         query_ids: list[int] = [int(query_id) for query_id in result.query_ids.tolist()]
@@ -52,7 +52,7 @@ class DetectorRecognizer(Recognizer[DetectionModel]):
             instances=tuple(
                 RecognizedInstance(
                     class_name=result.class_names[class_ids[index]],
-                    query_label=query_labels[query_ids[index]],
+                    matched_prompt=prompt_labels[query_ids[index]],
                     confidence=confidences[index],
                     box=PixelBox.of(xyxy[index]),
                 )

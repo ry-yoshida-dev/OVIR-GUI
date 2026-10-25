@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ...export import CropImageFormat, ExportFormat, ExportPurpose, ExportScope
+from ...export import CropImageFormat, ExportFormat, ExportPurpose
 from ...workspace import ActionReply, ExportPlan
 from ..json_value import JsonObject, JsonValue
 
@@ -25,7 +25,7 @@ class ReplyBuilder:
         Returns
         -------
         JsonObject
-            Model, counts, issue, purposes and formats of the task, scopes and image formats of cropped objects.
+            Model, media kind, counts, issue, purposes and formats of the task and image formats of cropped objects.
         """
         formats: tuple[ExportFormat, ...] = ExportFormat.of_task(plan.profile.task)
         return {
@@ -33,7 +33,9 @@ class ReplyBuilder:
             "options_text": plan.profile.options_text,
             "task": plan.profile.task.value,
             "picture_count": plan.picture_count,
+            "media": plan.media_kind.value,
             "pending_count": plan.pending_count,
+            "is_pending_inferable": plan.is_pending_inferable,
             "issue": plan.issue,
             "formats": [
                 {
@@ -49,9 +51,6 @@ class ReplyBuilder:
                 {"value": purpose.value, "label": purpose.label, "description": purpose.description}
                 for purpose in ExportPurpose
                 if any(export_format.purpose is purpose for export_format in formats)
-            ],
-            "scopes": [
-                {"value": scope.value, "label": scope.label, "description": scope.description} for scope in ExportScope
             ],
             "crop_image_formats": [
                 {"value": image_format.value, "label": image_format.label} for image_format in CropImageFormat

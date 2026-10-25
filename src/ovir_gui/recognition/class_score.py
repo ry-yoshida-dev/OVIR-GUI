@@ -13,16 +13,16 @@ class ClassScore:
     score : float
         Score in ``[0, 1]``: a share of the classes for softmax models, an independent probability for sigmoid models.
     logit : float
-        Logit of the best query of the class.
-    query_label : str
-        Label of the query that scored highest: a phrase or a reference image name.
+        Logit of the best prompt of the class.
+    matched_prompt : str
+        Prompt that scored highest: a phrase or a reference image name.
     similarity : float | None
-        Cosine similarity in ``[-1, 1]`` of the image and the best query of the class; ``None`` for results stored
+        Cosine similarity in ``[-1, 1]`` of the image and the best prompt of the class; ``None`` for results stored
         before it was recorded.
     """
 
     class_name: str
     score: float
     logit: float
-    query_label: str
+    matched_prompt: str
     similarity: float | None

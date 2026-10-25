@@ -15,8 +15,8 @@ class Finding:
         Position of the class score or the instance in its result.
     class_name : str
         Class it reports.
-    query_label : str
-        Query that matched: a phrase or a reference image name.
+    matched_prompt : str
+        Prompt that matched: a phrase, a reference image name or ``PromptClass.EXEMPLAR_LABEL``.
     confidence : float
         Score or confidence in ``[0, 1]``.
     box : PixelBox | None
@@ -24,13 +24,13 @@ class Finding:
     area : float | None
         Pixel count of a mask or area of a box; ``None`` for a classification.
     similarity : float | None
-        Cosine similarity of the image and the matched query of a classification; ``None`` for an instance or a
+        Cosine similarity of the image and the matched prompt of a classification; ``None`` for an instance or a
         classification stored before it was recorded.
     """
 
     index: int
     class_name: str
-    query_label: str
+    matched_prompt: str
     confidence: float
     box: PixelBox | None
     area: float | None

@@ -1,0 +1,30 @@
+{
+  "files": {
+    "crops.csv": [
+      "crop,media,frame,seconds,class,matched_prompt,confidence,x_min,y_min,x_max,y_max,crop_x_min,crop_y_min,crop_x_max,crop_y_max",
+      "crops/person/a_first_001.png,<tmp>/media/a_first.png,,,person,person,0.900000,2.00,2.00,10.00,20.00,0,0,12,25",
+      "crops/car/a_first_002.png,<tmp>/media/a_first.png,,,car,car,0.700000,10.00,2.00,18.00,20.00,8,0,20,25",
+      "crops/dog/a_first_003.png,<tmp>/media/a_first.png,,,dog,dog,0.500000,18.00,2.00,26.00,20.00,16,0,28,25",
+      "crops/person/a_first_004.png,<tmp>/media/a_first.png,,,person,person,0.500000,3.00,2.00,11.00,20.00,1,0,13,25",
+      "crops/person/b_second_001.png,<tmp>/media/b_second.png,,,person,person,0.900000,2.00,2.00,10.00,20.00,0,0,12,25",
+      "crops/car/b_second_002.png,<tmp>/media/b_second.png,,,car,car,0.700000,10.00,2.00,18.00,20.00,8,0,20,25",
+      "crops/dog/b_second_003.png,<tmp>/media/b_second.png,,,dog,dog,0.500000,18.00,2.00,26.00,20.00,16,0,28,25",
+      "crops/person/b_second_004.png,<tmp>/media/b_second.png,,,person,person,0.500000,3.00,2.00,11.00,20.00,1,0,13,25"
+    ],
+    "crops/car/a_first_002.png": true,
+    "crops/car/b_second_002.png": true,
+    "crops/dog/a_first_003.png": true,
+    "crops/dog/b_second_003.png": true,
+    "crops/person/a_first_001.png": true,
+    "crops/person/a_first_004.png": true,
+    "crops/person/b_second_001.png": true,
+    "crops/person/b_second_004.png": true
+  },
+  "last_export": {
+    "file_count": 9,
+    "finding_count": 8,
+    "format_name": "Cropped objects per class",
+    "output_directory": "<tmp>/export_crops",
+    "picture_count": 2
+  }
+}

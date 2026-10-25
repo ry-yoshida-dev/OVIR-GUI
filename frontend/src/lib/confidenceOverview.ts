@@ -3,8 +3,8 @@ import { ScoreHistogram, UNIT_RANGE, type ValueRange } from "./scoreHistogram";
 
 export type ConfidenceMeasure = "confidence" | "similarity";
 
-export interface PhraseConfidences {
-  phrase: string;
+export interface PromptConfidences {
+  prompt: string;
   histogram: ScoreHistogram;
   keptCount: number;
 }
@@ -13,7 +13,7 @@ export interface ClassConfidences {
   className: string;
   histogram: ScoreHistogram;
   keptCount: number;
-  phrases: PhraseConfidences[];
+  prompts: PromptConfidences[];
 }
 
 interface Tally {
@@ -43,17 +43,17 @@ export class ConfidenceOverview {
 
   static of(
     payload: ResultsPayload | null,
-    classPhrases: ReadonlyMap<string, readonly string[]>,
+    classPrompts: ReadonlyMap<string, readonly string[]>,
     measure: ConfidenceMeasure = "confidence",
   ): ConfidenceOverview {
     const classTallies = new Map<string, Tally>();
-    const phraseTallies = new Map<string, Map<string, Tally>>();
-    for (const [className, phrases] of classPhrases) {
+    const promptTallies = new Map<string, Map<string, Tally>>();
+    for (const [className, prompts] of classPrompts) {
       classTallies.set(className, { scores: [], keptCount: 0 });
-      phraseTallies.set(
+      promptTallies.set(
         className,
         new Map(
-          phrases.map((phrase) => [phrase, { scores: [], keptCount: 0 }]),
+          prompts.map((prompt) => [prompt, { scores: [], keptCount: 0 }]),
         ),
       );
     }
@@ -71,14 +71,14 @@ export class ConfidenceOverview {
         );
         if (value !== null) classTally.scores.push(value);
         if (isKept) classTally.keptCount += 1;
-        let phrases = phraseTallies.get(finding.class_name);
-        if (phrases === undefined) {
-          phrases = new Map();
-          phraseTallies.set(finding.class_name, phrases);
+        let prompts = promptTallies.get(finding.class_name);
+        if (prompts === undefined) {
+          prompts = new Map();
+          promptTallies.set(finding.class_name, prompts);
         }
-        const phraseTally = ConfidenceOverview.tallyIn(phrases, finding.query);
-        if (value !== null) phraseTally.scores.push(value);
-        if (isKept) phraseTally.keptCount += 1;
+        const promptTally = ConfidenceOverview.tallyIn(prompts, finding.matched_prompt);
+        if (value !== null) promptTally.scores.push(value);
+        if (isKept) promptTally.keptCount += 1;
       }
     }
     const range =
@@ -89,12 +89,12 @@ export class ConfidenceOverview {
       className,
       histogram: ScoreHistogram.of(tally.scores, range),
       keptCount: tally.keptCount,
-      phrases: [
-        ...(phraseTallies.get(className) ?? new Map<string, Tally>()).entries(),
-      ].map(([phrase, phraseTally]) => ({
-        phrase,
-        histogram: ScoreHistogram.of(phraseTally.scores, range),
-        keptCount: phraseTally.keptCount,
+      prompts: [
+        ...(promptTallies.get(className) ?? new Map<string, Tally>()).entries(),
+      ].map(([prompt, promptTally]) => ({
+        prompt,
+        histogram: ScoreHistogram.of(promptTally.scores, range),
+        keptCount: promptTally.keptCount,
       })),
     }));
     return new ConfidenceOverview(

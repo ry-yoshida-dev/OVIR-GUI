@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import ClassVar
 
-from ..review import LabelModeChoice
+from ..recognition import LabelMode
 from .json_fields import JsonFields, JsonValue
 from .json_file import JsonFile
 
@@ -38,30 +38,30 @@ class LabelModeStore:
         """
         return self._file.path
 
-    def load(self) -> LabelModeChoice:
+    def load(self) -> LabelMode | None:
         """
         Read the remembered label mode.
 
         Returns
         -------
-        LabelModeChoice
-            Remembered mode; automatic when none is stored or it cannot be read.
+        LabelMode | None
+            Remembered mode; ``None`` when none is stored or it cannot be read.
         """
         content: dict[str, JsonValue] | None = self._file.read_object("label mode")
         if content is None or self.KEY not in content:
-            return LabelModeChoice.AUTOMATIC
+            return None
         try:
-            return LabelModeChoice(JsonFields.string_of(content[self.KEY], self.KEY))
+            return LabelMode(JsonFields.string_of(content[self.KEY], self.KEY))
         except (TypeError, ValueError):
-            return LabelModeChoice.AUTOMATIC
+            return None
 
-    def save(self, label_mode: LabelModeChoice) -> None:
+    def save(self, label_mode: LabelMode) -> None:
         """
         Remember the label mode for the next run.
 
         Parameters
         ----------
-        label_mode : LabelModeChoice
+        label_mode : LabelMode
             Chosen mode.
 
         Raises

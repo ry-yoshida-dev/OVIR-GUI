@@ -53,7 +53,7 @@ class MaskGenerationRecognizer(Recognizer[MaskGenerationModel]):
             return None
         return RecognizedInstance(
             class_name=MaskGenerationModel.REGION_CLASS_NAME,
-            query_label=MaskGenerationModel.QUERY_LABEL,
+            matched_prompt=MaskGenerationModel.PROMPT_LABEL,
             confidence=float(region.score),
             box=mask.box,
             mask=mask,

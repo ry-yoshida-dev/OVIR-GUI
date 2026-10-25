@@ -33,11 +33,11 @@ class TestReviewRoutes:
             _ = client.get(f"/?token={ACCESS_TOKEN}")
             yield client
 
-    def test_phrase_minimums_are_reported(self, client: TestClient) -> None:
+    def test_prompt_minimums_are_reported(self, client: TestClient) -> None:
         body: dict[str, object] = {
             "default_minimum": 0.3,
             "class_minimums": {"car": 0.4},
-            "phrase_minimums": {"car": {"suv": 0.6}},
+            "prompt_minimums": {"car": {"suv": 0.6}},
         }
         assert client.put("/api/thresholds", json=body).status_code == 200
         state: Response = client.get("/api/state")

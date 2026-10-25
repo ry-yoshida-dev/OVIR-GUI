@@ -13,7 +13,7 @@ class ClassThresholdStore:
     Minimum confidence per class and task, remembered between runs in ``class_thresholds.json`` of a data directory.
 
     Classifier scores and detection confidences follow different scales, so every task keeps its own minimums. The
-    file looks like ``{"detection": {"default": 0.0, "classes": {"car": 0.35}, "phrases": {"car": {"suv": 0.5}}}}``.
+    file looks like ``{"detection": {"default": 0.0, "classes": {"car": 0.35}, "prompts": {"car": {"suv": 0.5}}}}``.
     The directory is created only when written to. Detectors and segmenters keep findings down to a low floor, so the
     default minimum of those tasks starts at ``FINDING_DEFAULT_MINIMUM`` instead of keeping every finding.
     """
@@ -95,16 +95,16 @@ class ClassThresholdStore:
     @staticmethod
     def _thresholds_of(content: dict[str, JsonValue]) -> ClassThresholds:
         class_minimums: dict[str, JsonValue] = JsonFields.object_of(content.get("classes", {}), "classes")
-        phrase_minimums: dict[str, JsonValue] = JsonFields.object_of(content.get("phrases", {}), "phrases")
+        prompt_minimums: dict[str, JsonValue] = JsonFields.object_of(content.get("prompts", {}), "prompts")
         return ClassThresholds(
             JsonFields.number_of(content.get("default", 0.0), "default"),
             {class_name: JsonFields.number_of(minimum, class_name) for class_name, minimum in class_minimums.items()},
             {
                 class_name: {
-                    phrase: JsonFields.number_of(minimum, phrase)
-                    for phrase, minimum in JsonFields.object_of(by_phrase, class_name).items()
+                    prompt: JsonFields.number_of(minimum, prompt)
+                    for prompt, minimum in JsonFields.object_of(by_prompt, class_name).items()
                 }
-                for class_name, by_phrase in phrase_minimums.items()
+                for class_name, by_prompt in prompt_minimums.items()
             },
         )
 
@@ -113,5 +113,5 @@ class ClassThresholdStore:
         return {
             "default": thresholds.default_minimum,
             "classes": dict(thresholds.class_minimums),
-            "phrases": {class_name: dict(by_phrase) for class_name, by_phrase in thresholds.phrase_minimums.items()},
+            "prompts": {class_name: dict(by_prompt) for class_name, by_prompt in thresholds.prompt_minimums.items()},
         }

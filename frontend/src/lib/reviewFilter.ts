@@ -28,13 +28,13 @@ export class ReviewFilter {
     return union <= 0 ? 0 : intersection / union;
   }
 
-  minimumOf(className: string, query: string | null = null): number {
-    const phraseMinimum =
-      query === null
+  minimumOf(className: string, matchedPrompt: string | null = null): number {
+    const promptMinimum =
+      matchedPrompt === null
         ? undefined
-        : this.thresholds.phrase_minimums[className]?.[query];
+        : this.thresholds.prompt_minimums[className]?.[matchedPrompt];
     return (
-      phraseMinimum ??
+      promptMinimum ??
       this.thresholds.class_minimums[className] ??
       this.thresholds.default_minimum
     );
@@ -49,7 +49,7 @@ export class ReviewFilter {
 
   isReaching(finding: Finding): boolean {
     return (
-      finding.confidence >= this.minimumOf(finding.class_name, finding.query)
+      finding.confidence >= this.minimumOf(finding.class_name, finding.matched_prompt)
     );
   }
 

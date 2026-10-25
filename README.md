@@ -28,7 +28,7 @@ device, precision, batch size, thresholds and, for classifiers, the text templat
   classifiers); pictures worth a look, such as crowded, empty or borderline ones; and the agreement with another
   model per class and per picture.
 - **Comparison**: results of several models are kept side by side, and one can be overlaid on another.
-- **Export**: YOLO, COCO and LabelMe boxes or mask polygons, mask images, class folders, CSV tables and annotated images and videos.
+- **Export**: from the Images table, the pictures and findings it lists; from the Videos panel, every kept finding of the videos. Formats are YOLO, COCO and LabelMe boxes or mask polygons, mask images, class folders, CSV tables and annotated images and videos.
 - **Embedding**: another web application, such as a GIS, can show the interface in a window of its own page and drive
   it with `postMessage`: open pictures and receive the findings of the shown model as polygons.
 

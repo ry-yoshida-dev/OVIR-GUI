@@ -13,8 +13,8 @@ class RecognizedInstance:
     ----------
     class_name : str
         Class of the prompt the instance belongs to.
-    query_label : str
-        Label of the query that matched: a phrase or a reference image name.
+    matched_prompt : str
+        Prompt that matched: a phrase, a reference image name or ``PromptClass.EXEMPLAR_LABEL``.
     confidence : float
         Confidence in ``[0, 1]``.
     box : PixelBox
@@ -24,7 +24,7 @@ class RecognizedInstance:
     """
 
     class_name: str
-    query_label: str
+    matched_prompt: str
     confidence: float
     box: PixelBox
     mask: InstanceMask | None = None

@@ -14,11 +14,10 @@ from ..export import (
     ExportFormat,
     ExportOptions,
     ExportReport,
-    ExportScope,
     LabelPreview,
     LabelPreviewer,
 )
-from ..media import FrameKey
+from ..media import FrameKey, MediaKind
 from ..workspace import ExportCoordinator, ExportPreviewSource, ExportRequest, Workspace
 from .json_value import JsonObject
 from .schema import ExportBody, ExportPreviewBody, PictureFindings
@@ -54,16 +53,17 @@ class ExportRoutes:
         context: WebContext = self._context
 
         @router.get("/export/plan")
-        async def export_plan() -> JsonObject:
+        async def export_plan(media: str) -> JsonObject:
             workspace: Workspace = context.workspace
             return context.replies.export_plan(
-                workspace.exports.plan(), ExportCoordinator.default_directory(context.working_directory)
+                workspace.exports.plan(MediaKind(media)), ExportCoordinator.default_directory(context.working_directory)
             )
 
         @router.post("/export/preview")
         async def export_preview(body: ExportPreviewBody) -> JsonObject:
+            media_kind: MediaKind = MediaKind(body.media)
             source: ExportPreviewSource = context.workspace.exports.preview_source(
-                ExportScope(body.scope), body.minimum_confidence, self._listed(body.listed_findings)
+                media_kind, self._listed(media_kind, body.listed_findings)
             )
             previewer: LabelPreviewer = LabelPreviewer(source.media)
             preview: LabelPreview = await asyncio.to_thread(
@@ -91,20 +91,20 @@ class ExportRoutes:
                 export_format=ExportFormat(body.export_format),
                 output_directory=Path(body.output_directory.strip()).expanduser().resolve(),
                 is_confidence_included=body.is_confidence_included,
-                scope=ExportScope(body.scope),
-                minimum_confidence=body.minimum_confidence,
                 is_annotated_image_saved=body.is_annotated_image_saved,
                 is_annotated_video_saved=body.is_annotated_video_saved,
                 crop_options=CropOptions(
                     image_format=CropImageFormat(body.crop_image_format), margin_percent=body.crop_margin_percent
                 ),
             )
+            media_kind: MediaKind = MediaKind(body.media)
             request: ExportRequest = ExportRequest(
                 options=options,
-                listed_indices=self._listed(body.listed_findings),
+                media_kind=media_kind,
+                listed_indices=self._listed(media_kind, body.listed_findings),
                 is_label_confidence_shown=body.is_label_confidence_shown,
             )
-            return context.replies.reply(context.workspace.exports.start(request, body.is_skipping_approved))
+            return context.replies.reply(context.workspace.exports.start(request))
 
         @router.get("/export/download")
         async def download(background_tasks: BackgroundTasks) -> FileResponse:
@@ -121,9 +121,13 @@ class ExportRoutes:
         return router
 
     @staticmethod
-    def _listed(listed_findings: list[PictureFindings] | None) -> dict[FrameKey, frozenset[int]] | None:
-        if listed_findings is None:
+    def _listed(
+        media_kind: MediaKind, listed_findings: list[PictureFindings] | None
+    ) -> dict[FrameKey, frozenset[int]] | None:
+        if media_kind is MediaKind.VIDEO:
             return None
+        if listed_findings is None:
+            raise ValueError("An image export needs the pictures the image table lists.")
         return {key: frozenset(indices) for key, indices in PictureFindings.grouped(listed_findings).items()}
 
     @staticmethod

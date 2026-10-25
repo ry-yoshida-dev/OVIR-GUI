@@ -137,6 +137,10 @@ export function SetupPane({
             classes={state.classes}
             classSet={state.class_set}
             isImagePromptSupported={state.model.is_image_prompt_supported}
+            labelMode={task === "classification" ? state.label_mode : null}
+            onLabelModeChange={(labelMode) =>
+              void call(() => api.setLabelMode(labelMode))
+            }
             onReport={onReport}
             onAddImagePrompt={(classIndex) =>
               onOpenDialog({ kind: "reference", classIndex })
@@ -177,6 +181,8 @@ export function SetupPane({
             currentPath={currentPath}
             backgroundKey={state.background_key}
             checkedPaths={checkedMediaPaths}
+            isCollapsed={isCollapsed}
+            onToggleGroup={onToggleSection}
             onCheckedChange={setCheckedMediaPaths}
             onSelect={onShowMedia}
             onRemove={removeMedia}

@@ -6,11 +6,12 @@ import type {
   ExportFormat,
   ExportPreviewChoice,
   ExportPurposeValue,
-  ExportScopeValue,
   LabelPreview,
+  MediaKindValue,
 } from "../api/types";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { useStoredState } from "../hooks/useStoredState";
+import type { TableRow } from "../lib/resultTable";
 import { CropMarginFigure } from "./CropMarginFigure";
 import { Dialog } from "./Dialog";
 import { ExportPurposeCards } from "./ExportPurposeCards";
@@ -20,10 +21,12 @@ import { NumberField } from "./NumberField";
 import { ServerBrowserDialog } from "./ServerBrowserDialog";
 
 interface ExportDialogProps {
-  hasVideos: boolean;
-  listedFindingCount: number;
+  media: MediaKindValue;
+  exportRows: TableRow[];
+  listedPictureCount: number | null;
   onExport: (choice: ExportChoice) => Promise<boolean>;
   onLoadPreview: (choice: ExportPreviewChoice) => Promise<LabelPreview>;
+  onInferAll: () => void;
   onDownloadCsv: () => void;
   onClose: () => void;
 }
@@ -32,8 +35,6 @@ interface StoredExportOptions {
   purposes: Record<string, ExportPurposeValue>;
   formats: Record<string, string>;
   is_confidence_included: boolean;
-  scope: ExportScopeValue;
-  minimum_confidence: number;
   is_annotated_image_saved: boolean;
   is_annotated_video_saved: boolean;
   crop_image_format: CropImageFormatValue;
@@ -59,11 +60,16 @@ function groupFormats(formats: ExportFormat[]): FormatGroup[] {
   return groups;
 }
 
+/**
+ * Dialog exporting the images as the Images table lists them, or every kept finding of the videos.
+ */
 export function ExportDialog({
-  hasVideos,
-  listedFindingCount,
+  media,
+  exportRows,
+  listedPictureCount,
   onExport,
   onLoadPreview,
+  onInferAll,
   onDownloadCsv,
   onClose,
 }: ExportDialogProps) {
@@ -74,8 +80,6 @@ export function ExportDialog({
     purposes: {},
     formats: {},
     is_confidence_included: true,
-    scope: "kept",
-    minimum_confidence: 0,
     is_annotated_image_saved: false,
     is_annotated_video_saved: false,
     crop_image_format: "jpeg",
@@ -83,7 +87,7 @@ export function ExportDialog({
     output_directory: "",
   });
   const [outputDirectory, setOutputDirectory] = useState("");
-  const plan = useAsyncResource(EXPORT_PLAN_KEY, api.exportPlan, {
+  const plan = useAsyncResource(`${EXPORT_PLAN_KEY}/${media}`, () => api.exportPlan(media), {
     onLoaded: (loaded) => setOutputDirectory(loaded.default_directory),
     onError: (caught) => setError(errorMessage(caught)),
   });
@@ -100,15 +104,13 @@ export function ExportDialog({
           export_format: format.value,
           is_confidence_included:
             format.is_confidence_supported && (format.purpose !== "annotations" || stored.is_confidence_included),
-          scope: stored.scope,
-          minimum_confidence: stored.minimum_confidence,
           crop_image_format: stored.crop_image_format,
           crop_margin_percent: stored.crop_margin_percent,
         };
   const preview = useAsyncResource(
     plan === null || previewChoice === undefined
       ? null
-      : `${EXPORT_PREVIEW_KEY}/${JSON.stringify(previewChoice)}/${listedFindingCount}`,
+      : `${EXPORT_PREVIEW_KEY}/${media}/${JSON.stringify(previewChoice)}/${exportRows.length}`,
     () => (previewChoice === undefined ? Promise.reject(new Error("No format chosen.")) : onLoadPreview(previewChoice)),
     { isStaleShown: false, onError: (caught) => setError(errorMessage(caught)) },
   );
@@ -121,7 +123,7 @@ export function ExportDialog({
       ...previewChoice,
       output_directory: outputDirectory,
       is_annotated_image_saved: stored.is_annotated_image_saved,
-      is_annotated_video_saved: stored.is_annotated_video_saved && hasVideos,
+      is_annotated_video_saved: media === "video" && stored.is_annotated_video_saved,
     });
     setIsSubmitting(false);
     if (isDone) {
@@ -133,18 +135,22 @@ export function ExportDialog({
   return (
     <>
       <Dialog
-        title="Export Results"
+        title={media === "image" ? "Export Images" : "Export Videos"}
         onClose={onClose}
         width={560}
         footer={
           <>
             <button
               className="left ghost"
-              disabled={listedFindingCount === 0}
+              disabled={exportRows.length === 0}
               onClick={onDownloadCsv}
-              title="Download the findings listed in the Images and Videos tables, as filtered and sorted there"
+              title={
+                media === "image"
+                  ? "Download the exported findings as a CSV table, in the order of the Images table"
+                  : "Download the exported findings of the videos as a CSV table"
+              }
             >
-              Download listed CSV ({listedFindingCount})
+              Download CSV ({exportRows.length})
             </button>
             <button onClick={onClose}>Cancel</button>
             <button
@@ -154,7 +160,7 @@ export function ExportDialog({
               }
               onClick={() => void submit()}
             >
-              {plan !== null && plan.pending_count > 0 ? `Infer ${plan.pending_count} and Export` : "Export"}
+              Export {exportRows.length}
             </button>
           </>
         }
@@ -163,10 +169,32 @@ export function ExportDialog({
         {plan !== null && purpose !== undefined && (
           <>
             <div className="hint" title={plan.options_text}>
-              {plan.model_name} · {plan.picture_count} pictures
-              {plan.pending_count > 0 && <> · {plan.pending_count} are inferred first</>}
+              {plan.model_name} · <b>{exportRows.length} findings</b>{" "}
+              {media === "image"
+                ? `on the ${listedPictureCount ?? 0} pictures listed in the Images table`
+                : `kept on ${plan.picture_count} inferred frames of the videos`}
             </div>
             {plan.issue !== "" && <div className="error-text">{plan.issue}</div>}
+            {plan.pending_count > 0 && (
+              <div className="export-pending">
+                <span className="grow">
+                  {plan.pending_count} {media === "image" ? "images are" : "sampled frames are"} not inferred yet and
+                  are left out.
+                  {!plan.is_pending_inferable && " Choose the model settings of these results to infer them."}
+                </span>
+                {plan.is_pending_inferable && (
+                  <button
+                    className="small"
+                    onClick={() => {
+                      onInferAll();
+                      onClose();
+                    }}
+                  >
+                    Infer All
+                  </button>
+                )}
+              </div>
+            )}
             <ExportPurposeCards
               purposes={plan.purposes}
               selected={purpose.value}
@@ -252,36 +280,6 @@ export function ExportDialog({
             </div>
             <div className="export-divider" />
             <div className="export-form">
-              <span>Findings</span>
-              <div className="row">
-                <div className="segmented export-choice" role="radiogroup" aria-label="Exported findings">
-                  {plan.scopes.map((scope) => (
-                    <button
-                      key={scope.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={stored.scope === scope.value}
-                      className={stored.scope === scope.value ? "active" : ""}
-                      onClick={() => change({ scope: scope.value })}
-                    >
-                      {scope.label}
-                    </button>
-                  ))}
-                </div>
-                <InfoTip label="Which findings are exported">
-                  {plan.scopes.map((scope) => (
-                    <div key={scope.value}>
-                      <b>{scope.label}</b>: {scope.description}
-                    </div>
-                  ))}
-                </InfoTip>
-              </div>
-              <span>Min. confidence</span>
-              <NumberField
-                value={stored.minimum_confidence}
-                onCommit={(value) => change({ minimum_confidence: value })}
-                width={80}
-              />
               <span>Folder</span>
               <div className="row">
                 <input
@@ -311,15 +309,21 @@ export function ExportDialog({
               )}
               <span>Also save</span>
               <div className="row wrap export-extras">
-                <label title="Every picture with its findings drawn, under annotated/">
+                <label
+                  title={
+                    media === "image"
+                      ? "Every exported image with its findings drawn, under annotated/"
+                      : "Every inferred frame with its findings drawn, under annotated/"
+                  }
+                >
                   <input
                     type="checkbox"
                     checked={stored.is_annotated_image_saved}
                     onChange={(event) => change({ is_annotated_image_saved: event.target.checked })}
                   />
-                  Annotated images
+                  {media === "image" ? "Annotated images" : "Annotated frames"}
                 </label>
-                {hasVideos && (
+                {media === "video" && (
                   <label title="Every video with findings drawn on every frame, under annotated/">
                     <input
                       type="checkbox"

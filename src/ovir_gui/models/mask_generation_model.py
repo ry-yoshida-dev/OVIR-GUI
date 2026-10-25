@@ -39,7 +39,7 @@ class MaskGenerationModel(RecognitionModel):
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
     MODE: ClassVar[SegmentationMode] = SegmentationMode.GENERATION
     REGION_CLASS_NAME: ClassVar[str] = "region"
-    QUERY_LABEL: ClassVar[str] = "automatic"
+    PROMPT_LABEL: ClassVar[str] = "automatic"
     DISABLED_NMS_THRESHOLD: ClassVar[float] = 1.0
 
     def __init__(self, preset: ModelPreset, settings: MaskGeneratorSettings) -> None:

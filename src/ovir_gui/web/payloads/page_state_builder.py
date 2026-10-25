@@ -3,10 +3,10 @@ from pathlib import Path
 
 from ...export import ExportReport
 from ...media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind
-from ...models import ClassificationModel, ModelProfile
+from ...models import ClassificationModel, ModelProfile, RecognitionModel
 from ...prompting import FramePrompt, ObjectMark, PicturePrompts
 from ...recognition import LabelMode, RecognitionTask
-from ...review import DuplicateSuppression, LabelModeChoice
+from ...review import DuplicateSuppression
 from ...storage import ClassThresholdStore
 from ...workspace import MediaStatus, RunProgress, Workspace
 from ..json_value import JsonObject, JsonValue
@@ -83,7 +83,7 @@ class PageStateBuilder:
             "suppression": self._class_views.suppression(workspace.review.duplicate_suppression),
             "standard_minimum": ClassThresholdStore.default_minimum_of(workspace.task),
             "standard_overlap_threshold": DuplicateSuppression.DEFAULT_OVERLAP_THRESHOLD,
-            "label_mode": self._label_mode(workspace.review.label_mode, shown),
+            "label_mode": self._label_mode(workspace),
             "status": {"message": workspace.notifier.status_message, "serial": workspace.notifier.status_serial},
             "activity": workspace.notifier.activity_message,
             "summary": workspace.summary,
@@ -110,18 +110,13 @@ class PageStateBuilder:
 
     @staticmethod
     def _media_entry(item: MediaItem, status: MediaStatus) -> JsonObject:
-        count_text: str = (
-            str(status.kept_count)
-            if status.expected_count == 1
-            else f"{status.recognized_count}/{status.expected_count}"
-        )
         return {
             "path": str(item.path),
             "name": item.path.name,
             "kind": item.kind.value,
             "state": status.state.value,
-            "color": status.state.color,
-            "count_text": count_text if status.recognized_count or status.outdated_count else "",
+            "expected_count": status.expected_count,
+            "recognized_count": status.recognized_count,
             "kept_count": status.kept_count,
             "description": status.description,
             "frame_count": None if item.video is None else item.video.frame_count,
@@ -164,15 +159,14 @@ class PageStateBuilder:
         }
 
     @staticmethod
-    def _label_mode(choice: LabelModeChoice, shown: ModelProfile | None) -> JsonObject:
-        native: LabelMode | None = (
-            ClassificationModel.native_label_mode_of(shown.backend)
-            if shown is not None and shown.task is RecognitionTask.CLASSIFICATION
-            else None
-        )
+    def _label_mode(workspace: Workspace) -> JsonValue:
+        model: RecognitionModel = workspace.models.current_model()
+        if model.task is not RecognitionTask.CLASSIFICATION:
+            return None
+        chosen: LabelMode | None = workspace.review.label_mode
+        shown: LabelMode = ClassificationModel.native_label_mode_of(model.backend) if chosen is None else chosen
         return {
-            "choice": choice.value,
-            "native": None if native is None else native.value,
+            "value": shown.value,
             "modes": [{"value": mode.value, "title": mode.title} for mode in LabelMode],
         }
 
@@ -236,7 +230,6 @@ class PageStateBuilder:
             "title": progress.title,
             "processed_count": progress.processed_count,
             "total_count": progress.total_count,
-            "is_blocking": progress.is_blocking,
         }
 
     @staticmethod

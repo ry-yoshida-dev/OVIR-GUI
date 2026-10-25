@@ -21,6 +21,7 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
+from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
     from .detection_model import DetectionModel
@@ -166,6 +167,18 @@ class ClassificationModel(RecognitionModel):
     @property
     def supported_query_kinds(self) -> frozenset[QueryKind]:
         return frozenset({QueryKind.TEXT, QueryKind.VISUAL})
+
+    @property
+    def threshold_controls(self) -> ThresholdControls:
+        """
+        Threshold settings of the review.
+
+        Returns
+        -------
+        ThresholdControls
+            Class minimums deciding which classes label a picture; no NMS.
+        """
+        return ThresholdControls(confidence_label=None, is_nms_shown=False, is_minimum_confidence_shown=True)
 
     @property
     def options(self) -> tuple[ProfileOption, ...]:

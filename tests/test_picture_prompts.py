@@ -147,7 +147,7 @@ class TestDrawnSignature:
 
     def test_exemplar_only_class_labels_its_query(self) -> None:
         prompt_class: PromptClass = PromptClass(name="dog", phrases=(), visual_examples=(), is_exemplar_queried=True)
-        assert prompt_class.query_labels == (PromptClass.EXEMPLAR_LABEL,)
+        assert prompt_class.prompt_labels == (PromptClass.EXEMPLAR_LABEL,)
         with pytest.raises(ValueError):
             PromptClass(name="dog", phrases=(), visual_examples=())
 
@@ -226,7 +226,7 @@ class TestDrawingPersistence:
             instances=(
                 RecognizedInstance(
                     class_name="dog",
-                    query_label=mark.label,
+                    matched_prompt=mark.label,
                     confidence=0.9,
                     box=instance_mask.box,
                     mask=instance_mask,

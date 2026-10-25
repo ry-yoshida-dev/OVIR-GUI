@@ -65,21 +65,21 @@ class ClassViewBuilder:
         Parameters
         ----------
         thresholds : ClassThresholds
-            Default, class and phrase minimums.
+            Default, class and prompt minimums.
 
         Returns
         -------
         JsonObject
-            Default minimum and the own minimums of classes and phrases.
+            Default minimum and the own minimums of classes and prompts.
         """
         class_minimums: JsonObject = dict(thresholds.class_minimums)
-        phrase_minimums: JsonObject = {
-            class_name: dict[str, JsonValue](by_phrase) for class_name, by_phrase in thresholds.phrase_minimums.items()
+        prompt_minimums: JsonObject = {
+            class_name: dict[str, JsonValue](by_prompt) for class_name, by_prompt in thresholds.prompt_minimums.items()
         }
         return {
             "default_minimum": thresholds.default_minimum,
             "class_minimums": class_minimums,
-            "phrase_minimums": phrase_minimums,
+            "prompt_minimums": prompt_minimums,
         }
 
     @staticmethod
