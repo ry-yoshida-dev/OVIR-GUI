@@ -850,6 +850,7 @@
     ],
     "benchmark_phrase_count": 2,
     "box_detectors": [],
+    "default_aggregation": null,
     "description": "",
     "devices": "<volatile>",
     "drawing_kinds": [],

@@ -174,6 +174,7 @@ export interface ModelState {
   text_templates: string[] | null;
   saved_templates: string[];
   aggregation: AggregationStep[] | null;
+  default_aggregation: AggregationStep[] | null;
   aggregation_methods: { value: AggregationMethodValue; title: string }[];
   score_activation: ScoreActivationValue | null;
   weights_path: string;

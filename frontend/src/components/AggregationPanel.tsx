@@ -16,10 +16,12 @@ import {
 import { placeInViewport } from "../lib/viewportPlacement";
 import { AggregationDiagram } from "./AggregationDiagram";
 import { AggregationMethodPicker } from "./AggregationMethodPicker";
+import { ResetGlyph } from "./Glyphs";
 
 interface AggregationPanelProps {
   anchor: RefObject<HTMLElement | null>;
   aggregation: AggregationRows;
+  defaultAggregation: AggregationRows;
   methods: { value: AggregationMethodValue; title: string }[];
   activation: ScoreActivationValue;
   isDisabled: boolean;
@@ -46,12 +48,13 @@ interface Preview {
  * of the process for example classes, which follows the choice. Templates and Prompts each run at no timing, on text
  * vectors or on similarities, with a method; dragging a row by its handle runs it before the other at the same timing,
  * and both rows at the same timing can be aggregated together. Pointing at a row highlights its step in the overview,
- * and pointing at a timing or at aggregating together shows the overview that choice gives before it is made.
- * It closes with its close button or Escape.
+ * and pointing at a timing, at aggregating together or at Reset shows the overview that choice gives before it is made;
+ * Reset returns to the default aggregation. It closes with its close button or Escape.
  */
 export function AggregationPanel({
   anchor,
   aggregation,
+  defaultAggregation,
   methods,
   activation,
   isDisabled,
@@ -98,6 +101,7 @@ export function AggregationPanel({
   const shownSteps: AggregationStep[] = preview === null ? steps : stepsOf(preview.aggregation);
   const shownHighlight = preview === null ? highlightedStep : previewHighlightOf(preview, shownSteps);
   const note = noteOf(steps, shownSteps);
+  const isDefault = isSameSteps(steps, stepsOf(defaultAggregation));
   const previewProps = (next: AggregationRows, rowIndex: number | null) => ({
     onMouseEnter: () => setPreview({ aggregation: next, rowIndex }),
     onMouseLeave: () => setPreview(null),
@@ -134,6 +138,20 @@ export function AggregationPanel({
         <span className="popover-title">Aggregation</span>
         <span className="small muted">How the prompts and templates of a class become its score</span>
         <span className="grow" />
+        <button
+          type="button"
+          className="ghost small labeled-action"
+          title="Reset the aggregation to its default"
+          disabled={isDisabled || isDefault}
+          {...(isDisabled || isDefault ? {} : previewProps(defaultAggregation, null))}
+          onClick={() => {
+            setPreview(null);
+            onChange(defaultAggregation);
+          }}
+        >
+          <ResetGlyph />
+          Reset
+        </button>
         <button className="ghost icon" title="Close" onClick={onClose}>
           ×
         </button>

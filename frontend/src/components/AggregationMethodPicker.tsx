@@ -28,6 +28,16 @@ const LOGSUMEXP_DESCRIPTIONS: Record<ScoreActivationValue, string> = {
   softmax: "Soft maximum: the same as adding up the probabilities of the members.",
   sigmoid: "Soft maximum: every strong member raises it a little more.",
 };
+const DESCRIPTIONS: Record<Exclude<AggregationMethodValue, "logsumexp">, string> = {
+  mean: "Average of every member: each member counts equally.",
+  max: "The most similar member: one good match is enough.",
+  median: "The middle member: a few outliers are ignored.",
+  min: "The least similar member: every member has to match.",
+};
+
+function describe(method: AggregationMethodValue, activation: ScoreActivationValue): string {
+  return method === "logsumexp" ? LOGSUMEXP_DESCRIPTIONS[activation] : DESCRIPTIONS[method];
+}
 
 function MethodMenu({
   anchor,
@@ -106,9 +116,7 @@ function MethodMenu({
                 <TeX expression={FORMULAS[method.value]} />
               </span>
             </span>
-            {method.value === "logsumexp" && (
-              <span className="aggregation-method-description">{LOGSUMEXP_DESCRIPTIONS[activation]}</span>
-            )}
+            <span className="aggregation-method-description">{describe(method.value, activation)}</span>
           </span>
         </div>
       ))}

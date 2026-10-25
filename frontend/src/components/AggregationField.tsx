@@ -15,6 +15,7 @@ import { AggregationPanel } from "./AggregationPanel";
 
 interface AggregationFieldProps {
   steps: AggregationStep[];
+  defaultSteps: AggregationStep[];
   methods: { value: AggregationMethodValue; title: string }[];
   activation: ScoreActivationValue;
   isDisabled: boolean;
@@ -32,7 +33,14 @@ interface SummaryLine {
  * the setup pane to choose them. The order of the rows is kept while the page is open, also where it does not change
  * the steps.
  */
-export function AggregationField({ steps, methods, activation, isDisabled, onChange }: AggregationFieldProps) {
+export function AggregationField({
+  steps,
+  defaultSteps,
+  methods,
+  activation,
+  isDisabled,
+  onChange,
+}: AggregationFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [order, setOrder] = useState<[RowUnit, RowUnit]>(DEFAULT_ROW_ORDER);
   const field = useRef<HTMLDivElement>(null);
@@ -88,6 +96,7 @@ export function AggregationField({ steps, methods, activation, isDisabled, onCha
         <AggregationPanel
           anchor={field}
           aggregation={aggregation}
+          defaultAggregation={rowsOf(defaultSteps, DEFAULT_ROW_ORDER)}
           methods={methods}
           activation={activation}
           isDisabled={isDisabled}
