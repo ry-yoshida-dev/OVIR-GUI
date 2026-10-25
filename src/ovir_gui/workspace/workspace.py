@@ -2,16 +2,16 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import ClassVar
 
+from open_vocabulary_classification import PromptAggregation
+
 from ..media import FrameKey, InferenceMode, MediaCollection, MediaItem, VideoSampling
 from ..models import (
-    ClassificationModel,
     LicenseConsent,
     ModelProfile,
     ModelSelection,
     ModelSelector,
     RecognitionModel,
     RecognizerSession,
-    TemplateCombination,
     WeightsStorage,
 )
 from ..prompting import PicturePromptBoard, PicturePrompts
@@ -207,7 +207,7 @@ class Workspace:
             self._models.current_model,
         )
         self._session.apply_stored()
-        self._library.apply_template_combination(self._template_combination())
+        self._library.apply_aggregation(self._aggregation())
         self._profiles.show_profile_of_task()
 
     @property
@@ -789,18 +789,18 @@ class Workspace:
             self._notifier.replace_status(f"Could not restore the saved results: {error}")
             return ResultLibrary()
 
-    def _template_combination(self) -> TemplateCombination:
+    def _aggregation(self) -> PromptAggregation:
         selection: ModelSelection | None = self._settings.selections.get(RecognitionTask.CLASSIFICATION)
-        if selection is None or selection.template_combination is None:
-            return ClassificationModel.DEFAULT_COMBINATION
-        return selection.template_combination
+        if selection is None or selection.aggregation is None:
+            return self._library.aggregation
+        return selection.aggregation
 
     def _model_chosen(self) -> None:
-        combination: TemplateCombination = self._template_combination()
-        if combination is self._library.template_combination:
+        aggregation: PromptAggregation = self._aggregation()
+        if aggregation == self._library.aggregation:
             self._settings_changed(WorkspaceTopic.STATE)
             return
-        self._library.apply_template_combination(combination)
+        self._library.apply_aggregation(aggregation)
         self._results_save.schedule()
         self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
 

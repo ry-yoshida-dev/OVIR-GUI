@@ -71,6 +71,7 @@ export class ConfidenceOverview {
         );
         if (value !== null) classTally.scores.push(value);
         if (isKept) classTally.keptCount += 1;
+        if (finding.matched_prompt === null) continue;
         let prompts = promptTallies.get(finding.class_name);
         if (prompts === undefined) {
           prompts = new Map();

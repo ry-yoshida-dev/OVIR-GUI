@@ -167,8 +167,8 @@ class ModelChoice:
 
     def select_preset(self, backend: str, preset_name: str) -> None:
         """
-        Choose a preset of the current task with its own values, keeping the template combination, which scores the
-        stored classifications of every model.
+        Choose a preset of the current task with its own values, keeping the aggregation, whose steps on similarities
+        score the stored classifications of every model.
 
         Parameters
         ----------
@@ -191,7 +191,7 @@ class ModelChoice:
         self.select_model(
             replace(
                 self._model_selector.selection_of(self._settings.task, backend, preset_name),
-                template_combination=self.selection.template_combination,
+                aggregation=self.selection.aggregation,
             )
         )
 

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from fastapi import APIRouter, Response
+from open_vocabulary_classification import AggregationStep, PromptAggregation
 
 from ..export import ListedFindingsWriter
 from ..media import FrameKey
@@ -13,7 +14,6 @@ from ..models import (
     ModelProfile,
     ModelSelection,
     StoredWeights,
-    TemplateCombination,
 )
 from ..recognition import RecognitionTask
 from ..results import ResultCatalog
@@ -115,9 +115,11 @@ class RecognitionRoutes:
                     box_detector_label=body.box_detector_label,
                     tiling_grid_size=body.tiling_grid_size,
                     text_templates=None if body.text_templates is None else tuple(body.text_templates),
-                    template_combination=None
-                    if body.template_combination is None
-                    else TemplateCombination(body.template_combination),
+                    aggregation=None
+                    if body.aggregation is None
+                    else PromptAggregation.of(
+                        [AggregationStep.from_mapping(step.model_dump()) for step in body.aggregation]
+                    ),
                     batch_size=body.batch_size,
                 )
             )

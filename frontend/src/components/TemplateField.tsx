@@ -1,32 +1,27 @@
 import { useRef, useState } from "react";
-import type { TemplateCombinationValue } from "../api/types";
 import { PLAIN_TEMPLATE } from "../lib/textTemplate";
-import { type TemplateChoice, type TemplateCombinationChoice, TemplatePanel } from "./TemplatePanel";
+import { type TemplateChoice, TemplatePanel } from "./TemplatePanel";
 import { TemplateText } from "./TemplateText";
 
 interface TemplateFieldProps {
   templates: string[];
   savedTemplates: string[];
-  combination: TemplateCombinationChoice;
   examplePrompt: string;
   isDisabled: boolean;
   onChange: (choice: TemplateChoice) => void;
-  onCombinationChange: (combination: TemplateCombinationValue) => void;
   onReport: (text: string) => void;
 }
 
 /**
- * Picker summing up the templates in use, opening the panel beside the setup pane to choose how their scores combine
- * and to choose and edit the saved templates.
+ * Picker summing up the templates in use, opening the panel beside the setup pane to choose and edit the saved
+ * templates.
  */
 export function TemplateField({
   templates,
   savedTemplates,
-  combination,
   examplePrompt,
   isDisabled,
   onChange,
-  onCombinationChange,
   onReport,
 }: TemplateFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,11 +52,9 @@ export function TemplateField({
         <TemplatePanel
           anchor={field}
           choice={{ saved, inUse: templates }}
-          combination={combination}
           examplePrompt={examplePrompt}
           isDisabled={isDisabled}
           onChange={onChange}
-          onCombinationChange={onCombinationChange}
           onReport={onReport}
           onClose={() => setIsOpen(false)}
         />

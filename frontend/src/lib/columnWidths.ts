@@ -37,7 +37,7 @@ function cellTextOf(row: TableRow, key: ColumnKey): string {
     case "class":
       return finding.class_name;
     case "prompt":
-      return finding.matched_prompt;
+      return finding.matched_prompt ?? "";
     case "template":
       return finding.matched_template === null ? "" : templateLabelOf(finding.matched_template);
     case "confidence":

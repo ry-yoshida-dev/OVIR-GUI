@@ -33,7 +33,7 @@ dependencies = [
     "segmentation-format @ git+https://github.com/ry-yoshida-dev/SegmentationFormat.git@5fa833f0b8c143e9fddb84d1ab932bfa38855c82",
     "video-handler @ git+https://github.com/ry-yoshida-dev/VideoHandler.git@8e9b5c0c133162b610b15b24f6f7e572eb3873bf",
     "time-series-iterator @ git+https://github.com/ry-yoshida-dev/TimeSeriesIterator.git@ddbe88a0861d8229b5acb0a201c891fad9926b3c",
-    "open-vocabulary-classification @ git+https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git@361ce2c41b6701a2dc9e7bea14ee2d60fab8c91f",
+    "open-vocabulary-classification @ git+https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git@f74ac924284125cc7e9dbea5a5f6f26b56e2655e",
     "open-vocabulary-detector @ git+https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git@6e2300c7e7cc75c97b09e34cda9eefef71b6029e",
     "open-vocabulary-segmentation @ git+https://github.com/ry-yoshida-dev/OpenVocabularySegmentation.git@a08eea4103d2d9fbd06f7d01c34b1a92022d24bd",
 ]

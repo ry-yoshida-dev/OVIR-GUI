@@ -1,6 +1,9 @@
+from open_vocabulary_classification import AggregationMethod, PromptAggregation
+
 from ...models import (
     BackendTraits,
     BenchmarkCatalog,
+    ClassificationModel,
     ComputeDevice,
     ComputePrecision,
     DeviceAvailability,
@@ -11,7 +14,6 @@ from ...models import (
     ModelSelector,
     RecognitionModel,
     SegmentationMode,
-    TemplateCombination,
     ThresholdControls,
 )
 from ...prompting import QueryKind
@@ -94,7 +96,7 @@ class ModelPanelBuilder:
         ]
         availability: DeviceAvailability = selector.device_availability
         text_templates: tuple[str, ...] | None = model.text_templates
-        template_combination: TemplateCombination | None = model.template_combination
+        aggregation: PromptAggregation | None = model.aggregation
         return {
             "backends": backends,
             "modes": modes,
@@ -127,9 +129,10 @@ class ModelPanelBuilder:
             "is_image_prompt_supported": workspace.models.is_image_prompt_supported(),
             "text_templates": None if text_templates is None else list[JsonValue](text_templates),
             "saved_templates": list[JsonValue](workspace.text_templates.templates),
-            "template_combination": None if template_combination is None else template_combination.value,
-            "template_combinations": [
-                {"value": combination.value, "title": combination.title} for combination in TemplateCombination
+            "aggregation": None if aggregation is None else self._steps(aggregation),
+            "aggregation_methods": [
+                {"value": method.value, "title": ClassificationModel.method_title_of(method)}
+                for method in AggregationMethod
             ],
             "weights_path": model.weights_path,
             "description": model.usage_description,
@@ -203,8 +206,10 @@ class ModelPanelBuilder:
             "box_detector_label": selection.box_detector_label,
             "tiling_grid_size": selection.tiling_grid_size,
             "text_templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
-            "template_combination": None
-            if selection.template_combination is None
-            else selection.template_combination.value,
+            "aggregation": None if selection.aggregation is None else ModelPanelBuilder._steps(selection.aggregation),
             "batch_size": selection.batch_size,
         }
+
+    @staticmethod
+    def _steps(aggregation: PromptAggregation) -> JsonValue:
+        return [dict[str, JsonValue](step.to_mapping()) for step in aggregation.steps]

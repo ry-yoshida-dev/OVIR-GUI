@@ -120,6 +120,29 @@
     }
   ],
   "model": {
+    "aggregation": null,
+    "aggregation_methods": [
+      {
+        "title": "Mean",
+        "value": "mean"
+      },
+      {
+        "title": "Max",
+        "value": "max"
+      },
+      {
+        "title": "Median",
+        "value": "median"
+      },
+      {
+        "title": "Min",
+        "value": "min"
+      },
+      {
+        "title": "LogSumExp",
+        "value": "logsumexp"
+      }
+    ],
     "backends": [
       {
         "image_poolings": [],
@@ -849,6 +872,7 @@
       "a photo of a {}."
     ],
     "selection": {
+      "aggregation": null,
       "backend": "grounding_dino",
       "batch_size": 4,
       "box_detector_label": null,
@@ -858,33 +882,9 @@
       "nms_iou_threshold": null,
       "precision": "float32",
       "preset_name": "original_tiny",
-      "template_combination": null,
       "text_templates": null,
       "tiling_grid_size": null
     },
-    "template_combination": null,
-    "template_combinations": [
-      {
-        "title": "None",
-        "value": "none"
-      },
-      {
-        "title": "Max",
-        "value": "max"
-      },
-      {
-        "title": "Mean",
-        "value": "mean"
-      },
-      {
-        "title": "Median",
-        "value": "median"
-      },
-      {
-        "title": "Min",
-        "value": "min"
-      }
-    ],
     "text_templates": null,
     "tuning": {
       "confidence_label": null,

@@ -1,8 +1,10 @@
 from collections.abc import Callable, Iterable
 from functools import partial
 
+from open_vocabulary_classification import PromptAggregation, ScoreActivation
+
 from ..media import FrameKey
-from ..models import ClassificationModel, ModelProfile, TemplateCombination, TemplateScorer
+from ..models import ClassificationModel, ClassificationScorer, ModelProfile
 from ..prompting import PromptChange, PromptSignature
 from ..recognition import FrameResult, RecognitionTask
 from .result_catalog import ResultCatalog
@@ -13,38 +15,42 @@ class ResultLibrary:
     One ``ResultCatalog`` per model profile, in the order the profiles were added.
 
     Results of every model and option set are kept side by side, so switching back to a model shows its results
-    without recognizing again, and two models can be compared. Every classification is scored with the template
-    combination of the library from the sentence logits it keeps, so changing the combination needs no recognition.
+    without recognizing again, and two models can be compared. Every classification is scored with the aggregation
+    steps on similarities of the library from the logits of the text vectors it keeps, so changing those steps needs
+    no recognition.
     """
 
     def __init__(self) -> None:
         self._catalogs: dict[ModelProfile, ResultCatalog] = {}
-        self._template_combination: TemplateCombination = ClassificationModel.DEFAULT_COMBINATION
+        self._aggregation: PromptAggregation = PromptAggregation()
+        self._scorers: dict[ScoreActivation, ClassificationScorer] = {}
 
     @property
-    def template_combination(self) -> TemplateCombination:
+    def aggregation(self) -> PromptAggregation:
         """
-        Combination the classifications are scored with.
+        Aggregation whose steps on similarities the classifications are scored with.
 
         Returns
         -------
-        TemplateCombination
-            Combination last applied, ``ClassificationModel.DEFAULT_COMBINATION`` at first.
+        PromptAggregation
+            Aggregation last applied, the library default at first.
         """
-        return self._template_combination
+        return self._aggregation
 
-    def apply_template_combination(self, combination: TemplateCombination) -> None:
+    def apply_aggregation(self, aggregation: PromptAggregation) -> None:
         """
-        Score every stored classification again with a combination, and the ones recorded later.
+        Score every stored classification again with the steps on similarities of an aggregation, and the ones
+        recorded later.
 
-        Classifications stored without sentence logits keep their scores.
+        Classifications stored without embedding logits keep their scores; steps on text vectors are not read.
 
         Parameters
         ----------
-        combination : TemplateCombination
-            How the sentences of a prompt turn into its score.
+        aggregation : PromptAggregation
+            How the prompts and templates of every class become its score.
         """
-        self._template_combination = combination
+        self._aggregation = aggregation
+        self._scorers.clear()
         for profile, catalog in self._catalogs.items():
             if profile.task is RecognitionTask.CLASSIFICATION:
                 catalog.rescore(partial(self._scored, profile))
@@ -228,8 +234,10 @@ class ResultLibrary:
         self._catalogs.clear()
 
     def _scored(self, profile: ModelProfile, result: FrameResult) -> FrameResult:
-        if result.sentence_logits is None:
+        if result.embedding_logits is None:
             return result
-        return TemplateScorer(
-            self._template_combination, ClassificationModel.score_activation_of(profile.backend)
-        ).rescored(result)
+        activation: ScoreActivation = ClassificationModel.score_activation_of(profile.backend)
+        scorer: ClassificationScorer = self._scorers.setdefault(
+            activation, ClassificationScorer(self._aggregation, activation)
+        )
+        return scorer.rescored(result)

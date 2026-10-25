@@ -8,6 +8,7 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 
 | Component | Description |
 | --- | --- |
+| [aggregation_step_body.py](./aggregation_step_body.py) | `AggregationStepBody` is one step merging the prompts or templates of a classifier class: unit, timing and method. |
 | [acceptance_body.py](./acceptance_body.py) | `AcceptanceBody` lists findings of the shown results to keep or reject. |
 | [approval_body.py](./approval_body.py) | `ApprovalBody` is a request that may need the user's approval to leave out classes. |
 | [class_row_body.py](./class_row_body.py) | `ClassRowBody` carries a class, or phrases of a class, typed by the user. |

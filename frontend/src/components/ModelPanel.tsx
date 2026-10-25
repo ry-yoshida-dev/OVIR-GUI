@@ -4,6 +4,7 @@ import type { ModelSelection, ModelState } from "../api/types";
 import type { Call } from "../hooks/useActionRunner";
 import { familyOf } from "../lib/modelFamily";
 import { ModelLibraryDialog } from "./ModelLibraryDialog";
+import { AggregationField } from "./AggregationField";
 import { TemplateField } from "./TemplateField";
 import type { TemplateChoice } from "./TemplatePanel";
 
@@ -53,20 +54,27 @@ export function ModelPanel({
             ›
           </span>
         </button>
-        {model.text_templates !== null && model.template_combination !== null && (
+        {model.text_templates !== null && (
           <>
             <span>Templates</span>
             <TemplateField
               templates={model.text_templates}
               savedTemplates={model.saved_templates}
-              combination={{ value: model.template_combination, options: model.template_combinations }}
               examplePrompt={examplePrompt}
               isDisabled={isDisabled}
               onChange={(choice) => void changeTemplates(choice)}
-              onCombinationChange={(combination) =>
-                onSelectionChange({ ...selection, template_combination: combination })
-              }
               onReport={onReport}
+            />
+          </>
+        )}
+        {model.aggregation !== null && (
+          <>
+            <span>Aggregation</span>
+            <AggregationField
+              steps={model.aggregation}
+              methods={model.aggregation_methods}
+              isDisabled={isDisabled}
+              onChange={(steps) => onSelectionChange({ ...selection, aggregation: steps })}
             />
           </>
         )}

@@ -13,20 +13,21 @@ class ClassScore:
     score : float
         Score in ``[0, 1]``: a share of the classes for softmax models, an independent probability for sigmoid models.
     logit : float
-        Logit of the best prompt of the class.
-    matched_prompt : str
-        Prompt that scored highest: a phrase or a reference image name.
+        Logit of the class after the aggregation steps.
+    matched_prompt : str | None
+        Prompt of the text vector that scored highest among those the logit came from: a phrase or a reference image
+        name; ``None`` once the prompts of the class were merged into one text vector.
     similarity : float | None
-        Cosine similarity in ``[-1, 1]`` of the image and the best prompt of the class; ``None`` for results stored
-        before it was recorded.
+        Cosine similarity in ``[-1, 1]`` the logit stands for; ``None`` for results stored before it was recorded.
     matched_template : str | None
-        Text template of the best sentence of the matched prompt, ``"{}"`` for the phrase as written; ``None`` for a
-        reference image or results stored before it was recorded.
+        Text template of the text vector that scored highest, ``"{}"`` for the phrase as written; ``None`` for a
+        reference image, once the templates were merged into one text vector, or for results stored before it was
+        recorded.
     """
 
     class_name: str
     score: float
     logit: float
-    matched_prompt: str
+    matched_prompt: str | None
     similarity: float | None
     matched_template: str | None

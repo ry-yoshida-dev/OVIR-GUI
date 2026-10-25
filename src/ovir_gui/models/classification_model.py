@@ -4,12 +4,17 @@ from typing import TYPE_CHECKING, ClassVar
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from open_vocabulary_classification import (
+    AggregationMethod,
+    AggregationStep,
+    AggregationTiming,
+    AggregationUnit,
     ClassifierBackend,
     ClassifierSettings,
     Device,
     ImagePooling,
     ImageTiling,
     Precision,
+    PromptAggregation,
     ScoreActivation,
 )
 
@@ -21,7 +26,6 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
-from .template_combination import TemplateCombination
 from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
@@ -35,22 +39,20 @@ class ClassificationModel(RecognitionModel):
 
     Classifiers take phrases and reference images; the image pooling can be chosen among those the backend offers,
     and large pictures can be classified on a grid of overlapping tiles so that small objects count. Every phrase is
-    filled into every text template outside the library, and the sentences of a phrase are scored by the
-    ``TemplateCombination``. The combination is not an option of the profile: results keep the logit of every
-    sentence and are scored again when it changes.
+    filled into every text template, and the ``PromptAggregation`` of the settings merges the prompts and templates of
+    every class. Its steps on text vectors are an option of the profile, since they change what a picture is compared
+    with; its steps on similarities are not: results keep the logit of every text vector and are scored again when
+    they change.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.CLASSIFICATION
     SECTION_KEY: ClassVar[str] = "classifier"
-    PLAIN_TEMPLATE: ClassVar[str] = "{}"
-    DEFAULT_COMBINATION: ClassVar[TemplateCombination] = TemplateCombination.NONE
 
     def __init__(
         self,
         preset: ModelPreset,
         settings: ClassifierSettings,
         tiling: ImageTiling | None = None,
-        template_combination: TemplateCombination = DEFAULT_COMBINATION,
     ) -> None:
         """
         Parameters
@@ -62,13 +64,10 @@ class ClassificationModel(RecognitionModel):
         tiling : ImageTiling | None, optional
             Grid of tiles each picture is classified on besides the whole picture; ``None`` classifies the whole
             picture only.
-        template_combination : TemplateCombination, optional
-            How the sentences of a phrase, one per text template, turn into its score.
         """
         super().__init__(preset)
         self._settings: ClassifierSettings = settings
         self._tiling: ImageTiling | None = tiling
-        self._template_combination: TemplateCombination = template_combination
 
     @classmethod
     def from_preset(cls, preset: ModelPreset) -> "ClassificationModel":
@@ -177,10 +176,9 @@ class ClassificationModel(RecognitionModel):
         Returns
         -------
         ClassifierSettings
-            Settings with overrides applied and the plain template only, since the phrases arrive filled into the
-            text templates already.
+            Settings with overrides applied.
         """
-        return replace(self._settings, text_templates=(self.PLAIN_TEMPLATE,))
+        return self._settings
 
     @property
     def weights_path(self) -> str:
@@ -226,7 +224,64 @@ class ClassificationModel(RecognitionModel):
             ProfileOption(
                 "Tiling", "off" if self._tiling is None else f"{self._tiling.grid_size}x{self._tiling.grid_size}"
             ),
+            *self._text_vector_options(),
         )
+
+    @staticmethod
+    def unit_title_of(unit: AggregationUnit) -> str:
+        """
+        Name of what an aggregation step merges, as the settings show it.
+
+        Parameters
+        ----------
+        unit : AggregationUnit
+            Which entries of a class a step merges.
+
+        Returns
+        -------
+        str
+            E.g. ``"Templates"``.
+        """
+        match unit:
+            case AggregationUnit.TEMPLATE:
+                return "Templates"
+            case AggregationUnit.PROMPT:
+                return "Prompts"
+            case AggregationUnit.TEMPLATE_AND_PROMPT:
+                return "Templates & prompts"
+
+    @staticmethod
+    def method_title_of(method: AggregationMethod) -> str:
+        """
+        Name of how an aggregation step merges, as the settings show it.
+
+        Parameters
+        ----------
+        method : AggregationMethod
+            How the members of a group become one.
+
+        Returns
+        -------
+        str
+            E.g. ``"LogSumExp"``.
+        """
+        match method:
+            case AggregationMethod.MEAN:
+                return "Mean"
+            case AggregationMethod.MAX:
+                return "Max"
+            case AggregationMethod.MEDIAN:
+                return "Median"
+            case AggregationMethod.MIN:
+                return "Min"
+            case AggregationMethod.LOGSUMEXP:
+                return "LogSumExp"
+
+    def _text_vector_options(self) -> tuple[ProfileOption, ...]:
+        steps: tuple[AggregationStep, ...] = self._settings.aggregation.steps_at(AggregationTiming.EMBEDDING)
+        if not steps:
+            return ()
+        return (ProfileOption("Text vectors", " → ".join(self.unit_title_of(step.unit) for step in steps)),)
 
     @property
     def tiling(self) -> ImageTiling | None:
@@ -253,16 +308,16 @@ class ClassificationModel(RecognitionModel):
         return self._settings.text_templates
 
     @property
-    def template_combination(self) -> TemplateCombination:
+    def aggregation(self) -> PromptAggregation:
         """
-        How the sentences of a phrase, one per text template, turn into its score.
+        How the prompts and templates of every class become its score.
 
         Returns
         -------
-        TemplateCombination
-            Combination of the selection, ``NONE`` unless chosen.
+        PromptAggregation
+            Aggregation of the selection, or of the preset unless chosen.
         """
-        return self._template_combination
+        return self._settings.aggregation
 
     def loading_signature(self) -> tuple[str, ...]:
         return (
@@ -284,7 +339,7 @@ class ClassificationModel(RecognitionModel):
             image_pooling=self._settings.image_pooling.value,
             tiling_grid_size=None if self._tiling is None else self._tiling.grid_size,
             text_templates=self._settings.text_templates,
-            template_combination=self._template_combination,
+            aggregation=self._settings.aggregation,
             batch_size=self._settings.batch_size,
         )
 
@@ -303,7 +358,7 @@ class ClassificationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, pooling, tiling, text templates, their combination and batch size to use.
+            Device, precision, pooling, tiling, text templates, their aggregation and batch size to use.
         box_detector_of : Callable[[str], DetectionModel]
             Not read; the model has no box detector.
 
@@ -330,10 +385,10 @@ class ClassificationModel(RecognitionModel):
                 text_templates=self._settings.text_templates
                 if selection.text_templates is None
                 else selection.text_templates,
+                aggregation=self._settings.aggregation if selection.aggregation is None else selection.aggregation,
                 batch_size=self._settings.batch_size if selection.batch_size is None else selection.batch_size,
             ),
             None if selection.tiling_grid_size is None else ImageTiling(grid_size=selection.tiling_grid_size),
-            self._template_combination if selection.template_combination is None else selection.template_combination,
         )
 
     def build_recognizer(self) -> "Recognizer[ClassificationModel]":

@@ -138,11 +138,19 @@ export interface ModelSelection {
   box_detector_label: string | null;
   tiling_grid_size: number | null;
   text_templates: string[] | null;
-  template_combination: TemplateCombinationValue | null;
+  aggregation: AggregationStep[] | null;
   batch_size: number | null;
 }
 
-export type TemplateCombinationValue = "none" | "max" | "mean" | "median" | "min";
+export type AggregationUnitValue = "template" | "prompt" | "template_and_prompt";
+export type AggregationTimingValue = "embedding" | "similarity";
+export type AggregationMethodValue = "mean" | "max" | "median" | "min" | "logsumexp";
+
+export interface AggregationStep {
+  unit: AggregationUnitValue;
+  timing: AggregationTimingValue;
+  method: AggregationMethodValue;
+}
 
 export interface TaskState {
   value: TaskValue;
@@ -164,8 +172,8 @@ export interface ModelState {
   is_image_prompt_supported: boolean;
   text_templates: string[] | null;
   saved_templates: string[];
-  template_combination: TemplateCombinationValue | null;
-  template_combinations: { value: TemplateCombinationValue; title: string }[];
+  aggregation: AggregationStep[] | null;
+  aggregation_methods: { value: AggregationMethodValue; title: string }[];
   weights_path: string;
   description: string;
   benchmark_phrase_count: number;
@@ -326,7 +334,7 @@ export interface WorkspaceState {
 export interface Finding {
   index: number;
   class_name: string;
-  matched_prompt: string;
+  matched_prompt: string | null;
   matched_template: string | null;
   confidence: number;
   box: Box | null;
@@ -371,7 +379,7 @@ export interface ClassScore {
   score: number;
   logit: number;
   similarity: number | null;
-  matched_prompt: string;
+  matched_prompt: string | null;
   matched_template: string | null;
 }
 

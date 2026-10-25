@@ -1,5 +1,4 @@
 import { type RefObject, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
-import type { TemplateCombinationValue } from "../api/types";
 import { placeInViewport } from "../lib/viewportPlacement";
 import { PLAIN_TEMPLATE, wordsOf } from "../lib/textTemplate";
 import { TrashGlyph } from "./Glyphs";
@@ -11,19 +10,12 @@ export interface TemplateChoice {
   inUse: string[];
 }
 
-export interface TemplateCombinationChoice {
-  value: TemplateCombinationValue;
-  options: { value: TemplateCombinationValue; title: string }[];
-}
-
 interface TemplatePanelProps {
   anchor: RefObject<HTMLElement | null>;
   choice: TemplateChoice;
-  combination: TemplateCombinationChoice;
   examplePrompt: string;
   isDisabled: boolean;
   onChange: (choice: TemplateChoice) => void;
-  onCombinationChange: (combination: TemplateCombinationValue) => void;
   onReport: (text: string) => void;
   onClose: () => void;
 }
@@ -33,8 +25,7 @@ const PANE_GAP = 10;
 const HEADER_OFFSET = 40;
 
 /**
- * Panel beside the setup pane choosing how the sentences of a prompt, one per template in use, become its score, above
- * the table of the saved templates led by None, which uses the prompt as written: the check of a row chooses whether
+ * Panel beside the setup pane with the table of the saved templates led by None, which uses the prompt as written: the check of a row chooses whether
  * it is used, the words of a template are edited in place, and new templates are added at the end. When nothing is
  * checked, None is used. It stays open while the user works elsewhere and closes with its close button or Escape
  * outside a field, so nothing typed is lost.
@@ -42,11 +33,9 @@ const HEADER_OFFSET = 40;
 export function TemplatePanel({
   anchor,
   choice,
-  combination,
   examplePrompt,
   isDisabled,
   onChange,
-  onCombinationChange,
   onReport,
   onClose,
 }: TemplatePanelProps) {
@@ -81,7 +70,6 @@ export function TemplatePanel({
   }, [anchor]);
 
   const inUse = new Set(choice.inUse);
-  const isCombinable = choice.inUse.length > 1;
   const needle = search.trim().toLowerCase();
   const shown = choice.saved.filter((template) => {
     if (needle === "") return true;
@@ -142,30 +130,6 @@ export function TemplatePanel({
         <button className="ghost icon" title="Close" onClick={onClose}>
           ×
         </button>
-      </div>
-      <div className="template-section-heading">Combine</div>
-      <div className="template-combine">
-        <span
-          className="segmented"
-          role="radiogroup"
-          aria-label="Combine"
-          title={isCombinable ? undefined : "Use two or more templates to combine their scores"}
-        >
-          {combination.options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={option.value === combination.value}
-              className={option.value === combination.value ? "active" : ""}
-              disabled={isDisabled || !isCombinable}
-              onClick={() => onCombinationChange(option.value)}
-            >
-              {option.title}
-            </button>
-          ))}
-        </span>
-        <span className="template-note">How the scores of a prompt in each template in use become its score</span>
       </div>
       <div className="template-section-heading">
         Templates

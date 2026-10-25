@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from .aggregation_step_body import AggregationStepBody
+
 
 class ModelSelectionBody(BaseModel):
     """
@@ -27,8 +29,9 @@ class ModelSelectionBody(BaseModel):
         Tiles along each side a classifier also scores; ``None`` scores the whole picture only.
     text_templates : list[str] | None
         Sentences every phrase of a classifier is filled into; ``None`` keeps the preset's own.
-    template_combination : str | None
-        Value of how the sentences of a classifier phrase turn into its score; ``None`` keeps the model's.
+    aggregation : list[AggregationStepBody] | None
+        Steps merging the prompts and templates of every class of a classifier, in order; ``None`` keeps the
+        preset's own.
     batch_size : int | None
         Pictures per forward pass, a power of two; ``None`` keeps the preset's own.
     """
@@ -43,5 +46,5 @@ class ModelSelectionBody(BaseModel):
     box_detector_label: str | None = None
     tiling_grid_size: int | None = None
     text_templates: list[str] | None = None
-    template_combination: str | None = None
+    aggregation: list[AggregationStepBody] | None = None
     batch_size: int | None = None

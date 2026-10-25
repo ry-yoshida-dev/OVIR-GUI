@@ -87,7 +87,7 @@ class TableExportWriter:
                         self._frame_text(item),
                         self._seconds_text(item),
                         finding.class_name,
-                        finding.matched_prompt,
+                        "" if finding.matched_prompt is None else finding.matched_prompt,
                     ]
                     if self._is_confidence_included:
                         row.append(f"{finding.confidence:.6f}")

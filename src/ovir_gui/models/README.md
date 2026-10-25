@@ -10,10 +10,11 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | --- | --- |
 | [backend_traits.py](./backend_traits.py) | `BackendTraits` holds the options a model family offers: image poolings, detector boxes and segmentation mode. |
 | [benchmark_catalog.py](./benchmark_catalog.py) | `BenchmarkCatalog` holds the accuracy and compute of the detection checkpoints, read from `model_benchmarks.json`. |
-| [classification_model.py](./classification_model.py) | `ClassificationModel` holds the settings of an `open_vocabulary_classification` classifier (CLIP, SigLIP and variants). |
-| [classifier_prompt_builder.py](./classifier_prompt_builder.py) | `ClassifierPromptBuilder` fills every phrase of a `LabeledPrompt` into every text template, giving the queries of `open_vocabulary_classification`. |
-| [classifier_query_layout.py](./classifier_query_layout.py) | `ClassifierQueryLayout` holds the library prompt of a classifier with the class, prompt and template of every sentence, and turns the query logits of a picture into its `ClassifierLogits`. |
-| [classifier_recognizer.py](./classifier_recognizer.py) | `ClassifierRecognizer` wraps a loaded `open_vocabulary_classification` classifier, scoring the classes from the logits of their sentences. |
+| [classification_model.py](./classification_model.py) | `ClassificationModel` holds the settings of an `open_vocabulary_classification` classifier (CLIP, SigLIP and variants) with its text templates and `PromptAggregation`; the steps on text vectors are a profile option, the steps on similarities score stored results again. |
+| [classifier_prompt_builder.py](./classifier_prompt_builder.py) | `ClassifierPromptBuilder` turns the phrases and visual examples of every class of a `LabeledPrompt` into the `open_vocabulary_classification` prompt, which fills them into the text templates. |
+| [classifier_query_layout.py](./classifier_query_layout.py) | `ClassifierQueryLayout` holds the library prompt of a classifier with the prompt label of every query, and turns the library result of a picture into its `ClassifierLogits`, one per text vector. |
+| [classification_scorer.py](./classification_scorer.py) | `ClassificationScorer` turns the logits of the text vectors of a classifier into class scores with the library's steps on similarities; it scores stored results again when those steps change. |
+| [classifier_recognizer.py](./classifier_recognizer.py) | `ClassifierRecognizer` wraps a loaded `open_vocabulary_classification` classifier, keeping the logits of the text vectors of every picture and scoring the classes from them. |
 | [concept_tracking_model.py](./concept_tracking_model.py) | `ConceptTrackingModel` holds the settings of the SAM 3 video concept tracker. |
 | [concept_tracking_recognizer.py](./concept_tracking_recognizer.py) | `ConceptTrackingRecognizer` follows every instance of the phrases and reference images through the frames of a video, naming its track. |
 | [compute_device.py](./compute_device.py) | `ComputeDevice` enumerates the devices a model runs on, mapped onto each library's device type. |
@@ -38,7 +39,6 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | [preset_catalog.py](./preset_catalog.py) | `PresetCatalog` discovers model presets of every task from `<root>/<backend>/<name>.yaml`, and from `<root>/<folder>/<family>/<name>.yaml` for nested folders. |
 | [preset_reference.py](./preset_reference.py) | `PresetReference` names one preset of the catalog by task, model family and preset name. |
 | [profile_option.py](./profile_option.py) | `ProfileOption` holds one setting telling results of the same model apart, e.g. `Conf` = `0.35`. |
-| [prompt_sentence.py](./prompt_sentence.py) | `PromptSentence` is one query a classifier scores for a class: a phrase in one text template, or a reference image. |
 | [promptable_recognizer.py](./promptable_recognizer.py) | `PromptableRecognizer` segments the objects marked on each picture, reusing the encodings of recent pictures. |
 | [promptable_segmentation_model.py](./promptable_segmentation_model.py) | `PromptableSegmentationModel` holds the settings of a promptable segmenter (SAM, SAM 2, SAM 3 tracker, EdgeTAM, Florence-2). |
 | [recognition_model.py](./recognition_model.py) | `RecognitionModel` is the task-independent view of the settings of one model. |
@@ -50,7 +50,5 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | [segmenter_recognizer.py](./segmenter_recognizer.py) | `SegmenterRecognizer` wraps a loaded `open_vocabulary_segmentation` segmenter, passing SAM 3 the reference images of the prompt and the exemplar boxes of each picture and keeping masks compact as `InstanceMask`s. |
 | [stored_weights.py](./stored_weights.py) | `StoredWeights` holds the weights path and disk size of one downloaded checkpoint. |
 | [stream_position.py](./stream_position.py) | `StreamPosition` tells whether the next picture continues the streaming session of a tracker. |
-| [template_combination.py](./template_combination.py) | `TemplateCombination` enumerates how the sentences of a classifier prompt become its score: none (every sentence scored on its own), max, mean, median or min. |
-| [template_scorer.py](./template_scorer.py) | `TemplateScorer` turns the sentence logits of a classifier into class scores, combining or not before the softmax or sigmoid, and reports the best template; it scores stored results again from their logits when the combination changes. |
 | [threshold_controls.py](./threshold_controls.py) | `ThresholdControls` tells which threshold settings a model reads, shown with its settings. |
 | [weights_storage.py](./weights_storage.py) | `WeightsStorage` finds, sizes and deletes downloaded weights in the Hugging Face hub cache (through `huggingface_hub`, keeping files shared with other repositories) and the Ultralytics directories. |

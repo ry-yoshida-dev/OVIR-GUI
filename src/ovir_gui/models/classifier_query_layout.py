@@ -1,51 +1,51 @@
 from dataclasses import dataclass
 
-import numpy as np
-from numpy.typing import NDArray
-from open_vocabulary_classification import Prompt
+from open_vocabulary_classification import ClassificationResult, EmbeddingEntry, Prompt
 
-from ..recognition import ClassifierLogits, SentenceLogit
-from .prompt_sentence import PromptSentence
+from ..prompting import LabeledPrompt
+from ..recognition import ClassifierLogits, EmbeddingLogit
 
 
 @dataclass(frozen=True)
 class ClassifierQueryLayout:
     """
-    Library prompt of a classifier with every sentence of the classes it holds the logit of.
-
-    The library prompt has one class per distinct query, so its logits are read per sentence and the scores of the
-    classes are computed outside the library.
+    Library prompt of a classifier with the prompt label of every query.
 
     Attributes
     ----------
     prompt : Prompt
-        Library prompt, one query per distinct sentence.
-    sentences : tuple[PromptSentence, ...]
-        Every sentence, grouped by class and prompt in prompt order, templates in template order.
-    class_names : tuple[str, ...]
-        Class names in class order.
+        Library prompt: the classes with their phrases and visual queries.
+    query_prompt_indices : tuple[int, ...]
+        Position in ``LabeledPrompt.prompt_labels`` of every query of ``prompt``, in query-id order.
+
+    Raises
+    ------
+    ValueError
+        If there is not one prompt index per query.
     """
 
     prompt: Prompt
-    sentences: tuple[PromptSentence, ...]
-    class_names: tuple[str, ...]
+    query_prompt_indices: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.query_prompt_indices) != len(self.prompt.queries):
+            raise ValueError(
+                f"query_prompt_indices must hold one index per query ({len(self.prompt.queries)}). "
+                + f"got {len(self.query_prompt_indices)}"
+            )
 
     def logits_of(
-        self,
-        query_logits: NDArray[np.float64],
-        prompt_labels: tuple[str, ...],
-        logit_scale: float,
-        logit_bias: float,
+        self, result: ClassificationResult, labeled_prompt: LabeledPrompt, logit_scale: float, logit_bias: float
     ) -> ClassifierLogits:
         """
-        Logit of every sentence of one picture.
+        Logit of every text vector of one picture.
 
         Parameters
         ----------
-        query_logits : NDArray[np.float64]
-            Logit of every query of ``prompt``, shape (Q,).
-        prompt_labels : tuple[str, ...]
-            Label of every prompt, indexed by ``PromptSentence.prompt_index``.
+        result : ClassificationResult
+            Result of the library for the picture.
+        labeled_prompt : LabeledPrompt
+            Prompt the layout was built from, naming the classes and the prompts.
         logit_scale : float
             Scale of the classifier turning a cosine similarity into a logit.
         logit_bias : float
@@ -54,27 +54,23 @@ class ClassifierQueryLayout:
         Returns
         -------
         ClassifierLogits
-            Sentences of the classes with their logits.
-
-        Raises
-        ------
-        ValueError
-            If ``query_logits`` does not hold one logit per query or a class has no sentence.
+            Text vectors of the classes with their logits.
         """
-        if query_logits.shape != (len(self.prompt.queries),):
-            raise ValueError(f"query_logits must have shape ({len(self.prompt.queries)},). got {query_logits.shape}")
         return ClassifierLogits(
-            class_names=self.class_names,
-            prompt_labels=prompt_labels,
-            sentences=tuple(
-                SentenceLogit(
-                    class_index=sentence.class_index,
-                    prompt_index=sentence.prompt_index,
-                    template=sentence.template,
-                    logit=float(query_logits[sentence.query_index]),
-                )
-                for sentence in self.sentences
+            class_names=labeled_prompt.class_names,
+            prompt_labels=labeled_prompt.prompt_labels,
+            embeddings=tuple(
+                self._embedding_logit_of(entry, float(logit))
+                for entry, logit in zip(result.layout.entries, result.embedding_logits.tolist(), strict=True)
             ),
             logit_scale=logit_scale,
             logit_bias=logit_bias,
+        )
+
+    def _embedding_logit_of(self, entry: EmbeddingEntry, logit: float) -> EmbeddingLogit:
+        return EmbeddingLogit(
+            class_index=entry.class_id,
+            prompt_index=None if entry.query_id is None else self.query_prompt_indices[entry.query_id],
+            template=entry.template,
+            logit=logit,
         )

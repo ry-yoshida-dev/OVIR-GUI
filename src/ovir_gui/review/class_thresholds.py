@@ -144,7 +144,7 @@ class ClassThresholds:
                 return prompt_minimum
         return self._class_minimums.get(class_name, self._default_minimum)
 
-    def is_reaching_minimum(self, class_name: str, matched_prompt: str, confidence: float) -> bool:
+    def is_reaching_minimum(self, class_name: str, matched_prompt: str | None, confidence: float) -> bool:
         """
         Whether a finding reaches the minimum of its prompt.
 
@@ -152,8 +152,9 @@ class ClassThresholds:
         ----------
         class_name : str
             Class of the finding.
-        matched_prompt : str
-            Prompt that matched the finding.
+        matched_prompt : str | None
+            Prompt that matched the finding; ``None`` for a classification whose prompts were merged, which takes the
+            minimum of its class.
         confidence : float
             Confidence of the finding.
 

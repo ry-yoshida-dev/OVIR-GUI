@@ -1,6 +1,7 @@
 from .backend_traits import BackendTraits
 from .benchmark_catalog import BenchmarkCatalog
 from .classification_model import ClassificationModel
+from .classification_scorer import ClassificationScorer
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
 from .concept_tracking_model import ConceptTrackingModel
@@ -28,8 +29,6 @@ from .segmentation_mode import SegmentationMode
 from .segmentation_model import SegmentationModel
 from .stored_weights import StoredWeights
 from .stream_position import StreamPosition
-from .template_combination import TemplateCombination
-from .template_scorer import TemplateScorer
 from .threshold_controls import ThresholdControls
 from .weights_storage import WeightsStorage
 
@@ -37,6 +36,7 @@ __all__ = [
     "BackendTraits",
     "BenchmarkCatalog",
     "ClassificationModel",
+    "ClassificationScorer",
     "ComputeDevice",
     "ComputePrecision",
     "ConceptTrackingModel",
@@ -64,8 +64,6 @@ __all__ = [
     "SegmentationModel",
     "StoredWeights",
     "StreamPosition",
-    "TemplateCombination",
-    "TemplateScorer",
     "ThresholdControls",
     "WeightsStorage",
 ]

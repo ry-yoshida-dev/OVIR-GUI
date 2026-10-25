@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import ClassVar
 
+from open_vocabulary_classification import AggregationStep, PromptAggregation
+
 from ..media import InferenceMode
-from ..models import ComputeDevice, ComputePrecision, ModelSelection, TemplateCombination
+from ..models import ComputeDevice, ComputePrecision, ModelSelection
 from ..recognition import RecognitionTask
 from .json_fields import JsonFields, JsonValue
 from .json_file import JsonFile
@@ -192,7 +194,9 @@ class SessionStore:
             "box_detector": selection.box_detector_label,
             "tiling": selection.tiling_grid_size,
             "templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
-            "combination": None if selection.template_combination is None else selection.template_combination.value,
+            "aggregation": None
+            if selection.aggregation is None
+            else [dict[str, JsonValue](step.to_mapping()) for step in selection.aggregation.steps],
             "batch_size": selection.batch_size,
         }
 
@@ -202,7 +206,7 @@ class SessionStore:
         for entry in JsonFields.list_of(value, "selections"):
             try:
                 selection: ModelSelection = cls._selection_of(JsonFields.object_of(entry, "selection"))
-            except (TypeError, ValueError):
+            except (KeyError, TypeError, ValueError):
                 continue
             selections[selection.task] = selection
         return selections
@@ -236,9 +240,14 @@ class SessionStore:
                 JsonFields.string_of(template, "template")
                 for template in JsonFields.list_of(content.get("templates"), "templates")
             ),
-            template_combination=None
-            if content.get("combination") is None
-            else TemplateCombination(JsonFields.string_of(content.get("combination"), "combination")),
+            aggregation=None
+            if content.get("aggregation") is None
+            else PromptAggregation.of(
+                [
+                    AggregationStep.from_mapping(JsonFields.object_of(step, "aggregation step"))
+                    for step in JsonFields.list_of(content.get("aggregation"), "aggregation")
+                ]
+            ),
             batch_size=None
             if content.get("batch_size") is None
             else JsonFields.integer_of(content.get("batch_size"), "batch_size"),

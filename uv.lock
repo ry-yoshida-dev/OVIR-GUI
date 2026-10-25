@@ -468,7 +468,7 @@ wheels = [
 [[package]]
 name = "file-handler"
 version = "0.1.0"
-source = { git = "https://github.com/ry-yoshida-dev/FileHandler.git#edc8a79785e09e89a5c6a0a37e55c435c1e4e579" }
+source = { git = "https://github.com/ry-yoshida-dev/FileHandler.git?rev=edc8a79785e09e89a5c6a0a37e55c435c1e4e579#edc8a79785e09e89a5c6a0a37e55c435c1e4e579" }
 dependencies = [
     { name = "h5py" },
     { name = "numpy" },
@@ -1544,7 +1544,7 @@ wheels = [
 [[package]]
 name = "open-vocabulary-classification"
 version = "0.0.1"
-source = { git = "https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git?rev=361ce2c41b6701a2dc9e7bea14ee2d60fab8c91f#361ce2c41b6701a2dc9e7bea14ee2d60fab8c91f" }
+source = { git = "https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git?rev=f74ac924284125cc7e9dbea5a5f6f26b56e2655e#f74ac924284125cc7e9dbea5a5f6f26b56e2655e" }
 dependencies = [
     { name = "numpy" },
     { name = "pillow" },
@@ -1690,7 +1690,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "object-detection-format", git = "https://github.com/ry-yoshida-dev/ObjectDetectionFormat.git?rev=f5edaa53c41c5b9b3db1ed9bbee49af8d14853ce" },
     { name = "omegaconf" },
-    { name = "open-vocabulary-classification", git = "https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git?rev=361ce2c41b6701a2dc9e7bea14ee2d60fab8c91f" },
+    { name = "open-vocabulary-classification", git = "https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git?rev=f74ac924284125cc7e9dbea5a5f6f26b56e2655e" },
     { name = "open-vocabulary-detector", git = "https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git?rev=6e2300c7e7cc75c97b09e34cda9eefef71b6029e" },
     { name = "open-vocabulary-detector", extras = ["ultralytics"], marker = "extra == 'ultralytics'", git = "https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git?rev=6e2300c7e7cc75c97b09e34cda9eefef71b6029e" },
     { name = "open-vocabulary-segmentation", git = "https://github.com/ry-yoshida-dev/OpenVocabularySegmentation.git?rev=a08eea4103d2d9fbd06f7d01c34b1a92022d24bd" },

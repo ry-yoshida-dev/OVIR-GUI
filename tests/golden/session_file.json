@@ -12,10 +12,10 @@
   },
   "selections": [
     {
+      "aggregation": null,
       "backend": "grounding_dino",
       "batch_size": 4,
       "box_detector": null,
-      "combination": null,
       "confidence": null,
       "device": "auto",
       "nms": null,

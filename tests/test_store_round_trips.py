@@ -3,6 +3,13 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from open_vocabulary_classification import (
+    AggregationMethod,
+    AggregationStep,
+    AggregationTiming,
+    AggregationUnit,
+    PromptAggregation,
+)
 
 from ovir_gui.media import FrameKey, InferenceMode
 from ovir_gui.models import (
@@ -11,12 +18,12 @@ from ovir_gui.models import (
     ModelProfile,
     ModelSelection,
     ProfileOption,
-    TemplateCombination,
 )
 from ovir_gui.prompting import PromptSignature, QueriedClass
 from ovir_gui.recognition import (
     ClassifierLogits,
     ClassScore,
+    EmbeddingLogit,
     FrameResult,
     ImageSize,
     InstanceMask,
@@ -24,7 +31,6 @@ from ovir_gui.recognition import (
     PixelBox,
     RecognitionTask,
     RecognizedInstance,
-    SentenceLogit,
 )
 from ovir_gui.results import ResultLibrary
 from ovir_gui.review import ClassThresholds, DuplicateSuppression
@@ -44,7 +50,7 @@ from ovir_gui.storage import (
 class TestStoreRoundTrips:
     """
     Every store reads back what it wrote: the session, the class minimums, the duplicate suppression, the saved text
-    templates and the results archive with masks, rejections and sentence logits.
+    templates and the results archive with masks, rejections and embedding logits.
     """
 
     def test_session_round_trip(self, tmp_path: Path) -> None:
@@ -74,7 +80,25 @@ class TestStoreRoundTrips:
                 ),
                 RecognitionTask.SEGMENTATION: SessionTaskSettings(frame_step=2),
             },
-            selections={RecognitionTask.DETECTION: selection},
+            selections={
+                RecognitionTask.DETECTION: selection,
+                RecognitionTask.CLASSIFICATION: ModelSelection(
+                    task=RecognitionTask.CLASSIFICATION,
+                    backend="clip",
+                    preset_name="openai_vit_b16",
+                    device=ComputeDevice.CPU,
+                    precision=ComputePrecision.FLOAT32,
+                    aggregation=PromptAggregation.of(
+                        [
+                            AggregationStep(
+                                AggregationUnit.TEMPLATE_AND_PROMPT,
+                                AggregationTiming.SIMILARITY,
+                                AggregationMethod.LOGSUMEXP,
+                            )
+                        ]
+                    ),
+                ),
+            },
         )
         store: SessionStore = SessionStore(tmp_path / "data")
         store.save(session)
@@ -195,11 +219,10 @@ class TestStoreRoundTrips:
         logits: ClassifierLogits = ClassifierLogits(
             class_names=("dog", "cat"),
             prompt_labels=("dog", "cat"),
-            sentences=(
-                SentenceLogit(0, 0, "{}", 0.0),
-                SentenceLogit(0, 0, "a photo of a {}.", 4.0),
-                SentenceLogit(1, 1, "{}", 3.0),
-                SentenceLogit(1, 1, "a photo of a {}.", 3.0),
+            embeddings=(
+                EmbeddingLogit(0, 0, "{}", 0.0),
+                EmbeddingLogit(0, 0, "a photo of a {}.", 4.0),
+                EmbeddingLogit(1, None, None, 3.0),
             ),
             logit_scale=100.0,
             logit_bias=0.0,
@@ -209,7 +232,7 @@ class TestStoreRoundTrips:
             image_size=ImageSize(24, 16),
             class_scores=(ClassScore("dog", 0.5, 0.0, "dog", 0.0, "{}"), ClassScore("cat", 0.5, 0.0, "cat", 0.0, "{}")),
             native_label_mode=LabelMode.SINGLE_LABEL,
-            sentence_logits=logits,
+            embedding_logits=logits,
         )
         signature: PromptSignature = PromptSignature(
             (
@@ -218,16 +241,26 @@ class TestStoreRoundTrips:
             )
         )
         library: ResultLibrary = ResultLibrary()
-        library.apply_template_combination(TemplateCombination.MAX)
+        library.apply_aggregation(self._similarity_aggregation(AggregationMethod.MAX))
         library.record(profile, FrameKey(image_path), result, signature)
         library.catalog_of(profile).set_accepted(FrameKey(image_path), [1], False)
         store: ResultsStore = ResultsStore(tmp_path / "data")
         store.write(ResultsStore.snapshot(library))
         read_back: ResultLibrary = store.load()
-        read_back.apply_template_combination(TemplateCombination.MIN)
+        read_back.apply_aggregation(self._similarity_aggregation(AggregationMethod.MIN))
         stored = read_back.catalog_of(profile).stored_of(FrameKey(image_path))
         assert stored is not None
         assert stored.rejected_indices == frozenset({1})
         dog, cat = stored.result.class_scores
         assert (dog.logit, dog.matched_template, cat.logit) == (0.0, "a photo of a {}.", 3.0)
+        assert (cat.matched_prompt, cat.matched_template) == (None, None)
         assert cat.score > dog.score
+
+    @staticmethod
+    def _similarity_aggregation(method: AggregationMethod) -> PromptAggregation:
+        return PromptAggregation.of(
+            [
+                AggregationStep(AggregationUnit.TEMPLATE, AggregationTiming.SIMILARITY, method),
+                AggregationStep(AggregationUnit.PROMPT, AggregationTiming.SIMILARITY, AggregationMethod.MAX),
+            ]
+        )

@@ -1,4 +1,5 @@
 from .acceptance_body import AcceptanceBody
+from .aggregation_step_body import AggregationStepBody
 from .approval_body import ApprovalBody
 from .class_row_body import ClassRowBody
 from .exemplar_body import ExemplarBody
@@ -39,6 +40,7 @@ from .weights_body import WeightsBody
 
 __all__ = [
     "AcceptanceBody",
+    "AggregationStepBody",
     "ApprovalBody",
     "ClassRowBody",
     "ExemplarBody",

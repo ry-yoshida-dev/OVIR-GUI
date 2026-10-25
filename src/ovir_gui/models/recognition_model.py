@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
+from open_vocabulary_classification import PromptAggregation
+
 from ..prompting import PromptMode, QueryKind
 from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
@@ -16,7 +18,6 @@ from .threshold_controls import ThresholdControls
 if TYPE_CHECKING:
     from .detection_model import DetectionModel
     from .recognizer import Recognizer
-    from .template_combination import TemplateCombination
 
 
 class RecognitionModel(ABC):
@@ -215,14 +216,14 @@ class RecognitionModel(ABC):
         return None
 
     @property
-    def template_combination(self) -> "TemplateCombination | None":
+    def aggregation(self) -> PromptAggregation | None:
         """
-        How the sentences of a phrase, one per text template, turn into its score.
+        How the prompts and templates of every class become its score.
 
         Returns
         -------
-        TemplateCombination | None
-            ``None`` unless a subclass fills phrases into templates.
+        PromptAggregation | None
+            ``None`` unless a subclass aggregates prompts and templates.
         """
         return None
 

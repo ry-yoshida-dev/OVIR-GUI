@@ -23,7 +23,7 @@ class ResultsManifestWriter:
     The manifest looks like::
 
         {
-          "format": "ovir-gui-results", "version": 3,
+          "format": "ovir-gui-results", "version": 4,
           "media": [{"path": "/data/a.mp4", "mtime_ns": 1, "size": 2}],
           "signatures": [{"classes": [{"name": "car", "phrases": ["car"], "boxes": [...]}]}],
           "profiles": [{"task": "detection", ..., "frames": [
@@ -34,18 +34,19 @@ class ResultsManifestWriter:
 
     A classification frame holds ``"scores": [[class, score, logit, matched prompt, similarity, matched template],
     ...]`` instead of instances, ``similarity`` and ``matched template`` being ``null`` or left out for results stored
-    before they were recorded; ``matched template`` is also ``null`` for a reference image. Rejected findings
-    are indexed by the position of their class score or instance; version 1 indexed the only finding of a
-    classification, its best class, by 0. A classification frame also holds ``"logits": {"scale": 100.0, "bias": 0.0,
-    "prompts": ["dog"], "sentences": [[class, prompt, template, logit], ...]}``, the logit of every sentence the
-    scores were computed from, since version 3; ``class`` and ``prompt`` index the classes of ``scores`` and
-    ``prompts``. The last
+    before they were recorded; ``matched prompt`` is ``null`` once the prompts of the class were merged, ``matched
+    template`` for a reference image and once the templates were merged. Rejected findings are indexed by the position
+    of their class score or instance; version 1 indexed the only finding of a classification, its best class, by 0. A
+    classification frame also holds ``"logits": {"scale": 100.0, "bias": 0.0, "prompts": ["dog"], "embeddings":
+    [[class, prompt, template, logit], ...]}``, the logit of every text vector the scores were computed from;
+    ``class`` and ``prompt`` index the classes of ``scores`` and ``prompts``, ``prompt`` and ``template`` being
+    ``null`` once merged. Version 3 held the sentences alone, under ``"sentences"``. The last
     field of an instance indexes ``mask_bits`` (``-1`` without a mask) and is followed by the crop
     ``[left, top, width, height, area]`` of the mask.
     """
 
     FORMAT_NAME: ClassVar[str] = "ovir-gui-results"
-    FORMAT_VERSION: ClassVar[int] = 3
+    FORMAT_VERSION: ClassVar[int] = 4
 
     def __init__(self) -> None:
         self._media_indices: dict[Path, int] = {}
@@ -124,8 +125,8 @@ class ResultsManifestWriter:
                 ]
                 for score in result.class_scores
             ]
-            if result.sentence_logits is not None:
-                entry["logits"] = self._logits_entry(result.sentence_logits)
+            if result.embedding_logits is not None:
+                entry["logits"] = self._logits_entry(result.embedding_logits)
         else:
             entry["instances"] = [self._instance_entry(instance) for instance in result.instances]
         return entry
@@ -136,9 +137,9 @@ class ResultsManifestWriter:
             "scale": logits.logit_scale,
             "bias": logits.logit_bias,
             "prompts": list[JsonValue](logits.prompt_labels),
-            "sentences": [
-                [sentence.class_index, sentence.prompt_index, sentence.template, sentence.logit]
-                for sentence in logits.sentences
+            "embeddings": [
+                [embedding.class_index, embedding.prompt_index, embedding.template, embedding.logit]
+                for embedding in logits.embeddings
             ],
         }
 

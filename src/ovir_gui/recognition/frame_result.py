@@ -32,8 +32,8 @@ class FrameResult:
     native_label_mode : LabelMode
         Label mode the scores are made for: single-label for a classifier whose softmax shares the score among the
         classes, multi-label for one scoring every class on its own (sigmoid) and for detection and segmentation.
-    sentence_logits : ClassifierLogits | None
-        Logit of every sentence the class scores were computed from; ``None`` unless classifying, and for
+    embedding_logits : ClassifierLogits | None
+        Logit of every text vector the class scores were computed from; ``None`` unless classifying, and for
         classifications stored before it was recorded.
 
     Raises
@@ -47,7 +47,7 @@ class FrameResult:
     class_scores: tuple[ClassScore, ...] = ()
     instances: tuple[RecognizedInstance, ...] = ()
     native_label_mode: LabelMode = LabelMode.MULTI_LABEL
-    sentence_logits: ClassifierLogits | None = None
+    embedding_logits: ClassifierLogits | None = None
 
     def __post_init__(self) -> None:
         match self.task:
@@ -56,10 +56,10 @@ class FrameResult:
                     raise ValueError("a classification holds no instances.")
                 if not self.class_scores:
                     raise ValueError("a classification needs the score of at least one class.")
-                if self.sentence_logits is not None and self.sentence_logits.class_names != tuple(
+                if self.embedding_logits is not None and self.embedding_logits.class_names != tuple(
                     score.class_name for score in self.class_scores
                 ):
-                    raise ValueError("the sentence logits must hold the classes of the scores.")
+                    raise ValueError("the embedding logits must hold the classes of the scores.")
             case RecognitionTask.DETECTION:
                 if self.class_scores:
                     raise ValueError("a detection holds no class scores.")
@@ -68,8 +68,8 @@ class FrameResult:
                     raise ValueError("a segmentation holds no class scores.")
                 if any(instance.mask is None for instance in self.instances):
                     raise ValueError("every segmented instance needs a mask.")
-        if self.task is not RecognitionTask.CLASSIFICATION and self.sentence_logits is not None:
-            raise ValueError(f"a {self.task.value} holds no sentence logits.")
+        if self.task is not RecognitionTask.CLASSIFICATION and self.embedding_logits is not None:
+            raise ValueError(f"a {self.task.value} holds no embedding logits.")
         if self.task is not RecognitionTask.CLASSIFICATION and self.native_label_mode is LabelMode.SINGLE_LABEL:
             raise ValueError(f"a {self.task.value} reports any number of classes.")
 
