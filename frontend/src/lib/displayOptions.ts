@@ -29,7 +29,7 @@ export const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
   maskOpacity: 0.45,
   isScorePanelShown: true,
   isInterpolated: true,
-  belowMinimum: "dim",
+  belowMinimum: "hide",
 };
 
 export function colorOf(palette: string[], classId: number): string {
