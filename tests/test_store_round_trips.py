@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import cv2
@@ -15,6 +16,7 @@ from ovir_gui.storage import (
     ResultsSnapshot,
     ResultsStore,
     Session,
+    SessionMedia,
     SessionStore,
 )
 
@@ -37,10 +39,14 @@ class TestStoreRoundTrips:
             nms_iou_threshold=0.5,
             batch_size=2,
         )
+        video_path: Path = tmp_path / "clip.mp4"
         session: Session = Session(
-            media_paths=(media_path,),
-            current_path=media_path,
-            current_frame_index=None,
+            media={
+                RecognitionTask.DETECTION: SessionMedia(paths=(media_path,), current_path=media_path),
+                RecognitionTask.CLASSIFICATION: SessionMedia(
+                    paths=(media_path, video_path), current_path=video_path, current_frame_index=6
+                ),
+            },
             task=RecognitionTask.DETECTION,
             frame_step=7,
             inference_mode=InferenceMode.ALL,
@@ -50,6 +56,18 @@ class TestStoreRoundTrips:
         store: SessionStore = SessionStore(tmp_path / "data")
         store.save(session)
         assert store.load() == session
+
+    def test_media_list_of_earlier_sessions_goes_to_their_task(self, tmp_path: Path) -> None:
+        store: SessionStore = SessionStore(tmp_path)
+        media_path: Path = tmp_path / "picture.png"
+        content: str = json.dumps(
+            {"media": [str(media_path)], "current": str(media_path), "frame": None, "task": "segmentation"}
+        )
+        _ = store.path.write_text(content, "utf-8")
+        loaded: Session = store.load()
+        assert loaded.media == {
+            RecognitionTask.SEGMENTATION: SessionMedia(paths=(media_path,), current_path=media_path),
+        }
 
     def test_unknown_inference_mode_is_dropped(self, tmp_path: Path) -> None:
         store: SessionStore = SessionStore(tmp_path)

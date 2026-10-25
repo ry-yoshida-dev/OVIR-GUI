@@ -1,5 +1,7 @@
-import type { ResultsPayload } from "../api/types";
-import { ScoreHistogram } from "./scoreHistogram";
+import type { Finding, ResultsPayload } from "../api/types";
+import { ScoreHistogram, UNIT_RANGE, type ValueRange } from "./scoreHistogram";
+
+export type ConfidenceMeasure = "confidence" | "similarity";
 
 export interface PhraseConfidences {
   phrase: string;
@@ -19,24 +21,30 @@ interface Tally {
   keptCount: number;
 }
 
+const SIMILARITY_RANGE_STEP = 0.05;
+
 export class ConfidenceOverview {
   readonly overall: ScoreHistogram;
   readonly overallKeptCount: number;
+  readonly measuredCount: number;
   readonly classes: ClassConfidences[];
 
   private constructor(
     overall: ScoreHistogram,
     overallKeptCount: number,
+    measuredCount: number,
     classes: ClassConfidences[],
   ) {
     this.overall = overall;
     this.overallKeptCount = overallKeptCount;
+    this.measuredCount = measuredCount;
     this.classes = classes;
   }
 
   static of(
     payload: ResultsPayload | null,
     classPhrases: ReadonlyMap<string, readonly string[]>,
+    measure: ConfidenceMeasure = "confidence",
   ): ConfidenceOverview {
     const classTallies = new Map<string, Tally>();
     const phraseTallies = new Map<string, Map<string, Tally>>();
@@ -54,13 +62,14 @@ export class ConfidenceOverview {
     for (const picture of payload?.pictures ?? []) {
       for (const finding of picture.findings) {
         const isKept = finding.is_accepted && finding.is_passing;
-        allScores.push(finding.confidence);
+        const value = ConfidenceOverview.valueOf(finding, measure);
+        if (value !== null) allScores.push(value);
         if (isKept) overallKeptCount += 1;
         const classTally = ConfidenceOverview.tallyIn(
           classTallies,
           finding.class_name,
         );
-        classTally.scores.push(finding.confidence);
+        if (value !== null) classTally.scores.push(value);
         if (isKept) classTally.keptCount += 1;
         let phrases = phraseTallies.get(finding.class_name);
         if (phrases === undefined) {
@@ -68,27 +77,58 @@ export class ConfidenceOverview {
           phraseTallies.set(finding.class_name, phrases);
         }
         const phraseTally = ConfidenceOverview.tallyIn(phrases, finding.query);
-        phraseTally.scores.push(finding.confidence);
+        if (value !== null) phraseTally.scores.push(value);
         if (isKept) phraseTally.keptCount += 1;
       }
     }
+    const range =
+      measure === "similarity"
+        ? ConfidenceOverview.similarityRangeOf(allScores)
+        : UNIT_RANGE;
     const classes = [...classTallies.entries()].map(([className, tally]) => ({
       className,
-      histogram: ScoreHistogram.of(tally.scores),
+      histogram: ScoreHistogram.of(tally.scores, range),
       keptCount: tally.keptCount,
       phrases: [
         ...(phraseTallies.get(className) ?? new Map<string, Tally>()).entries(),
       ].map(([phrase, phraseTally]) => ({
         phrase,
-        histogram: ScoreHistogram.of(phraseTally.scores),
+        histogram: ScoreHistogram.of(phraseTally.scores, range),
         keptCount: phraseTally.keptCount,
       })),
     }));
     return new ConfidenceOverview(
-      ScoreHistogram.of(allScores),
+      ScoreHistogram.of(allScores, range),
       overallKeptCount,
+      allScores.length,
       classes,
     );
+  }
+
+  private static valueOf(
+    finding: Finding,
+    measure: ConfidenceMeasure,
+  ): number | null {
+    switch (measure) {
+      case "confidence":
+        return finding.confidence;
+      case "similarity":
+        return finding.similarity ?? null;
+    }
+  }
+
+  private static similarityRangeOf(similarities: readonly number[]): ValueRange {
+    if (similarities.length === 0) return UNIT_RANGE;
+    const smallest = similarities.reduce((low, value) => Math.min(low, value));
+    const largest = similarities.reduce((high, value) => Math.max(high, value));
+    const lower =
+      Math.floor(smallest / SIMILARITY_RANGE_STEP) * SIMILARITY_RANGE_STEP;
+    const upper =
+      Math.ceil(largest / SIMILARITY_RANGE_STEP) * SIMILARITY_RANGE_STEP;
+    return {
+      lower,
+      upper: Math.max(upper, lower + SIMILARITY_RANGE_STEP),
+    };
   }
 
   private static tallyIn(tallies: Map<string, Tally>, key: string): Tally {

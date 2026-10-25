@@ -23,7 +23,7 @@ class ResultsManifestWriter:
     The manifest looks like::
 
         {
-          "format": "ovir-gui-results", "version": 1,
+          "format": "ovir-gui-results", "version": 2,
           "media": [{"path": "/data/a.mp4", "mtime_ns": 1, "size": 2}],
           "signatures": [{"classes": [{"name": "car", "phrases": ["car"], "boxes": [...]}]}],
           "profiles": [{"task": "detection", ..., "frames": [
@@ -32,13 +32,16 @@ class ResultsManifestWriter:
           ]}]
         }
 
-    A classification frame holds ``"scores": [[class, score, logit, query], ...]`` instead of instances; the last
+    A classification frame holds ``"scores": [[class, score, logit, query, similarity], ...]`` instead of instances,
+    ``similarity`` being ``null`` or left out for results stored before it was recorded. Rejected findings are indexed
+    by the position of their class score or instance; version 1 indexed the only finding of a classification, its
+    best class, by 0. The last
     field of an instance indexes ``mask_bits`` (``-1`` without a mask) and is followed by the crop
     ``[left, top, width, height, area]`` of the mask.
     """
 
     FORMAT_NAME: ClassVar[str] = "ovir-gui-results"
-    FORMAT_VERSION: ClassVar[int] = 1
+    FORMAT_VERSION: ClassVar[int] = 2
 
     def __init__(self) -> None:
         self._media_indices: dict[Path, int] = {}
@@ -107,7 +110,8 @@ class ResultsManifestWriter:
         }
         if result.class_scores:
             entry["scores"] = [
-                [score.class_name, score.score, score.logit, score.query_label] for score in result.class_scores
+                [score.class_name, score.score, score.logit, score.query_label, score.similarity]
+                for score in result.class_scores
             ]
         else:
             entry["instances"] = [self._instance_entry(instance) for instance in result.instances]

@@ -1,3 +1,4 @@
+import csv
 import json
 import time
 from collections.abc import Iterator
@@ -10,6 +11,7 @@ from fake_recognizer_session import FakeRecognizerSession
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from golden_snapshot import GoldenSnapshot
+from PIL import Image
 
 from ovir_gui.models import DeviceAvailability, ModelSelector, PresetCatalog
 from ovir_gui.web import EmbeddingPolicy, WebApplication
@@ -99,6 +101,49 @@ class TestWorkspaceFlow:
         written: JsonDict = self._export(client, tmp_path / "export_coco", "coco")
         golden.assert_matches("export_coco", written)
 
+    def test_cropped_objects_export(self, client: TestClient, tmp_path: Path, golden: GoldenSnapshot) -> None:
+        directory: Path = tmp_path / "export_crops"
+        written: JsonDict = self._export(
+            client, directory, "cropped_objects", {"crop_image_format": "png", "crop_margin_percent": 25.0}
+        )
+        golden.assert_matches("export_cropped_objects", written)
+        with (directory / "crops.csv").open(encoding="utf-8", newline="") as table_file:
+            rows: list[dict[str, str]] = list(csv.DictReader(table_file))
+        assert rows
+        for row in rows:
+            with Image.open(directory / row["crop"]) as crop:
+                assert crop.format == "PNG"
+                assert crop.size == (
+                    int(row["crop_x_max"]) - int(row["crop_x_min"]),
+                    int(row["crop_y_max"]) - int(row["crop_y_min"]),
+                )
+
+    def test_label_preview(self, client: TestClient, media_directory: Path) -> None:
+        image_path: str = str(media_directory / "b_second.png")
+        assert client.post("/api/media/show", json={"path": image_path, "frame": None}).is_success
+        coco: JsonDict = client.post("/api/export/preview", json={"export_format": "coco"}).json()
+        assert coco["file_name"] == "annotations.json"
+        assert coco["is_shown_picture_only"] is False
+        coco_text: object = coco["text"]
+        assert isinstance(coco_text, str)
+        document: object = json.loads(coco_text)
+        assert isinstance(document, dict)
+        assert [category["name"] for category in document["categories"]] == ["person", "car", "dog"]
+        assert len(document["images"]) == 5
+        yolo: JsonDict = client.post("/api/export/preview", json={"export_format": "yolo"}).json()
+        assert yolo["file_name"] == "b_second.txt"
+        assert yolo["is_shown_picture_only"] is True
+        yolo_text: object = yolo["text"]
+        assert isinstance(yolo_text, str)
+        assert len(yolo_text.splitlines()) == 4
+        crops: JsonDict = client.post(
+            "/api/export/preview", json={"export_format": "cropped_objects", "minimum_confidence": 0.8}
+        ).json()
+        assert crops["file_name"] == "crops.csv"
+        crops_text: object = crops["text"]
+        assert isinstance(crops_text, str)
+        assert [row.split(",")[0] for row in crops_text.splitlines()[1:]] == ["crops/person/b_second_001.jpg"]
+
     def test_listed_export_without_pending(self, client: TestClient, tmp_path: Path, media_directory: Path) -> None:
         image_path: str = str(media_directory / "a_first.png")
         written: JsonDict = self._export(
@@ -130,12 +175,48 @@ class TestWorkspaceFlow:
 
     def test_classification(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:
         assert client.put("/api/task", json={"task": "classification"}).is_success
+        assert client.post("/api/media/open", json={"paths": [str(media_directory)]}).is_success
         self._wait_idle(client)
         golden.assert_matches("classification_results", client.get("/api/results").json())
         video_path: str = str(media_directory / "c_clip.mp4")
         timeline: object = client.get("/api/timeline", params={"path": video_path}).json()
         golden.assert_matches("classification_timeline", timeline)
         golden.assert_matches("classification_statistics", client.get("/api/statistics").json())
+
+    def test_media_are_kept_per_task(self, tmp_path: Path, media_directory: Path) -> None:
+        video_path: str = str(media_directory / "c_clip.mp4")
+        image_path: str = str(media_directory / "b_second.png")
+        with self._client_of(tmp_path, [media_directory]) as client:
+            self._recognize_everything(client)
+            assert client.post("/api/media/show", json={"path": video_path, "frame": FRAME_STEP}).is_success
+            assert client.put("/api/task", json={"task": "classification"}).is_success
+            assert self._media_paths(client) == []
+            assert self._state(client)["current"] is None
+            assert client.post("/api/media/open", json={"paths": [image_path]}).is_success
+            assert client.put("/api/task", json={"task": "detection"}).is_success
+            assert len(self._media_paths(client)) == 3
+            assert self._current_frame(client) == (video_path, FRAME_STEP)
+            self._wait_idle(client)
+        with self._client_of(tmp_path, []) as restarted:
+            _ = restarted.get(f"/?token={ACCESS_TOKEN}")
+            assert len(self._media_paths(restarted)) == 3
+            assert self._current_frame(restarted) == (video_path, FRAME_STEP)
+            assert restarted.put("/api/task", json={"task": "classification"}).is_success
+            assert self._media_paths(restarted) == [image_path]
+
+    def test_classes_are_kept_per_task(self, tmp_path: Path, client: TestClient) -> None:
+        assert client.put("/api/classes/text", json={"text": "person\ncat"}).is_success
+        assert client.put("/api/task", json={"task": "classification"}).is_success
+        assert self._class_names(client) == ["person", "car", "dog"]
+        assert client.put("/api/classes/text", json={"text": "indoor\noutdoor"}).is_success
+        assert client.put("/api/task", json={"task": "detection"}).is_success
+        assert self._class_names(client) == ["person", "cat"]
+        self._wait_idle(client)
+        with self._client_of(tmp_path, []) as restarted:
+            _ = restarted.get(f"/?token={ACCESS_TOKEN}")
+            assert self._class_names(restarted) == ["person", "cat"]
+            assert restarted.put("/api/task", json={"task": "classification"}).is_success
+            assert self._class_names(restarted) == ["indoor", "outdoor"]
 
     def test_closing_media(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:
         assert client.post("/api/media/close", json={"paths": [str(media_directory / "a_first.png")]}).is_success
@@ -210,6 +291,21 @@ class TestWorkspaceFlow:
                 return
             assert time.monotonic() < deadline, "inference did not finish"
             time.sleep(0.05)
+
+    @staticmethod
+    def _class_names(client: TestClient) -> list[str]:
+        state: dict[str, list[dict[str, object]]] = client.get("/api/state").json()
+        return [str(entry["name"]) for entry in state["classes"]]
+
+    def _media_paths(self, client: TestClient) -> list[object]:
+        media: object = self._state(client)["media"]
+        assert isinstance(media, list)
+        return [entry["path"] for entry in media if isinstance(entry, dict)]
+
+    def _current_frame(self, client: TestClient) -> tuple[object, object]:
+        current: object = self._state(client)["current"]
+        assert isinstance(current, dict)
+        return current["path"], current["frame"]
 
     @staticmethod
     def _state(client: TestClient) -> JsonDict:

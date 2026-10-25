@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import type {
   ClassEntry,
   DuplicateSuppression,
+  LabelModeChoice,
+  LabelModeState,
   ResultsPayload,
   Thresholds,
 } from "../api/types";
@@ -18,6 +20,7 @@ import {
 } from "../lib/reviewModes";
 import { toggledMembership } from "../lib/sets";
 import { ResetGlyph } from "./Glyphs";
+import { DistributionChartRow } from "./DistributionChartRow";
 import { ResultsHeading } from "./ResultsHeading";
 import { ScoreChartRow } from "./ScoreChartRow";
 
@@ -27,13 +30,60 @@ interface ReviewPanelProps {
   reviewFilter: ReviewFilter;
   thresholds: Thresholds;
   suppression: DuplicateSuppression;
+  labelMode: LabelModeState;
   standardMinimum: number;
   standardOverlap: number;
-  isOverlapAvailable: boolean;
+  isScoreBased: boolean;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
   onThresholdsChange: (thresholds: Thresholds) => void;
   onSuppressionChange: (suppression: DuplicateSuppression) => void;
+  onLabelModeChange: (labelMode: LabelModeChoice) => void;
+}
+
+interface LabelModeSelectProps {
+  labelMode: LabelModeState;
+  onLabelModeChange: (labelMode: LabelModeChoice) => void;
+}
+
+const LABEL_MODE_HINT =
+  "Single label keeps only the best class of a picture; multi-label keeps every class reaching its minimum. " +
+  "Automatic follows the model: multi-label for sigmoid scores (SigLIP), single label for softmax scores (CLIP).";
+
+function LabelModeSelect({
+  labelMode,
+  onLabelModeChange,
+}: LabelModeSelectProps) {
+  const choices: LabelModeChoice[] = [
+    "automatic",
+    ...labelMode.modes.map((mode) => mode.value),
+  ];
+  const nativeTitle =
+    labelMode.modes.find((mode) => mode.value === labelMode.native)?.title ??
+    null;
+  return (
+    <label className="review-switch" title={LABEL_MODE_HINT}>
+      Labels
+      <select
+        value={labelMode.choice}
+        onChange={(event) => {
+          const chosen = choices.find(
+            (choice) => choice === event.target.value,
+          );
+          if (chosen !== undefined) onLabelModeChange(chosen);
+        }}
+      >
+        <option value="automatic">
+          {nativeTitle === null ? "Automatic" : `Automatic (${nativeTitle})`}
+        </option>
+        {labelMode.modes.map((mode) => (
+          <option key={mode.value} value={mode.value}>
+            {mode.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 interface ConfidenceChartRowsProps {
@@ -46,6 +96,14 @@ interface ConfidenceChartRowsProps {
   colorOf: (className: string) => string;
   onToggleExpanded: (className: string) => void;
   onThresholdsChange: (thresholds: Thresholds) => void;
+}
+
+interface SimilarityChartRowsProps {
+  mode: ReviewMode;
+  similarities: ConfidenceOverview;
+  expandedClasses: ReadonlySet<string>;
+  colorOf: (className: string) => string;
+  onToggleExpanded: (className: string) => void;
 }
 
 interface OverlapChartRowsProps {
@@ -207,6 +265,66 @@ function ConfidenceChartRows({
   );
 }
 
+function SimilarityChartRows({
+  mode,
+  similarities,
+  expandedClasses,
+  colorOf,
+  onToggleExpanded,
+}: SimilarityChartRowsProps) {
+  if (similarities.measuredCount === 0) {
+    return (
+      <div className="hint">
+        No similarities recorded yet; infer again to chart them.
+      </div>
+    );
+  }
+  return (
+    <>
+      <DistributionChartRow
+        title="All classes"
+        level="overall"
+        color={OVERALL_COLOR}
+        histogram={similarities.overall}
+        hint={mode.valueHint}
+        keptCount={similarities.overallKeptCount}
+      />
+      {similarities.classes.map((entry) => {
+        const isExpandable = entry.phrases.length > 1;
+        const isExpanded = isExpandable && expandedClasses.has(entry.className);
+        const color = colorOf(entry.className);
+        return (
+          <div key={entry.className} className="score-chart-group">
+            <DistributionChartRow
+              title={entry.className}
+              level="class"
+              color={color}
+              histogram={entry.histogram}
+              hint={mode.valueHint}
+              keptCount={entry.keptCount}
+              isExpandable={isExpandable}
+              isExpanded={isExpanded}
+              onToggleExpanded={() => onToggleExpanded(entry.className)}
+            />
+            {isExpanded &&
+              entry.phrases.map((phrase) => (
+                <DistributionChartRow
+                  key={phrase.phrase}
+                  title={phrase.phrase}
+                  level="phrase"
+                  color={color}
+                  histogram={phrase.histogram}
+                  hint={mode.valueHint}
+                  keptCount={phrase.keptCount}
+                />
+              ))}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function OverlapChartRows({
   mode,
   overview,
@@ -296,19 +414,33 @@ export function ReviewPanel({
   reviewFilter,
   thresholds,
   suppression,
+  labelMode,
   standardMinimum,
   standardOverlap,
-  isOverlapAvailable,
+  isScoreBased,
   isCollapsed,
   onToggleCollapsed,
   onThresholdsChange,
   onSuppressionChange,
+  onLabelModeChange,
 }: ReviewPanelProps) {
   const [modeValue, setModeValue] = useState<ReviewModeValue>("confidence");
   const [expandedClasses, setExpandedClasses] = useState<ReadonlySet<string>>(
     new Set(),
   );
-  const shownModeValue: ReviewModeValue = isOverlapAvailable
+  const availableModeValues = REVIEW_MODE_ORDER.filter((value) => {
+    switch (value) {
+      case "confidence":
+        return true;
+      case "similarity":
+        return isScoreBased;
+      case "overlap":
+        return !isScoreBased;
+    }
+  });
+  const shownModeValue: ReviewModeValue = availableModeValues.includes(
+    modeValue,
+  )
     ? modeValue
     : "confidence";
   const mode = reviewModeOf(shownModeValue);
@@ -323,6 +455,13 @@ export function ReviewPanel({
   const confidences = useMemo(
     () => ConfidenceOverview.of(results, classPhrases),
     [results, classPhrases],
+  );
+  const similarities = useMemo(
+    () =>
+      shownModeValue === "similarity" && !isCollapsed
+        ? ConfidenceOverview.of(results, classPhrases, "similarity")
+        : null,
+    [shownModeValue, isCollapsed, results, classPhrases],
   );
   const overlaps = useMemo(
     () =>
@@ -342,8 +481,16 @@ export function ReviewPanel({
   const isOverlapDeparted =
     !isSameValue(suppression.overlap_threshold, standardOverlap, mode.step) ||
     Object.keys(suppression.class_overlap_thresholds).length > 0;
-  const isShownModeDeparted =
-    shownModeValue === "overlap" ? isOverlapDeparted : isConfidenceDeparted;
+  const isShownModeDeparted = (() => {
+    switch (shownModeValue) {
+      case "confidence":
+        return isConfidenceDeparted;
+      case "similarity":
+        return false;
+      case "overlap":
+        return isOverlapDeparted;
+    }
+  })();
 
   const resetShownMode = () => {
     switch (shownModeValue) {
@@ -353,6 +500,8 @@ export function ReviewPanel({
           class_minimums: {},
           phrase_minimums: {},
         });
+        break;
+      case "similarity":
         break;
       case "overlap":
         onSuppressionChange({
@@ -377,9 +526,7 @@ export function ReviewPanel({
             role="tablist"
             aria-label="Review charts"
           >
-            {REVIEW_MODE_ORDER.filter(
-              (value) => value === "confidence" || isOverlapAvailable,
-            ).map((value) => (
+            {availableModeValues.map((value) => (
               <button
                 key={value}
                 type="button"
@@ -394,6 +541,12 @@ export function ReviewPanel({
           </div>
         )}
         <span className="grow" />
+        {!isCollapsed && isScoreBased && (
+          <LabelModeSelect
+            labelMode={labelMode}
+            onLabelModeChange={onLabelModeChange}
+          />
+        )}
         {!isCollapsed && shownModeValue === "overlap" && (
           <label
             className="review-switch"
@@ -412,7 +565,7 @@ export function ReviewPanel({
             Remove duplicates
           </label>
         )}
-        {!isCollapsed && (
+        {!isCollapsed && shownModeValue !== "similarity" && (
           <button
             type="button"
             className="ghost small labeled-action"
@@ -428,7 +581,15 @@ export function ReviewPanel({
       </ResultsHeading>
       {!isCollapsed && (
         <div className="review-rows">
-          {shownModeValue === "overlap" && overlaps !== null ? (
+          {shownModeValue === "similarity" && similarities !== null ? (
+            <SimilarityChartRows
+              mode={mode}
+              similarities={similarities}
+              expandedClasses={expandedClasses}
+              colorOf={colorOf}
+              onToggleExpanded={toggleExpanded}
+            />
+          ) : shownModeValue === "overlap" && overlaps !== null ? (
             <OverlapChartRows
               mode={mode}
               overview={overlaps}

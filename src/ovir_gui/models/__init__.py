@@ -1,4 +1,5 @@
 from .backend_traits import BackendTraits
+from .benchmark_catalog import BenchmarkCatalog
 from .classification_model import ClassificationModel
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
@@ -7,7 +8,9 @@ from .detection_model import DetectionModel
 from .device_availability import DeviceAvailability
 from .license_consent import LicenseConsent
 from .licensed_dependency import LicensedDependency
+from .lvis_split import LvisSplit
 from .mask_generation_model import MaskGenerationModel
+from .model_benchmark import ModelBenchmark
 from .model_preset import ModelPreset
 from .model_profile import ModelProfile
 from .model_selection import ModelSelection
@@ -28,6 +31,7 @@ from .threshold_controls import ThresholdControls
 
 __all__ = [
     "BackendTraits",
+    "BenchmarkCatalog",
     "ClassificationModel",
     "ComputeDevice",
     "ComputePrecision",
@@ -36,7 +40,9 @@ __all__ = [
     "DeviceAvailability",
     "LicenseConsent",
     "LicensedDependency",
+    "LvisSplit",
     "MaskGenerationModel",
+    "ModelBenchmark",
     "ModelPreset",
     "ModelProfile",
     "ModelSelection",

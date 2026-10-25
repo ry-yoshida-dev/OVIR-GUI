@@ -51,6 +51,12 @@ class TestPicturePromptRoutes:
             yield client
 
     @staticmethod
+    def switch_to_segmentation(client: TestClient, media_directory: Path) -> None:
+        assert client.put("/api/task", json={"task": "segmentation"}).status_code == 200
+        paths: list[str] = [str(media_directory / "first.png"), str(media_directory / "second.png")]
+        assert client.post("/api/media/open", json={"paths": paths}).status_code == 200
+
+    @staticmethod
     def picture_prompt(client: TestClient) -> JsonDict:
         state: JsonDict = client.get("/api/state").json()
         prompt: object = state["picture_prompt"]
@@ -129,13 +135,13 @@ class TestPicturePromptRoutes:
         ]
 
     @pytest.mark.parametrize(
-        ("backend", "preset", "prompt_mode", "drawing_kinds", "is_sequential"),
+        ("backend", "preset", "drawing_kinds", "is_sequential"),
         [
-            ("sam3", "original", "classes", ["exemplar"], False),
-            ("promptable/sam2", "hiera_tiny", "marks", ["mark"], False),
-            ("generation/sam2", "hiera_tiny", "automatic", [], False),
-            ("tracker/sam2", "hiera_tiny", "marks", ["mark"], True),
-            ("concept_tracker/sam3", "original", "classes", [], True),
+            ("sam3", "original", {"exemplar": True, "mark": False}, False),
+            ("promptable/sam2", "hiera_tiny", {"exemplar": False, "mark": True}, False),
+            ("generation/sam2", "hiera_tiny", {"exemplar": False, "mark": False}, False),
+            ("tracker/sam2", "hiera_tiny", {"exemplar": False, "mark": True}, True),
+            ("concept_tracker/sam3", "original", {"exemplar": False, "mark": False}, True),
         ],
     )
     def test_segmentation_modes_describe_their_prompting(
@@ -143,19 +149,40 @@ class TestPicturePromptRoutes:
         client: TestClient,
         backend: str,
         preset: str,
-        prompt_mode: str,
-        drawing_kinds: list[str],
+        drawing_kinds: dict[str, bool],
         is_sequential: bool,
     ) -> None:
         assert client.put("/api/task", json={"task": "segmentation"}).status_code == 200
         assert client.put("/api/model/preset", json={"backend": backend, "preset_name": preset}).status_code == 200
         model: JsonDict = client.get("/api/state").json()["model"]
-        assert model["prompt_mode"] == prompt_mode
-        assert model["drawing_kinds"] == drawing_kinds
+        assert model["drawing_kinds"] == [
+            {"value": kind, "is_used": is_used} for kind, is_used in drawing_kinds.items()
+        ]
         assert model["is_sequential"] is is_sequential
 
-    def test_mark_models_refuse_to_run_without_marks(self, client: TestClient) -> None:
-        assert client.put("/api/task", json={"task": "segmentation"}).status_code == 200
+    def test_detection_offers_no_drawing(self, client: TestClient) -> None:
+        assert client.get("/api/state").json()["model"]["drawing_kinds"] == []
+
+    def test_classes_count_their_drawings(self, client: TestClient, media_directory: Path) -> None:
+        self.switch_to_segmentation(client, media_directory)
+        first: JsonDict = {"path": str(media_directory / "first.png"), "frame": None}
+        second: JsonDict = {"path": str(media_directory / "second.png"), "frame": None}
+        for picture in (first, second):
+            _ = client.put("/api/prompts/marks", json={**picture, "class_name": "person", "box": [1, 1, 9, 9]})
+        _ = client.post(
+            "/api/prompts/exemplars", json={**first, "class_name": "person", "box": [2, 2, 8, 8], "is_positive": True}
+        )
+        classes: object = client.get("/api/state").json()["classes"]
+        assert isinstance(classes, list)
+        counts: dict[str, tuple[object, object]] = {
+            str(entry["name"]): (entry["exemplar_count"], entry["object_count"])
+            for entry in classes
+            if isinstance(entry, dict)
+        }
+        assert counts["person"] == (1, 2)
+
+    def test_mark_models_refuse_to_run_without_marks(self, client: TestClient, media_directory: Path) -> None:
+        self.switch_to_segmentation(client, media_directory)
         response: Response = client.put(
             "/api/model/preset", json={"backend": "promptable/sam2", "preset_name": "hiera_tiny"}
         )

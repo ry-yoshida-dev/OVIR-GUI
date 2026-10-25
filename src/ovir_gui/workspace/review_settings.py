@@ -1,6 +1,6 @@
 from ..recognition import RecognitionTask
-from ..review import ClassThresholds, DuplicateSuppression, ReviewFilter
-from ..storage import ClassThresholdStore, DuplicateSuppressionStore
+from ..review import ClassThresholds, DuplicateSuppression, LabelModeChoice, ReviewFilter
+from ..storage import ClassThresholdStore, DuplicateSuppressionStore, LabelModeStore
 from .recognition_settings import RecognitionSettings
 from .status_notifier import StatusNotifier
 from .workspace_topic import WorkspaceTopic
@@ -8,14 +8,15 @@ from .workspace_topic import WorkspaceTopic
 
 class ReviewSettings:
     """
-    Which stored findings pass the review for each task: the minimum confidence of the classes and the suppression of
-    overlapping boxes, remembered in the data directory whenever they change.
+    Which stored findings pass the review for each task: the label mode of classifications, the minimum confidence of
+    the classes and the suppression of overlapping boxes, remembered in the data directory whenever they change.
     """
 
     def __init__(
         self,
         threshold_store: ClassThresholdStore,
         suppression_store: DuplicateSuppressionStore,
+        label_mode_store: LabelModeStore,
         settings: RecognitionSettings,
         notifier: StatusNotifier,
     ) -> None:
@@ -26,6 +27,8 @@ class ReviewSettings:
             File remembering the minimums of every task.
         suppression_store : DuplicateSuppressionStore
             File remembering the suppression of every task.
+        label_mode_store : LabelModeStore
+            File remembering the label mode of classifications.
         settings : RecognitionSettings
             Settings naming the current task.
         notifier : StatusNotifier
@@ -33,10 +36,12 @@ class ReviewSettings:
         """
         self._threshold_store: ClassThresholdStore = threshold_store
         self._suppression_store: DuplicateSuppressionStore = suppression_store
+        self._label_mode_store: LabelModeStore = label_mode_store
         self._settings: RecognitionSettings = settings
         self._notifier: StatusNotifier = notifier
         self._thresholds: dict[RecognitionTask, ClassThresholds] = threshold_store.load()
         self._suppressions: dict[RecognitionTask, DuplicateSuppression] = suppression_store.load()
+        self._label_mode: LabelModeChoice = label_mode_store.load()
 
     @property
     def class_thresholds(self) -> ClassThresholds:
@@ -63,6 +68,18 @@ class ReviewSettings:
         return self._suppressions.get(self._settings.task, DuplicateSuppression())
 
     @property
+    def label_mode(self) -> LabelModeChoice:
+        """
+        Label mode chosen for classifications.
+
+        Returns
+        -------
+        LabelModeChoice
+            Chosen mode, automatic by default.
+        """
+        return self._label_mode
+
+    @property
     def review_filter(self) -> ReviewFilter:
         """
         Which stored findings of the current task pass the review.
@@ -86,10 +103,12 @@ class ReviewSettings:
         Returns
         -------
         ReviewFilter
-            Minimums and suppression of the task.
+            Label mode, minimums and suppression of the task.
         """
         return ReviewFilter(
-            self._thresholds.get(task, ClassThresholds()), self._suppressions.get(task, DuplicateSuppression())
+            self._thresholds.get(task, ClassThresholds()),
+            self._suppressions.get(task, DuplicateSuppression()),
+            self._label_mode if task is RecognitionTask.CLASSIFICATION else LabelModeChoice.AUTOMATIC,
         )
 
     def set_class_thresholds(self, class_thresholds: ClassThresholds) -> None:
@@ -119,5 +138,20 @@ class ReviewSettings:
         self._suppressions[self._settings.task] = suppression
         self._notifier.save_reporting_failure(
             lambda: self._suppression_store.save(self._suppressions), "Could not save the duplicate suppression"
+        )
+        self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
+
+    def set_label_mode(self, label_mode: LabelModeChoice) -> None:
+        """
+        Change the label mode of classifications and remember it.
+
+        Parameters
+        ----------
+        label_mode : LabelModeChoice
+            Automatic, single- or multi-label.
+        """
+        self._label_mode = label_mode
+        self._notifier.save_reporting_failure(
+            lambda: self._label_mode_store.save(label_mode), "Could not save the label mode"
         )
         self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)

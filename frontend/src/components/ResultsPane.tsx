@@ -160,13 +160,17 @@ export function ResultsPane({
                     suppression={
                       review.suppression.value ?? state.suppression
                     }
+                    labelMode={state.label_mode}
                     standardMinimum={state.standard_minimum}
                     standardOverlap={state.standard_overlap_threshold}
-                    isOverlapAvailable={!taskView.isScoreBased}
+                    isScoreBased={taskView.isScoreBased}
                     isCollapsed={isCollapsed("review")}
                     onToggleCollapsed={() => toggleSection("review")}
                     onThresholdsChange={review.thresholds.change}
                     onSuppressionChange={review.suppression.change}
+                    onLabelModeChange={(labelMode) =>
+                      call(() => api.setLabelMode(labelMode))
+                    }
                   />
                 </div>
                 {!isCollapsed("review") && (

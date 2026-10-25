@@ -42,21 +42,19 @@ class StoredResult:
 
     def kept_indices(self, review_filter: ReviewFilter) -> frozenset[int]:
         """
-        Findings kept in the review: accepted by the user and passing the review filter.
+        Findings kept in the review: listed in its label mode, accepted by the user and passing the review filter.
 
         Parameters
         ----------
         review_filter : ReviewFilter
-            Minimums and duplicate suppression of the review.
+            Label mode, minimums and duplicate suppression of the review.
 
         Returns
         -------
         frozenset[int]
             Indices of the kept findings.
         """
-        return frozenset(
-            index for index in review_filter.passing_indices(self.result.findings) if self.is_accepted(index)
-        )
+        return frozenset(index for index in review_filter.passing_indices_of(self.result) if self.is_accepted(index))
 
     def with_accepted(self, indices: frozenset[int], is_accepted: bool) -> "StoredResult":
         """
@@ -65,7 +63,7 @@ class StoredResult:
         Parameters
         ----------
         indices : frozenset[int]
-            Findings to change.
+            Findings to change, by the position of their class score or instance.
         is_accepted : bool
             True to keep them, False to reject them.
 
@@ -77,9 +75,9 @@ class StoredResult:
         Raises
         ------
         IndexError
-            If an index is outside the findings of the result.
+            If an index is outside the class scores or instances of the result.
         """
-        finding_count: int = len(self.result.findings)
+        finding_count: int = self.result.candidate_count
         if any(not 0 <= index < finding_count for index in indices):
             raise IndexError(f"finding indices must be in [0, {finding_count}). got {sorted(indices)}")
         rejected: frozenset[int] = self.rejected_indices - indices if is_accepted else self.rejected_indices | indices

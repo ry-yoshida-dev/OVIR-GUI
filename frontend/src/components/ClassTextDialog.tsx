@@ -39,7 +39,7 @@ export function ClassTextDialog({ classes, onClose }: ClassTextDialogProps) {
       }
     >
       <div className="hint">
-        One class per line: <span className="mono">person</span> or <span className="mono">car: car, suv, taxi</span>.
+        One class per line: <span className="snippet">person</span> or <span className="snippet">car: car, suv, taxi</span>.
         Reference images stay with the classes that keep their name.
       </div>
       <textarea

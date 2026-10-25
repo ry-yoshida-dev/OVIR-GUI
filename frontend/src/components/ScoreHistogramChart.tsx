@@ -4,7 +4,8 @@ import { usePointerDrag } from "../hooks/usePointerDrag";
 import { clamp } from "../lib/numbers";
 import type { ReviewMode } from "../lib/reviewModes";
 import { snappedValue } from "../lib/reviewModes";
-import { ScoreHistogram } from "../lib/scoreHistogram";
+import type { ScoreHistogram } from "../lib/scoreHistogram";
+import { HistogramBars } from "./HistogramBars";
 
 interface ScoreHistogramChartProps {
   mode: ReviewMode;
@@ -97,8 +98,6 @@ export function ScoreHistogramChart({
     onEditingChange(false);
   };
 
-  const largestCount = histogram.largestCount;
-  const binCount = ScoreHistogram.BIN_COUNT;
   return (
     <div
       className={`score-chart${isDisabled ? " disabled" : ""}${drag.isDragging ? " dragging" : ""}`}
@@ -155,34 +154,14 @@ export function ScoreHistogramChart({
           if (!isDisabled && onReset !== null) onReset();
         }}
       >
-        <svg
-          className="score-chart-bars"
-          viewBox={`0 0 ${binCount} 1`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          {largestCount > 0 &&
-            histogram.counts.map((count, bin) => {
-              if (count === 0) return null;
-              const barHeight = Math.max(0.06, Math.sqrt(count / largestCount));
-              const isAtOrAbove = histogram.middleScoreOf(bin) >= threshold;
-              const isHighlighted =
-                mode.highlight === "at-or-above" ? isAtOrAbove : !isAtOrAbove;
-              return (
-                <rect
-                  key={bin}
-                  x={bin + 0.06}
-                  y={1 - barHeight}
-                  width={0.88}
-                  height={barHeight}
-                  className={isHighlighted ? undefined : "muted"}
-                  style={isHighlighted ? { fill: color } : undefined}
-                >
-                  <title>{`${(bin / binCount).toFixed(2)}–${((bin + 1) / binCount).toFixed(2)}: ${count}`}</title>
-                </rect>
-              );
-            })}
-        </svg>
+        <HistogramBars
+          histogram={histogram}
+          color={color}
+          isHighlighted={(bin) => {
+            const isAtOrAbove = histogram.middleScoreOf(bin) >= threshold;
+            return mode.highlight === "at-or-above" ? isAtOrAbove : !isAtOrAbove;
+          }}
+        />
         {parentThreshold !== null && (
           <span
             className="score-chart-parent"

@@ -1,4 +1,4 @@
-import type { PicturePrompt } from "../api/types";
+import type { DrawingKindValue, PicturePrompt } from "../api/types";
 import { type ClassColors, classColorOf } from "../lib/frameView";
 
 interface PromptOverlayProps {
@@ -6,29 +6,29 @@ interface PromptOverlayProps {
   scale: number;
   classColors: ClassColors;
   activeObjectId: number | null;
-  isExemplarShown: boolean;
-  isMarkShown: boolean;
+  activeKind: DrawingKindValue;
 }
 
 const POSITIVE_COLOR = "#2fbf71";
 const NEGATIVE_COLOR = "#e5484d";
 const POINT_RADIUS = 6;
 const LABEL_FONT_SIZE = 12;
+const INACTIVE_KIND_OPACITY = 0.4;
 
 export function PromptOverlay({
   prompt,
   scale,
   classColors,
   activeObjectId,
-  isExemplarShown,
-  isMarkShown,
+  activeKind,
 }: PromptOverlayProps) {
   const unit = 1 / scale;
   const colorOf = (className: string) => classColorOf(classColors, className);
+  const opacityOf = (kind: DrawingKindValue) => (kind === activeKind ? 1 : INACTIVE_KIND_OPACITY);
   return (
     <g style={{ pointerEvents: "none" }}>
-      {isExemplarShown &&
-        prompt.exemplars.map((exemplar) => {
+      <g opacity={opacityOf("exemplar")}>
+      {prompt.exemplars.map((exemplar) => {
           const [left, top, right, bottom] = exemplar.box;
           const stroke = exemplar.is_positive ? POSITIVE_COLOR : NEGATIVE_COLOR;
           return (
@@ -56,8 +56,9 @@ export function PromptOverlay({
             </g>
           );
         })}
-      {isMarkShown &&
-        prompt.marks.map((mark) => {
+      </g>
+      <g opacity={opacityOf("mark")}>
+      {prompt.marks.map((mark) => {
           const color = colorOf(mark.class_name);
           const isActive = mark.object_id === activeObjectId;
           const anchor = mark.box ?? [...(mark.positive_points[0] ?? [0, 0]), 0, 0];
@@ -113,6 +114,7 @@ export function PromptOverlay({
             </g>
           );
         })}
+      </g>
     </g>
   );
 }

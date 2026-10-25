@@ -38,7 +38,7 @@ class OverlayRenderer:
         }
         self._is_confidence_shown: bool = is_confidence_shown
 
-    def render(self, picture: Image.Image, result: FrameResult, label: str | None = None) -> Image.Image:
+    def render(self, picture: Image.Image, result: FrameResult, labels: tuple[str, ...] = ()) -> Image.Image:
         """
         Draw a result over a copy of its picture.
 
@@ -48,8 +48,8 @@ class OverlayRenderer:
             RGB picture the result was recognized in.
         result : FrameResult
             Findings to draw.
-        label : str | None, optional
-            Class shown first for a classification; its top class by default.
+        labels : tuple[str, ...], optional
+            Classes shown first for a classification, all of them even beyond the usual lines; none by default.
 
         Returns
         -------
@@ -58,7 +58,7 @@ class OverlayRenderer:
         """
         canvas: Image.Image = picture.convert("RGB")
         if result.class_scores:
-            return self._draw_scores(canvas, result, label)
+            return self._draw_scores(canvas, result, labels)
         masked: list[RecognizedInstance] = [instance for instance in result.instances if instance.mask is not None]
         if masked:
             canvas = self._tint_masks(canvas, masked)
@@ -101,13 +101,13 @@ class OverlayRenderer:
             )
         return canvas
 
-    def _draw_scores(self, canvas: Image.Image, result: FrameResult, label: str | None) -> Image.Image:
+    def _draw_scores(self, canvas: Image.Image, result: FrameResult, labels: tuple[str, ...]) -> Image.Image:
         scale: float = max(canvas.size) / self.REFERENCE_SIDE
         font: ImageFont.FreeTypeFont | ImageFont.ImageFont = self._font(scale * 1.2)
         draw: ImageDraw.ImageDraw = ImageDraw.Draw(canvas)
-        ranked: list[ClassScore] = list(result.ranked_scores[: self.CLASSIFICATION_LINES])
-        if label is not None:
-            ranked.sort(key=lambda score: score.class_name != label)
+        labelled: list[ClassScore] = [score for score in result.ranked_scores if score.class_name in labels]
+        unlabelled: list[ClassScore] = [score for score in result.ranked_scores if score.class_name not in labels]
+        ranked: list[ClassScore] = (labelled + unlabelled)[: max(self.CLASSIFICATION_LINES, len(labelled))]
         padding: int = max(2, round(4 * scale))
         top: float = padding
         for score in ranked:

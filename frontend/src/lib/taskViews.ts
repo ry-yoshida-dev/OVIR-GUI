@@ -32,9 +32,6 @@ export interface TaskView {
   columns: ColumnDefinition[];
   emptyPictureText: string;
   drawnShapeNoun: string;
-  minimumConfidenceHint: string;
-  topCountLabel: string;
-  comparisonHintOf: (iouThreshold: number) => string;
 }
 
 const COMMON_TOGGLES: DisplayToggle[] = [
@@ -49,11 +46,7 @@ const INTERPOLATION_TOGGLE: DisplayToggle = {
   label: "Interpolate between sampled frames",
 };
 
-const FINDING_MINIMUM_HINT = "Findings below it are hidden and not exported.";
 const NOTHING_FOUND_TEXT = "Nothing found";
-const FOUND_LABEL = "Found";
-const pairedComparisonHintOf = (iouThreshold: number): string =>
-  `instances paired by IoU ≥ ${iouThreshold}. The compared ones are drawn dotted.`;
 
 const TASK_VIEWS: Record<TaskValue, TaskView> = {
   classification: {
@@ -73,10 +66,6 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     columns: SCORE_COLUMNS,
     emptyPictureText: "Low confidence",
     drawnShapeNoun: "boxes",
-    minimumConfidenceHint:
-      "Pictures whose top score is below it get no label and are not exported.",
-    topCountLabel: "Top-1",
-    comparisonHintOf: () => "matched when both give the same top class.",
   },
   detection: {
     task: "detection",
@@ -96,9 +85,6 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     columns: BOX_FINDING_COLUMNS,
     emptyPictureText: NOTHING_FOUND_TEXT,
     drawnShapeNoun: "boxes",
-    minimumConfidenceHint: FINDING_MINIMUM_HINT,
-    topCountLabel: FOUND_LABEL,
-    comparisonHintOf: pairedComparisonHintOf,
   },
   segmentation: {
     task: "segmentation",
@@ -119,9 +105,6 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     columns: MASK_FINDING_COLUMNS,
     emptyPictureText: NOTHING_FOUND_TEXT,
     drawnShapeNoun: "instances",
-    minimumConfidenceHint: FINDING_MINIMUM_HINT,
-    topCountLabel: FOUND_LABEL,
-    comparisonHintOf: pairedComparisonHintOf,
   },
 };
 

@@ -310,8 +310,8 @@ class InferenceRunner:
             self._workbench.picture_board.prompts.relevant_to(key, model.is_sequential).marks for key in frame_keys
         ):
             return self._notifier.reject(
-                f"{model.preset.label} segments the objects you mark: choose a class, then click on an object or "
-                + "drag a box around it in the viewer."
+                f"{model.preset.label} segments the objects you mark: choose Objects in the drawing bar and a class, "
+                + "then click on an object or drag a box around it in the viewer."
             )
         preparation: PromptPreparation = self._prompts.prepare(model, is_skipping_approved)
         if preparation.prompt is None:

@@ -16,8 +16,8 @@ interface ZoomableImageProps {
   children?: (scale: number) => ReactNode;
   isDrawing?: boolean;
   drawColor?: string;
-  onDrawn?: (box: Box, isNegative: boolean) => void;
-  onPointClicked?: (point: [number, number], isNegative: boolean) => void;
+  onDrawn?: (box: Box, isInverted: boolean) => void;
+  onPointClicked?: (point: [number, number], isInverted: boolean) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onBackgroundClick?: () => void;
   hud?: ReactNode;
@@ -48,7 +48,7 @@ export function ZoomableImage({
   const isUserZoomed = useRef(false);
   const gesture = useRef<
     | { kind: "pan"; startX: number; startY: number; view: View; hasMoved: boolean }
-    | { kind: "draw"; start: [number, number]; isNegative: boolean }
+    | { kind: "draw"; start: [number, number]; isInverted: boolean }
     | null
   >(null);
 
@@ -115,10 +115,10 @@ export function ZoomableImage({
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
-    if ((event.button === 0 || event.button === 2) && isDrawing) {
+    if (event.button === 0 && isDrawing) {
       const start = toImage(event.clientX, event.clientY);
-      const isNegative = event.button === 2 || event.ctrlKey || event.metaKey;
-      gesture.current = { kind: "draw", start, isNegative };
+      const isInverted = event.ctrlKey || event.metaKey;
+      gesture.current = { kind: "draw", start, isInverted };
       setDraft([start[0], start[1], start[0], start[1]]);
       event.currentTarget.setPointerCapture(event.pointerId);
     }
@@ -155,9 +155,9 @@ export function ZoomableImage({
       ];
       setDraft(null);
       if (box[2] - box[0] >= MIN_DRAWN_SIDE && box[3] - box[1] >= MIN_DRAWN_SIDE) {
-        onDrawn?.(box, current.isNegative);
+        onDrawn?.(box, current.isInverted);
       } else {
-        onPointClicked?.(current.start, current.isNegative);
+        onPointClicked?.(current.start, current.isInverted);
       }
     }
   };
@@ -176,9 +176,6 @@ export function ZoomableImage({
         setDraft(null);
       }}
       onDoubleClick={isDrawing ? undefined : fit}
-      onContextMenu={(event) => {
-        if (isDrawing) event.preventDefault();
-      }}
       onKeyDown={onKeyDown}
     >
       <svg>

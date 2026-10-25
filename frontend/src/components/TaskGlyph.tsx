@@ -10,8 +10,9 @@ export function TaskGlyph({ task }: TaskGlyphProps) {
     <Glyph className="task-glyph" viewBox="0 0 20 20">
       {task === "classification" && (
         <>
-          <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M2.5 6a2.5 2.5 0 0 1 2.5-2.5h5.5v4.5H2.5z" fill="currentColor" />
+          <rect x="2.5" y="3.5" width="15" height="3" rx="1.5" fill="currentColor" />
+          <rect x="2.5" y="8.5" width="9.5" height="3" rx="1.5" fill="currentColor" fillOpacity="0.45" />
+          <rect x="2.5" y="13.5" width="5.5" height="3" rx="1.5" fill="currentColor" fillOpacity="0.45" />
         </>
       )}
       {task === "detection" && (
@@ -28,11 +29,12 @@ export function TaskGlyph({ task }: TaskGlyphProps) {
       )}
       {task === "segmentation" && (
         <path
-          d="M6.2 4.6c2.3-1.6 5.4-1.2 7.6.4 2.4 1.8 3.4 4.8 2.3 7.6-1.1 2.9-4.3 4.6-7.4 4-3-.6-5.3-3.1-5.4-6.1-.1-2.4 1-4.6 2.9-5.9z"
+          d="M4.2 9.8C3.4 7 5.6 4.6 8.2 5.4C9.6 5.8 10.2 5.2 11.4 4C13 2.4 16 3.2 15.6 5.6C15.3 7.2 13.6 7.6 13.9 9.4C14.1 10.6 16.4 11.2 16.2 13.6C16 16.4 12.6 17.4 10.6 15.8C9.6 15 8.6 15.4 7.4 16C5 17.2 2.6 15 3.6 12.8C4 11.9 4.4 10.9 4.2 9.8Z"
           fill="currentColor"
           fillOpacity="0.3"
           stroke="currentColor"
           strokeWidth="1.6"
+          strokeLinejoin="round"
         />
       )}
     </Glyph>

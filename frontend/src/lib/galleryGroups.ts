@@ -115,15 +115,20 @@ export function buildGalleryGroups(
   const classOrder: string[] = Object.keys(classColors);
   const classGroups = new Map<string, GalleryTile[]>();
   const statusGroups = new Map<string, GalleryTile[]>();
-  const seenPictureKeys = new Set<string>();
+  const seenTileKeys = new Set<string>();
   for (const row of rows) {
-    if (row.kind === "finding" && row.finding.index !== 0) continue;
+    if (
+      row.kind === "finding" &&
+      !row.finding.is_passing &&
+      row.finding.class_name !== row.scores[0]?.class_name
+    )
+      continue;
     if (row.kind === "status" && row.isBelowMinimum) continue;
-    const pictureKey = pictureKeyOf(row.path, row.frame);
-    if (seenPictureKeys.has(pictureKey)) continue;
-    seenPictureKeys.add(pictureKey);
-    const target = row.kind === "finding" ? classGroups : statusGroups;
     const groupKey = row.kind === "finding" ? row.finding.class_name : row.text;
+    const tileKey = `${pictureKeyOf(row.path, row.frame)}|${groupKey}`;
+    if (seenTileKeys.has(tileKey)) continue;
+    seenTileKeys.add(tileKey);
+    const target = row.kind === "finding" ? classGroups : statusGroups;
     const tile =
       row.kind === "finding" ? findingTileOf(row) : statusTileOf(row);
     const tiles = target.get(groupKey);

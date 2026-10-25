@@ -15,13 +15,13 @@ class ExportItem:
         Image or video frame.
     result : FrameResult
         Result with only the exported instances; a classification keeps every class score.
-    label : str | None
-        Exported class of a classification; ``None`` when its top class is not kept, and for other tasks.
+    labels : tuple[str, ...]
+        Exported classes of a classification from best to worst; empty when none is kept, and for other tasks.
     seconds : float | None
         Time of a video frame from the start of its video.
     """
 
     frame_key: FrameKey
     result: FrameResult
-    label: str | None
+    labels: tuple[str, ...]
     seconds: float | None

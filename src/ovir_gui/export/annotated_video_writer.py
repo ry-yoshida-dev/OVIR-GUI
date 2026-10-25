@@ -76,6 +76,6 @@ class AnnotatedVideoWriter:
                 annotated: Image.Image = picture
                 if position:
                     item: ExportItem = frame_items[frame_indices[position - 1]]
-                    annotated = self._renderer.render(picture, item.result, item.label)
+                    annotated = self._renderer.render(picture, item.result, item.labels)
                 writer.write(np.ascontiguousarray(np.asarray(annotated, dtype=np.uint8)[:, :, ::-1]))
         return target

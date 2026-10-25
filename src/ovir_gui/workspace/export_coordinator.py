@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +10,7 @@ from .action_reply import ActionReply
 from .action_status import ActionStatus
 from .class_workbench import ClassWorkbench
 from .export_plan import ExportPlan
+from .export_preview_source import ExportPreviewSource
 from .export_request import ExportRequest
 from .result_read_model import ResultReadModel
 from .review_settings import ReviewSettings
@@ -159,6 +160,39 @@ class ExportCoordinator:
             issue=issue,
         )
 
+    def preview_source(
+        self, scope: ExportScope, minimum_confidence: float, listed_indices: Mapping[FrameKey, frozenset[int]] | None
+    ) -> ExportPreviewSource:
+        """
+        What a label preview of the stored results of the planned profile is written from now.
+
+        Parameters
+        ----------
+        scope : ExportScope
+            Every kept finding, or only those the result table lists.
+        minimum_confidence : float
+            Findings below this confidence are left out.
+        listed_indices : Mapping[FrameKey, frozenset[int]] | None
+            Findings the result table lists per picture.
+
+        Returns
+        -------
+        ExportPreviewSource
+            Exported pictures, task, classes, shown picture and open media; pictures still to be recognized are left
+            out.
+        """
+        profile: ModelProfile = self.plan().profile
+        items: tuple[ExportItem, ...] = (
+            tuple(self._items(profile, scope, minimum_confidence, listed_indices)) if profile in self._library else ()
+        )
+        return ExportPreviewSource(
+            items=items,
+            task=profile.task,
+            class_names=self._workbench.class_names,
+            shown_key=self._working.current_key,
+            media=self._working.media,
+        )
+
     def start(self, request: ExportRequest, is_skipping_approved: bool) -> ActionReply:
         """
         Write the stored results of the shown profile, recognizing the pictures without an up-to-date result first.
@@ -229,22 +263,9 @@ class ExportCoordinator:
         if profile not in self._library:
             self._notifier.inform("Nothing to export.")
             return
-        catalog: ResultCatalog = self._library.catalog_of(profile)
-        selection: ExportSelection = ExportSelection(
-            review_filter=self._review.filter_of(profile.task),
-            minimum_confidence=request.options.minimum_confidence,
-            listed_indices=(
-                request.listed_indices
-                if request.options.scope is ExportScope.LISTED and profile == self._working.shown_profile
-                else None
-            ),
+        items: list[ExportItem] = self._items(
+            profile, request.options.scope, request.options.minimum_confidence, request.listed_indices
         )
-        items: list[ExportItem] = []
-        for frame_key in self._read_model.recognized_keys(catalog):
-            stored: StoredResult | None = catalog.stored_of(frame_key)
-            if stored is not None:
-                seconds: float | None = self._working.media[frame_key.path].seconds_at(frame_key)
-                items.append(selection.item_of(frame_key, stored, seconds))
         exporter: ResultExporter = ResultExporter(
             self._working.media, self._workbench.class_colors(), request.is_label_confidence_shown
         )
@@ -257,6 +278,29 @@ class ExportCoordinator:
             lambda report: self._on_written(report, on_ended),
             lambda error: self._on_failed(error, on_ended),
         )
+
+    def _items(
+        self,
+        profile: ModelProfile,
+        scope: ExportScope,
+        minimum_confidence: float,
+        listed_indices: Mapping[FrameKey, frozenset[int]] | None,
+    ) -> list[ExportItem]:
+        catalog: ResultCatalog = self._library.catalog_of(profile)
+        selection: ExportSelection = ExportSelection(
+            review_filter=self._review.filter_of(profile.task),
+            minimum_confidence=minimum_confidence,
+            listed_indices=(
+                listed_indices if scope is ExportScope.LISTED and profile == self._working.shown_profile else None
+            ),
+        )
+        items: list[ExportItem] = []
+        for frame_key in self._read_model.recognized_keys(catalog):
+            stored: StoredResult | None = catalog.stored_of(frame_key)
+            if stored is not None:
+                seconds: float | None = self._working.media[frame_key.path].seconds_at(frame_key)
+                items.append(selection.item_of(frame_key, stored, seconds))
+        return items
 
     def _on_written(self, report: ExportReport, on_ended: Callable[[], None]) -> None:
         self._is_exporting = False

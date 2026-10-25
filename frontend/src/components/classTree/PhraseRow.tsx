@@ -1,4 +1,4 @@
-import type { DragEvent, MouseEvent, ReactNode } from "react";
+import type { DragEvent, ReactNode } from "react";
 
 interface PhraseRowProps {
   phrase: string;
@@ -8,7 +8,6 @@ interface PhraseRowProps {
   renameInput: ReactNode | null;
   onSelect: () => void;
   onRename: () => void;
-  onContextMenu: (event: MouseEvent) => void;
   onDragStart: (event: DragEvent) => void;
   onDragEnd: () => void;
   onDragOver: (event: DragEvent) => void;
@@ -22,7 +21,6 @@ export function PhraseRow({
   renameInput,
   onSelect,
   onRename,
-  onContextMenu,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -36,7 +34,6 @@ export function PhraseRow({
       onDragOver={onDragOver}
       onClick={onSelect}
       onDoubleClick={onRename}
-      onContextMenu={onContextMenu}
     >
       <span className="faint">“</span>
       {renameInput ?? <span className="label">{phrase}</span>}

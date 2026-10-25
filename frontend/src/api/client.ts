@@ -6,9 +6,12 @@ import type {
   DirectoryListing,
   DuplicateSuppression,
   ExportPlan,
+  ExportPreviewRequest,
   ExportRequest,
   FramePayload,
   InferenceModeValue,
+  LabelModeChoice,
+  LabelPreview,
   MarkEntry,
   ModelSelection,
   ObjectDocument,
@@ -169,6 +172,8 @@ export const api = {
   setThresholds: (thresholds: Thresholds) => put("/api/thresholds", thresholds),
   setSuppression: (suppression: DuplicateSuppression) =>
     put("/api/suppression", suppression),
+  setLabelMode: (labelMode: LabelModeChoice) =>
+    put("/api/label-mode", { label_mode: labelMode }),
   tableCsv: (findings: { path: string; frame: number | null; index: number }[]) =>
     requestBlob("POST", "/api/findings/csv", { findings }),
 
@@ -279,6 +284,8 @@ export const api = {
     get<ObjectDocument>(`/api/results/document${pathQuery(paths)}`),
 
   exportPlan: () => get<ExportPlan>("/api/export/plan"),
+  exportPreview: (body: ExportPreviewRequest) =>
+    post<LabelPreview>("/api/export/preview", body),
   exportResults: (body: ExportRequest) =>
     post<ActionReply>("/api/export", body),
   exportDownloadUrl: "/api/export/download",

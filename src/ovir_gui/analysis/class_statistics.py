@@ -1,7 +1,8 @@
-import statistics
 from dataclasses import dataclass
 
-from .confidence_histogram import ConfidenceHistogram
+from .confidence_summary import ConfidenceSummary
+from .size_distribution import SizeDistribution
+from .threshold_curve import ThresholdCurve
 
 
 @dataclass(frozen=True)
@@ -20,11 +21,19 @@ class ClassStatistics:
     rejected_count : int
         Findings the user rejected.
     below_minimum_count : int
-        Findings kept by the user but below the minimum confidence of the class.
+        Findings kept by the user but filtered out by the review: below the minimum or suppressed as duplicates.
     kept_count : int
-        Findings neither rejected nor below the minimum.
-    confidences : tuple[float, ...]
-        Confidence of every stored finding.
+        Findings neither rejected nor filtered out.
+    peak_count : int
+        Most kept findings of the class in one picture.
+    confidences : ConfidenceSummary | None
+        Spread of the confidences of every stored finding; ``None`` without findings.
+    kept_confidences : ConfidenceSummary | None
+        Spread of the confidences of the kept findings; ``None`` without kept findings.
+    threshold_curve : ThresholdCurve
+        What every minimum confidence would keep of the accepted findings.
+    sizes : SizeDistribution | None
+        Sizes of the kept findings; ``None`` for classifications, which have no area.
     """
 
     class_name: str
@@ -33,40 +42,8 @@ class ClassStatistics:
     rejected_count: int
     below_minimum_count: int
     kept_count: int
-    confidences: tuple[float, ...]
-
-    @property
-    def mean_confidence(self) -> float | None:
-        """
-        Mean confidence.
-
-        Returns
-        -------
-        float | None
-            ``None`` without findings.
-        """
-        return statistics.fmean(self.confidences) if self.confidences else None
-
-    @property
-    def median_confidence(self) -> float | None:
-        """
-        Median confidence.
-
-        Returns
-        -------
-        float | None
-            ``None`` without findings.
-        """
-        return statistics.median(self.confidences) if self.confidences else None
-
-    @property
-    def histogram(self) -> ConfidenceHistogram:
-        """
-        Confidences in equal-width bins.
-
-        Returns
-        -------
-        ConfidenceHistogram
-            Histogram of every stored finding.
-        """
-        return ConfidenceHistogram.of(self.confidences)
+    peak_count: int
+    confidences: ConfidenceSummary | None
+    kept_confidences: ConfidenceSummary | None
+    threshold_curve: ThresholdCurve
+    sizes: SizeDistribution | None

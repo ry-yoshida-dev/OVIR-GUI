@@ -4,6 +4,7 @@ from object_detection_format import AnnotationFormat as BoxAnnotationFormat
 from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
 from ..recognition import RecognitionTask
+from .export_purpose import ExportPurpose
 
 
 class ExportFormat(Enum):
@@ -35,7 +36,9 @@ class ExportFormat(Enum):
     MASK_PNG : str
         Instance and class label maps as PNG images.
     CLASS_FOLDERS : str
-        Pictures copied into one folder per predicted class.
+        Pictures copied into the folder of each predicted class.
+    CROPPED_OBJECTS : str
+        Box of every instance saved as its own image in one folder per class.
     """
 
     CSV = "csv"
@@ -50,6 +53,7 @@ class ExportFormat(Enum):
     LABELME_SEGMENTATION = "labelme_segmentation"
     MASK_PNG = "mask_png"
     CLASS_FOLDERS = "class_folders"
+    CROPPED_OBJECTS = "cropped_objects"
 
     @property
     def label(self) -> str:
@@ -63,9 +67,9 @@ class ExportFormat(Enum):
         """
         match self:
             case ExportFormat.CSV:
-                return "CSV table"
+                return "CSV"
             case ExportFormat.JSON:
-                return "JSON document"
+                return "JSON"
             case ExportFormat.COCO:
                 return "MS COCO boxes (JSON)"
             case ExportFormat.YOLO:
@@ -86,6 +90,44 @@ class ExportFormat(Enum):
                 return "Mask images (PNG)"
             case ExportFormat.CLASS_FOLDERS:
                 return "Folder per class"
+            case ExportFormat.CROPPED_OBJECTS:
+                return "Cropped objects per class"
+
+    @property
+    def purpose(self) -> ExportPurpose:
+        """
+        What the format gives the user.
+
+        Returns
+        -------
+        ExportPurpose
+            Purpose the format is offered under.
+        """
+        match self:
+            case ExportFormat.CROPPED_OBJECTS:
+                return ExportPurpose.CROPS
+            case ExportFormat.CLASS_FOLDERS:
+                return ExportPurpose.CLASS_FOLDERS
+            case _:
+                return ExportPurpose.ANNOTATIONS
+
+    @property
+    def group_label(self) -> str:
+        """
+        Heading the format is listed under among the formats of its purpose.
+
+        Returns
+        -------
+        str
+            ``"Tables"`` for CSV and JSON, ``"Training formats"`` for the other annotations, empty otherwise.
+        """
+        match self.purpose:
+            case ExportPurpose.ANNOTATIONS if self in (ExportFormat.CSV, ExportFormat.JSON):
+                return "Tables"
+            case ExportPurpose.ANNOTATIONS:
+                return "Training formats"
+            case _:
+                return ""
 
     @property
     def tasks(self) -> frozenset[RecognitionTask]:
@@ -106,6 +148,7 @@ class ExportFormat(Enum):
                 | ExportFormat.PASCAL_VOC
                 | ExportFormat.LABELME
                 | ExportFormat.CREATE_ML
+                | ExportFormat.CROPPED_OBJECTS
             ):
                 return frozenset({RecognitionTask.DETECTION, RecognitionTask.SEGMENTATION})
             case (
@@ -126,7 +169,7 @@ class ExportFormat(Enum):
         Returns
         -------
         bool
-            True for tables, COCO and YOLO.
+            True for tables, COCO, YOLO and cropped objects.
         """
         match self:
             case (
@@ -136,6 +179,33 @@ class ExportFormat(Enum):
                 | ExportFormat.YOLO
                 | ExportFormat.COCO_SEGMENTATION
                 | ExportFormat.YOLO_SEGMENTATION
+                | ExportFormat.CROPPED_OBJECTS
+            ):
+                return True
+            case _:
+                return False
+
+    @property
+    def is_written_per_picture(self) -> bool:
+        """
+        Whether the format writes the labels or images of every picture in files of their own.
+
+        Returns
+        -------
+        bool
+            True for YOLO, Pascal VOC, LabelMe, mask images, cropped objects and class folders; False for the formats
+            writing one file for every picture.
+        """
+        match self:
+            case (
+                ExportFormat.YOLO
+                | ExportFormat.PASCAL_VOC
+                | ExportFormat.LABELME
+                | ExportFormat.YOLO_SEGMENTATION
+                | ExportFormat.LABELME_SEGMENTATION
+                | ExportFormat.MASK_PNG
+                | ExportFormat.CROPPED_OBJECTS
+                | ExportFormat.CLASS_FOLDERS
             ):
                 return True
             case _:
@@ -149,10 +219,10 @@ class ExportFormat(Enum):
         Returns
         -------
         bool
-            True for every annotation format and class folders.
+            True for every annotation format and class folders; cropped objects read the pictures themselves.
         """
         match self:
-            case ExportFormat.CSV | ExportFormat.JSON:
+            case ExportFormat.CSV | ExportFormat.JSON | ExportFormat.CROPPED_OBJECTS:
                 return False
             case _:
                 return True

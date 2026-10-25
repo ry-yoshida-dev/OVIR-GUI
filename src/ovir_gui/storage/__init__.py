@@ -6,6 +6,7 @@ from .class_set_summary import ClassSetSummary
 from .class_threshold_store import ClassThresholdStore
 from .duplicate_suppression_store import DuplicateSuppressionStore
 from .json_fields import JsonFields, JsonValue
+from .label_mode_store import LabelModeStore
 from .license_consent_store import LicenseConsentStore
 from .picture_prompt_codec import PicturePromptCodec
 from .picture_prompt_store import PicturePromptStore
@@ -14,6 +15,7 @@ from .results_archive import ResultsArchive
 from .results_snapshot import ResultsSnapshot
 from .results_store import ResultsStore
 from .session import Session
+from .session_media import SessionMedia
 from .session_store import SessionStore
 from .upload_store import UploadStore
 
@@ -27,6 +29,7 @@ __all__ = [
     "DuplicateSuppressionStore",
     "JsonFields",
     "JsonValue",
+    "LabelModeStore",
     "LicenseConsentStore",
     "PicturePromptCodec",
     "PicturePromptStore",
@@ -35,6 +38,7 @@ __all__ = [
     "ResultsSnapshot",
     "ResultsStore",
     "Session",
+    "SessionMedia",
     "SessionStore",
     "UploadStore",
 ]

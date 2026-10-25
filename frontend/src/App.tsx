@@ -13,7 +13,7 @@ import { Notices } from "./components/Notices";
 import { ResultsPane } from "./components/ResultsPane";
 import { SetupPane } from "./components/SetupPane";
 import { Splitter } from "./components/Splitter";
-import { StatisticsPanel } from "./components/StatisticsPanel";
+import { StatisticsDialog } from "./components/statistics/StatisticsDialog";
 import { StatusBar } from "./components/StatusBar";
 import type { VideoPlayback } from "./components/VideoResultPlayer";
 import { useActionRunner } from "./hooks/useActionRunner";
@@ -184,6 +184,10 @@ export function App() {
     )
       show(row.path, row.frame);
   };
+  const openPicture = (path: string, frame: number | null) => {
+    setCenterLayout({ mode: "image" });
+    show(path, frame);
+  };
   const setAccepted = (targets: TableRow[], isAccepted: boolean) => {
     void call(() => api.setAccepted(groupFindings(targets), isAccepted));
   };
@@ -264,10 +268,7 @@ export function App() {
               onNavigate={navigate}
               onSelectRow={selectRow}
               onSetAccepted={setAccepted}
-              onOpenPicture={(path, frame) => {
-                setCenterLayout({ mode: "image" });
-                show(path, frame);
-              }}
+              onOpenPicture={openPicture}
               onSelectFinding={(resultFrame, index) => {
                 if (currentPath !== null)
                   setSelectedRowKey(rowKeyOf(currentPath, resultFrame, index));
@@ -331,7 +332,7 @@ export function App() {
       )}
 
       {isStatisticsOpen && (
-        <StatisticsPanel
+        <StatisticsDialog
           refreshToken={`${state.status.serial}:${state.shown_profile_key}:${state.compared_profile_key}:${JSON.stringify(state.thresholds)}:${resultsVersion}`}
           thresholds={review.thresholds.value ?? state.thresholds}
           classColors={classColors}
@@ -340,6 +341,7 @@ export function App() {
           comparedKey={state.compared_profile_key}
           onThresholdsChange={review.thresholds.change}
           onCompare={(key) => void call(() => api.compare(key))}
+          onOpenPicture={openPicture}
           onClose={() => setIsStatisticsOpen(false)}
         />
       )}

@@ -29,6 +29,10 @@ class ExportBody(BaseModel):
         Whether drawn labels carry the confidence.
     is_skipping_approved : bool
         Whether the user approved leaving out classes the model cannot query.
+    crop_image_format : str
+        Value of the image format of cropped objects.
+    crop_margin_percent : float
+        Margin around cropped objects, as a percentage of the box.
     """
 
     export_format: str
@@ -41,3 +45,5 @@ class ExportBody(BaseModel):
     listed_findings: list[PictureFindings] | None = None
     is_label_confidence_shown: bool = True
     is_skipping_approved: bool = False
+    crop_image_format: str = "jpeg"
+    crop_margin_percent: float = 0.0

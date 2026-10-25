@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReviewMode } from "../lib/reviewModes";
 import type { ScoreHistogram } from "../lib/scoreHistogram";
 import { ResetGlyph } from "./Glyphs";
+import { ScoreChartLabel } from "./ScoreChartLabel";
 import { ScoreHistogramChart } from "./ScoreHistogramChart";
 
 export type ScoreChartLevel = "overall" | "class" | "phrase";
@@ -25,7 +26,7 @@ interface ScoreChartRowProps {
   onToggleExpanded?: () => void;
 }
 
-const CHART_HEIGHTS: Record<ScoreChartLevel, number> = {
+export const CHART_HEIGHTS: Record<ScoreChartLevel, number> = {
   overall: 44,
   class: 44,
   phrase: 30,
@@ -52,29 +53,14 @@ export function ScoreChartRow({
   const [isEditing, setIsEditing] = useState(false);
   return (
     <div className={`score-chart-row ${level}`}>
-      <div
-        className={`score-chart-label${isExpandable ? " expandable" : ""}`}
-        title={
-          isExpandable
-            ? `${title}: click to ${isExpanded ? "fold" : "unfold"} its phrases`
-            : title
-        }
-        onClick={isExpandable ? onToggleExpanded : undefined}
-      >
-        {level === "class" && (
-          <span
-            className={`chevron${isExpanded ? " expanded" : ""}${isExpandable ? "" : " hidden"}`}
-          >
-            ▸
-          </span>
-        )}
-        {level !== "phrase" && (
-          <span className="score-chart-dot" style={{ background: color }} />
-        )}
-        <span className="score-chart-name">
-          {level === "phrase" ? `“${title}”` : title}
-        </span>
-      </div>
+      <ScoreChartLabel
+        title={title}
+        level={level}
+        color={color}
+        isExpandable={isExpandable}
+        isExpanded={isExpanded}
+        onToggleExpanded={onToggleExpanded}
+      />
       <ScoreHistogramChart
         mode={mode}
         histogram={histogram}

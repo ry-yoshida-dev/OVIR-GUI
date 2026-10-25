@@ -1,0 +1,30 @@
+{
+  "phrase_count": 2,
+  "models": {
+    "IDEA-Research/grounding-dino-base": {"gflops": 531.3, "image_side": 640},
+    "IDEA-Research/grounding-dino-tiny": {"lvis_ap": 27.4, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640},
+    "florence-community/Florence-2-base": {"gflops": 542.0, "image_side": 768},
+    "florence-community/Florence-2-base-ft": {"gflops": 542.0, "image_side": 768},
+    "florence-community/Florence-2-large": {"gflops": 2072.0, "image_side": 768},
+    "florence-community/Florence-2-large-ft": {"gflops": 2072.0, "image_side": 768},
+    "google/owlv2-base-patch16": {"lvis_ap": 31.8, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 638.2, "image_side": 960},
+    "google/owlv2-base-patch16-ensemble": {"lvis_ap": 43.9, "lvis_split": "val", "is_lvis_zero_shot": false, "gflops": 638.2, "image_side": 960},
+    "google/owlv2-large-patch14": {"lvis_ap": 38.1, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 3195.0, "image_side": 1008},
+    "google/owlv2-large-patch14-ensemble": {"lvis_ap": 44.6, "lvis_split": "val", "is_lvis_zero_shot": false, "gflops": 3195.0, "image_side": 1008},
+    "google/owlvit-base-patch16": {"lvis_ap": 20.8, "lvis_split": "val", "is_lvis_zero_shot": true, "gflops": 404.0, "image_side": 768},
+    "google/owlvit-base-patch32": {"lvis_ap": 19.3, "lvis_split": "val", "is_lvis_zero_shot": true, "gflops": 105.0, "image_side": 768},
+    "google/owlvit-large-patch14": {"lvis_ap": 34.6, "lvis_split": "val", "is_lvis_zero_shot": true, "gflops": 2205.5, "image_side": 840},
+    "iSEE-Laboratory/llmdet_base": {"lvis_ap": 48.3, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 531.3, "image_side": 640},
+    "iSEE-Laboratory/llmdet_large": {"lvis_ap": 51.1, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 1563.3, "image_side": 640},
+    "iSEE-Laboratory/llmdet_tiny": {"lvis_ap": 44.7, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640},
+    "omlab/omdet-turbo-swin-tiny-hf": {"lvis_ap": 30.3, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 177.0, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_base_all": {"gflops": 531.3, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_base_o365v1_goldg_v3det": {"gflops": 531.3, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_large_all": {"gflops": 1563.3, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_large_o365v2_oiv6_goldg": {"gflops": 1563.3, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg": {"lvis_ap": 35.7, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_grit": {"lvis_ap": 36.5, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_grit_v3det": {"lvis_ap": 41.4, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640},
+    "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_v3det": {"lvis_ap": 40.5, "lvis_split": "minival", "is_lvis_zero_shot": true, "gflops": 326.0, "image_side": 640}
+  }
+}

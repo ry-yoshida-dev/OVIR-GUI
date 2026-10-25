@@ -186,14 +186,14 @@ class ResultViewBuilder:
                     names.append(name)
                     values[name] = [0.0] * len(frame_indices)
             kept: frozenset[int] = stored.kept_indices(review_filter)
+            listed: tuple[Finding, ...] = review_filter.findings_of(result)
             if result.class_scores:
                 for score in result.class_scores:
                     values[score.class_name][position] = score.score
-                top: Finding = result.findings[0]
-                top_classes.append(top.class_name if top.index in kept else None)
+                top_classes.append(next((finding.class_name for finding in listed if finding.index in kept), None))
                 continue
             top_classes.append(None)
-            for finding in result.findings:
+            for finding in listed:
                 if finding.index in kept:
                     values[finding.class_name][position] += 1.0
         return {
@@ -276,6 +276,7 @@ class ResultViewBuilder:
                     "class_name": score.class_name,
                     "score": score.score,
                     "logit": score.logit,
+                    "similarity": score.similarity,
                     "query": score.query_label,
                 }
                 for score in stored.result.ranked_scores
@@ -288,14 +289,14 @@ class ResultViewBuilder:
                     self._instance_entry(index, instance, True, True)
                     for index, instance in enumerate(compared_result.instances)
                 ],
-                "top_class": compared_result.findings[0].class_name if compared_result.class_scores else None,
+                "top_class": compared_result.ranked_scores[0].class_name if compared_result.class_scores else None,
             },
         }
 
     def _frame_findings(self, stored: StoredResult, review_filter: ReviewFilter) -> list[JsonValue]:
         if stored.result.class_scores:
             return self._finding_entries(stored, review_filter)
-        passing: frozenset[int] = review_filter.passing_indices(stored.result.findings)
+        passing: frozenset[int] = review_filter.passing_indices_of(stored.result)
         return [
             self._instance_entry(
                 index,
@@ -331,7 +332,7 @@ class ResultViewBuilder:
 
     @classmethod
     def _finding_entries(cls, stored: StoredResult, review_filter: ReviewFilter) -> list[JsonValue]:
-        findings: tuple[Finding, ...] = stored.result.findings
+        findings: tuple[Finding, ...] = review_filter.findings_of(stored.result)
         passing: frozenset[int] = review_filter.passing_indices(findings)
         return [cls._finding_entry(finding, stored, finding.index in passing) for finding in findings]
 
@@ -344,6 +345,7 @@ class ResultViewBuilder:
             "confidence": finding.confidence,
             "box": None if finding.box is None else list[JsonValue](finding.box.xyxy),
             "area": finding.area,
+            "similarity": finding.similarity,
             "is_accepted": stored.is_accepted(finding.index),
             "is_passing": is_passing,
         }

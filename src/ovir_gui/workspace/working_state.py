@@ -2,13 +2,16 @@ from pathlib import Path
 
 from ..media import FrameKey, MediaItem
 from ..models import ModelProfile
+from ..recognition import RecognitionTask
 from .run_progress import RunProgress
+from .task_media import TaskMedia
 
 
 class WorkingState:
     """
-    What the user works on right now, shared by the parts of the workspace: the open media, the shown picture, the
-    shown and compared result profiles, and the latest run of the shown picture.
+    What the user works on right now, shared by the parts of the workspace: the open media and shown picture of the
+    current task, the media left open in the other tasks, the shown and compared result profiles, and the latest run
+    of the shown picture.
 
     The state is owned by the thread of the workspace and changed only by its parts; it holds no rules of its own.
     """
@@ -22,6 +25,7 @@ class WorkingState:
         self.requested_key: FrameKey | None = None
         self.summary: str = ""
         self.progress: RunProgress | None = None
+        self.parked_media: dict[RecognitionTask, TaskMedia] = {}
 
     @property
     def current_item(self) -> MediaItem | None:
@@ -70,6 +74,29 @@ class WorkingState:
         self.current_key = frame_key
         self.is_playing = False
         self.summary = ""
+
+    def switch_media(self, leaving: RecognitionTask, entering: RecognitionTask) -> bool:
+        """
+        Keep the open media of the task left and open those of the task entered.
+
+        Parameters
+        ----------
+        leaving : RecognitionTask
+            Task whose media and shown picture are kept aside.
+        entering : RecognitionTask
+            Task whose kept media and shown picture are opened again.
+
+        Returns
+        -------
+        bool
+            Whether the task entered had media kept; otherwise nothing is open afterwards.
+        """
+        self.parked_media[leaving] = TaskMedia(self.media, self.current_key)
+        entered: TaskMedia | None = self.parked_media.pop(entering, None)
+        self.media = {} if entered is None else entered.media
+        self.show_key(None if entered is None else entered.current_key)
+        self.requested_key = None
+        return entered is not None
 
     def next_remaining_path(self, closed: frozenset[Path]) -> Path | None:
         """

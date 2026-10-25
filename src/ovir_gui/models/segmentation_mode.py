@@ -73,24 +73,24 @@ class SegmentationMode(Enum):
     @property
     def title(self) -> str:
         """
-        Name shown to the user.
+        Heading of the models of the mode, saying what they segment.
 
         Returns
         -------
         str
-            E.g. ``"Object tracking"``.
+            E.g. ``"Track marked objects"``.
         """
         match self:
             case SegmentationMode.CONCEPT:
-                return "Text / exemplars"
+                return "Find by phrases or examples"
             case SegmentationMode.PROMPTABLE:
-                return "Points & boxes"
+                return "Segment marked objects"
             case SegmentationMode.GENERATION:
-                return "Everything"
+                return "Segment everything"
             case SegmentationMode.OBJECT_TRACKING:
-                return "Object tracking"
+                return "Track marked objects"
             case SegmentationMode.CONCEPT_TRACKING:
-                return "Concept tracking"
+                return "Track by phrases or examples"
 
     @property
     def backend_prefix(self) -> str:

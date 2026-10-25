@@ -28,9 +28,9 @@ class ExportScope(Enum):
         """
         match self:
             case ExportScope.KEPT:
-                return "Every kept finding"
+                return "All kept"
             case ExportScope.LISTED:
-                return "Only listed findings"
+                return "Listed only"
 
     @property
     def description(self) -> str:
@@ -44,6 +44,6 @@ class ExportScope(Enum):
         """
         match self:
             case ExportScope.KEPT:
-                return "Leaves out rejected findings and those below the class minimums."
+                return "Every finding not rejected and not below the class minimums."
             case ExportScope.LISTED:
-                return "Also leaves out findings hidden by the filters of the result table."
+                return "Only the kept findings the result table lists with its filters."

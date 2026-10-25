@@ -1,29 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { MediaEntry, PictureKey } from "../api/types";
 import { groupMedia } from "../lib/mediaGroups";
+import { effectiveMediaSelection } from "../lib/mediaSelection";
 import { clamp } from "../lib/numbers";
-import { toggledMembership } from "../lib/sets";
+import { withMembership } from "../lib/sets";
 import { MediaKindGlyph } from "./MediaKindGlyph";
 import { useMenu } from "./Menu";
+import { MixedCheckbox } from "./MixedCheckbox";
 
 interface MediaListProps {
   media: MediaEntry[];
   currentPath: string | null;
   backgroundKey: PictureKey | null;
+  checkedPaths: ReadonlySet<string>;
+  onCheckedChange: (paths: Set<string>) => void;
   onSelect: (path: string) => void;
-  onClose: (paths: string[]) => void;
+  onRemove: (paths: string[]) => void;
 }
 
-export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose }: MediaListProps) {
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
-  const anchor = useRef<string | null>(null);
+export function MediaList({
+  media,
+  currentPath,
+  backgroundKey,
+  checkedPaths,
+  onCheckedChange,
+  onSelect,
+  onRemove,
+}: MediaListProps) {
   const container = useRef<HTMLDivElement>(null);
   const menu = useMenu();
   const groups = useMemo(() => groupMedia(media), [media]);
-
-  const openPaths = useMemo(() => new Set(media.map((entry) => entry.path)), [media]);
-  if ([...selectedPaths].some((path) => !openPaths.has(path)))
-    setSelectedPaths(new Set([...selectedPaths].filter((path) => openPaths.has(path))));
 
   useEffect(() => {
     if (currentPath === null) return;
@@ -31,39 +37,19 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
     element?.scrollIntoView({ block: "nearest" });
   }, [currentPath]);
 
-  const effectiveSelection = (): string[] => {
-    if (selectedPaths.size > 0) return media.map((entry) => entry.path).filter((path) => selectedPaths.has(path));
-    return currentPath === null ? [] : [currentPath];
-  };
-
   const step = (delta: number) => {
     const index = media.findIndex((entry) => entry.path === currentPath);
     const next = media[clamp(index + delta, 0, media.length - 1)];
-    if (next !== undefined && next.path !== currentPath) {
-      setSelectedPaths(new Set());
-      onSelect(next.path);
-    }
+    if (next !== undefined && next.path !== currentPath) onSelect(next.path);
   };
 
-  const onRowClick = (event: React.MouseEvent, path: string) => {
-    if (event.metaKey || event.ctrlKey) {
-      setSelectedPaths((current) => {
-        const base: ReadonlySet<string> = current.size === 0 && currentPath !== null ? new Set([currentPath]) : current;
-        return toggledMembership(base, path);
-      });
-      anchor.current = path;
-      return;
+  const setGroupChecked = (entries: MediaEntry[], isChecked: boolean) => {
+    const next = new Set(checkedPaths);
+    for (const entry of entries) {
+      if (isChecked) next.add(entry.path);
+      else next.delete(entry.path);
     }
-    if (event.shiftKey && anchor.current !== null) {
-      const from = media.findIndex((entry) => entry.path === anchor.current);
-      const to = media.findIndex((entry) => entry.path === path);
-      const [start, end] = from < to ? [from, to] : [to, from];
-      setSelectedPaths(new Set(media.slice(start, end + 1).map((entry) => entry.path)));
-      return;
-    }
-    anchor.current = path;
-    setSelectedPaths(new Set());
-    onSelect(path);
+    onCheckedChange(next);
   };
 
   return (
@@ -81,8 +67,8 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
             step(1);
           } else if (event.key === "Delete" || event.key === "Backspace") {
             event.preventDefault();
-            const paths = effectiveSelection();
-            if (paths.length > 0) onClose(paths);
+            const paths = effectiveMediaSelection(media, checkedPaths, currentPath);
+            if (paths.length > 0) onRemove(paths);
           }
         }}
       >
@@ -90,37 +76,47 @@ export function MediaList({ media, currentPath, backgroundKey, onSelect, onClose
         {groups.map((group) => (
           <div key={group.kind} className="list-group" role="group" aria-label={group.label}>
             <div className="list-group-heading">
+              <MixedCheckbox
+                checkedCount={group.entries.filter((entry) => checkedPaths.has(entry.path)).length}
+                totalCount={group.entries.length}
+                title={`Check every file in ${group.label}`}
+                onChange={(isChecked) => setGroupChecked(group.entries, isChecked)}
+              />
               <MediaKindGlyph kind={group.kind} />
               <span>{group.label}</span>
               <span className="faint">{group.entries.length}</span>
             </div>
             {group.entries.map((entry) => {
               const isCurrent = entry.path === currentPath;
-              const isSelected = selectedPaths.has(entry.path);
+              const isChecked = checkedPaths.has(entry.path);
               const isRecognizing = backgroundKey?.path === entry.path;
               return (
                 <div
                   key={entry.path}
                   data-path={entry.path}
-                  className={`list-item${isCurrent ? " current" : ""}${isSelected && !isCurrent ? " selected" : ""}`}
+                  className={`list-item${isCurrent ? " current" : ""}${isChecked && !isCurrent ? " selected" : ""}`}
                   title={`${entry.path}\n${entry.description}${entry.frame_count === null ? "" : `\n${entry.frame_count} frames at ${entry.fps?.toFixed(2)} fps`}`}
-                  onClick={(event) => onRowClick(event, entry.path)}
+                  onClick={() => onSelect(entry.path)}
                   onContextMenu={(event) => {
                     event.preventDefault();
-                    if (!selectedPaths.has(entry.path) && entry.path !== currentPath) {
-                      setSelectedPaths(new Set([entry.path]));
-                    }
-                    const paths = selectedPaths.has(entry.path) ? effectiveSelection() : [entry.path];
+                    const paths = isChecked ? effectiveMediaSelection(media, checkedPaths, null) : [entry.path];
                     menu.open(event.clientX, event.clientY, [
                       {
-                        label: paths.length === 1 ? "Close" : `Close ${paths.length} Files`,
+                        label: paths.length === 1 ? "Remove" : `Remove ${paths.length} Files`,
                         shortcut: "Del",
-                        onSelect: () => onClose(paths),
+                        onSelect: () => onRemove(paths),
                       },
-                      { label: "Close All", onSelect: () => onClose(media.map((item) => item.path)) },
+                      { label: "Remove All", onSelect: () => onRemove(media.map((item) => item.path)) },
                     ]);
                   }}
                 >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    aria-label={`Check ${entry.name}`}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => onCheckedChange(withMembership(checkedPaths, entry.path, event.target.checked))}
+                  />
                   <span
                     className="dot"
                     style={{

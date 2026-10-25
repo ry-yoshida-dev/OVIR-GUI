@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from ..models import BenchmarkCatalog
 from ..workspace import Workspace
 from .directory_browser import DirectoryBrowser
 from .event_hub import EventHub
@@ -37,7 +38,7 @@ class WebContext:
         self.statistics_views: StatisticsViewBuilder = StatisticsViewBuilder()
         self.replies: ReplyBuilder = ReplyBuilder()
         self.page_state: PageStateBuilder = PageStateBuilder(
-            self.preview_cache, ModelPanelBuilder(), self.class_views, self.result_views
+            self.preview_cache, ModelPanelBuilder(BenchmarkCatalog.bundled()), self.class_views, self.result_views
         )
         self.drafts: ReferenceDraftStore = ReferenceDraftStore()
         self.documents: ObjectDocumentBuilder = ObjectDocumentBuilder()

@@ -19,18 +19,30 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
   const scores = frame.scores;
   if (scores.length === 0 || !options.isScorePanelShown) return null;
   const hiddenCount = scores.length - SCORE_LINES;
-  const top = frame.findings[0];
-  const isTopKept = top !== undefined && top.is_accepted && top.is_passing && (listedIndices?.has(0) ?? true);
+  const findingOf = new Map(frame.findings.map((finding) => [finding.class_name, finding] as const));
+  const isKept = (className: string): boolean => {
+    const finding = findingOf.get(className);
+    return (
+      finding !== undefined &&
+      finding.is_accepted &&
+      finding.is_passing &&
+      (listedIndices?.has(finding.index) ?? true)
+    );
+  };
+  const isRejected = (className: string): boolean => findingOf.get(className)?.is_accepted === false;
   const compared = comparedOf(frame, options);
   const colorOf = (className: string) => classColorOf(classColors, className);
   return (
     <div className="score-panel">
-      {(isExpanded ? scores : scores.slice(0, SCORE_LINES)).map((score, position) => (
+      {(isExpanded ? scores : scores.slice(0, SCORE_LINES)).map((score) => (
         <div
           key={score.class_name}
-          className={`score-line${position === 0 && isTopKept ? " top" : ""}${position === 0 && top !== undefined && !top.is_accepted ? " rejected" : ""}`}
-          title={`${score.class_name}: score ${score.score.toFixed(4)}, logit ${score.logit.toFixed(3)}, query "${score.query}"`}
-          onClick={() => position === 0 && onSelectFinding(0)}
+          className={`score-line${isKept(score.class_name) ? " top" : ""}${isRejected(score.class_name) ? " rejected" : ""}`}
+          title={`${score.class_name}: score ${score.score.toFixed(4)}, logit ${score.logit.toFixed(3)}${score.similarity === null ? "" : `, similarity ${score.similarity.toFixed(4)}`}, query "${score.query}"`}
+          onClick={() => {
+            const finding = findingOf.get(score.class_name);
+            if (finding !== undefined) onSelectFinding(finding.index);
+          }}
         >
           <span className="swatch" style={{ background: colorOf(score.class_name) }} />
           <span className="name">{score.class_name}</span>

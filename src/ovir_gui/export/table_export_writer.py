@@ -13,13 +13,14 @@ class TableExportWriter:
     """
     Writes exported results as one CSV table or one JSON document.
 
-    The CSV has a row per instance for detection and segmentation, and a row per picture with the score of every
-    class for classification. The JSON lists every picture with its findings; segmentation instances carry their mask
-    outlines as polygons.
+    The CSV has a row per instance for detection and segmentation, and a row per picture with its labels, separated by
+    ``LABEL_SEPARATOR`` and best first, and the score of every class for classification. The JSON lists every
+    picture with its findings; segmentation instances carry their mask outlines as polygons.
     """
 
     CSV_NAME: ClassVar[str] = "results.csv"
     JSON_NAME: ClassVar[str] = "results.json"
+    LABEL_SEPARATOR: ClassVar[str] = ";"
 
     def __init__(self, is_confidence_included: bool) -> None:
         """
@@ -57,9 +58,8 @@ class TableExportWriter:
         with target.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             if task is RecognitionTask.CLASSIFICATION:
-                header: list[str] = ["media", "frame", "seconds", "label"]
+                header: list[str] = ["media", "frame", "seconds", "labels"]
                 if self._is_confidence_included:
-                    header.append("label_score")
                     header.extend(f"score:{name}" for name in class_names)
                 writer.writerow(header)
                 for item in items:
@@ -67,11 +67,10 @@ class TableExportWriter:
                         str(item.frame_key.path),
                         self._frame_text(item),
                         self._seconds_text(item),
-                        item.label or "",
+                        self.LABEL_SEPARATOR.join(item.labels),
                     ]
                     if self._is_confidence_included:
                         scores: dict[str, float] = {score.class_name: score.score for score in item.result.class_scores}
-                        row.append("" if item.label is None else f"{scores.get(item.label, 0.0):.6f}")
                         row.extend(f"{scores[name]:.6f}" if name in scores else "" for name in class_names)
                     writer.writerow(row)
                 return target
@@ -81,8 +80,8 @@ class TableExportWriter:
             header.extend(["x_min", "y_min", "x_max", "y_max", "area"])
             writer.writerow(header)
             for item in items:
-                finding: Finding
-                for finding in item.result.findings:
+                for index in range(len(item.result.instances)):
+                    finding: Finding = item.result.finding_of(index)
                     row = [
                         str(item.frame_key.path),
                         self._frame_text(item),
@@ -131,10 +130,15 @@ class TableExportWriter:
                 "height": item.result.image_size.height,
             }
             if task is RecognitionTask.CLASSIFICATION:
-                entry["label"] = item.label
+                entry["labels"] = list[JsonValue](item.labels)
                 if self._is_confidence_included:
                     entry["scores"] = {
-                        score.class_name: {"score": score.score, "logit": score.logit, "query": score.query_label}
+                        score.class_name: {
+                            "score": score.score,
+                            "logit": score.logit,
+                            "similarity": score.similarity,
+                            "query": score.query_label,
+                        }
                         for score in item.result.class_scores
                     }
             else:

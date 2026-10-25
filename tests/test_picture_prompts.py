@@ -195,10 +195,12 @@ class TestDrawingPersistence:
                 ),
             ),
         )
-        store.save(prompts)
-        loaded: PicturePrompts = store.load()
-        assert loaded.exemplars == prompts.exemplars
-        assert loaded.marks == prompts.marks
+        store.save({RecognitionTask.SEGMENTATION: prompts})
+        loaded: dict[RecognitionTask, PicturePrompts] = store.load()
+        assert loaded[RecognitionTask.SEGMENTATION].exemplars == prompts.exemplars
+        assert loaded[RecognitionTask.SEGMENTATION].marks == prompts.marks
+        assert not loaded[RecognitionTask.DETECTION].exemplars
+        assert not loaded[RecognitionTask.DETECTION].marks
 
     def test_result_signatures_keep_their_marks(self, tmp_path: Path, image_path: Path) -> None:
         frame_key: FrameKey = FrameKey(image_path)

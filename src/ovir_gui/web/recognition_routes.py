@@ -15,6 +15,7 @@ from .json_value import JsonObject
 from .schema import (
     AcceptanceBody,
     ApprovalBody,
+    LabelModeBody,
     LicenseBody,
     ModelSelectionBody,
     PictureFindings,
@@ -176,6 +177,11 @@ class RecognitionRoutes:
             context.workspace.review.set_duplicate_suppression(
                 DuplicateSuppression(body.is_enabled, body.overlap_threshold, body.class_overlap_thresholds)
             )
+            return {}
+
+        @router.put("/label-mode")
+        async def set_label_mode(body: LabelModeBody) -> JsonObject:
+            context.workspace.review.set_label_mode(body.label_mode)
             return {}
 
         @router.post("/findings/csv")

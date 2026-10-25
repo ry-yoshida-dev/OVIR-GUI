@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from ..media import FrameKey, VideoSampling
 from ..models import LicenseConsent, ModelSelection, ModelSelector
-from ..storage import Session, SessionStore
+from ..recognition import RecognitionTask
+from ..storage import Session, SessionMedia, SessionStore
 from .recognition_settings import RecognitionSettings
 from .status_notifier import StatusNotifier
 from .working_state import WorkingState
@@ -12,7 +15,9 @@ class SessionMapper:
 
     Restoring keeps only what is still valid: model choices of presets that no longer exist, cannot run here or need a
     license the user has not accepted are dropped one by one, as are tasks without presets and non-positive frame
-    steps. Saving writes the open media, the shown picture and the settings; a failed save is reported, not raised.
+    steps. The remembered media of each task stay unopened until the task is shown, and are saved again unchanged
+    until then. Saving writes the open media and shown picture of every task and the settings; a failed save is
+    reported, not raised.
     """
 
     def __init__(
@@ -46,12 +51,14 @@ class SessionMapper:
         self._notifier: StatusNotifier = notifier
         self._working: WorkingState = working
         self._settings: RecognitionSettings = settings
+        self._unopened_media: dict[RecognitionTask, SessionMedia] = {}
 
     def apply_stored(self) -> None:
         """
         Take over the valid choices of the remembered session into the settings.
         """
         session: Session = self._store.load()
+        self._unopened_media = dict(session.media)
         for task, selection in session.selections.items():
             try:
                 validated: ModelSelection = self._model_selector.validated(selection)
@@ -68,9 +75,25 @@ class SessionMapper:
         if session.is_auto_inference is not None:
             self._settings.is_auto_inference = session.is_auto_inference
 
+    def take_unopened_media(self, task: RecognitionTask) -> SessionMedia | None:
+        """
+        Remembered media of a task not opened yet in this run, handed out once.
+
+        Parameters
+        ----------
+        task : RecognitionTask
+            Task about to be shown.
+
+        Returns
+        -------
+        SessionMedia | None
+            Media of the last session; ``None`` when none were remembered or they were taken already.
+        """
+        return self._unopened_media.pop(task, None)
+
     def save(self) -> None:
         """
-        Remember the open media, the shown picture and the settings, reporting a failed write.
+        Remember the open media and shown picture of every task and the settings, reporting a failed write.
         """
         self._notifier.save_reporting_failure(lambda: self._store.save(self.session()), "Could not save the session")
 
@@ -81,16 +104,25 @@ class SessionMapper:
         Returns
         -------
         Session
-            Open media, shown picture and settings.
+            Open media and shown picture of every task, and the settings.
         """
-        current_key: FrameKey | None = self._working.current_key
+        media: dict[RecognitionTask, SessionMedia] = dict(self._unopened_media)
+        for task, parked in self._working.parked_media.items():
+            media[task] = self._media_of(tuple(parked.media), parked.current_key)
+        media[self._settings.task] = self._media_of(tuple(self._working.media), self._working.current_key)
         return Session(
-            media_paths=tuple(self._working.media),
-            current_path=None if current_key is None else current_key.path,
-            current_frame_index=None if current_key is None else current_key.frame_index,
+            media=media,
             task=self._settings.task,
             frame_step=self._settings.sampling.frame_step,
             inference_mode=self._settings.inference_mode,
             is_auto_inference=self._settings.is_auto_inference,
             selections=dict(self._settings.selections),
+        )
+
+    @staticmethod
+    def _media_of(paths: tuple[Path, ...], current_key: FrameKey | None) -> SessionMedia:
+        return SessionMedia(
+            paths=paths,
+            current_path=None if current_key is None else current_key.path,
+            current_frame_index=None if current_key is None else current_key.frame_index,
         )

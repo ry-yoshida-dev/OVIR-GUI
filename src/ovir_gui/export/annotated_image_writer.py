@@ -56,7 +56,7 @@ class AnnotatedImageWriter:
                 continue
             frame_key: FrameKey = loaded.frame_key
             item: ExportItem = by_key[frame_key]
-            annotated: Image.Image = self._renderer.render(picture, item.result, item.label)
+            annotated: Image.Image = self._renderer.render(picture, item.result, item.labels)
             target: Path = target_directory / self._unique_name(frame_key, used_names)
             annotated.save(target, quality=self.JPEG_QUALITY)
             written.append(target)

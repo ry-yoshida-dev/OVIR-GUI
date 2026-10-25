@@ -1,20 +1,33 @@
 import { useCallback, useMemo, useState } from "react";
 import { api, errorMessage } from "../api/client";
-import type { Box, DrawingKindValue, MarkEntry, PictureKey, PicturePrompt, WorkspaceState } from "../api/types";
+import type {
+  Box,
+  DrawingKindEntry,
+  DrawingKindValue,
+  MarkEntry,
+  PictureKey,
+  PicturePrompt,
+  WorkspaceState,
+} from "../api/types";
 import { PromptOverlay } from "../components/PromptOverlay";
 import type { ViewerDrawing } from "../lib/viewerDrawing";
 import type { Call } from "./useActionRunner";
 
 export interface PicturePromptEditor {
+  kinds: DrawingKindEntry[];
   kind: DrawingKindValue | null;
+  isKindUsed: boolean;
   prompt: PicturePrompt | null;
   isEnabled: boolean;
+  isExcluding: boolean;
   className: string | null;
   activeObjectId: number | null;
   isSequential: boolean;
   isPointSupported: boolean;
   drawing: ViewerDrawing | null;
   setIsEnabled: (isEnabled: boolean) => void;
+  setIsExcluding: (isExcluding: boolean) => void;
+  chooseKind: (kind: DrawingKindValue) => void;
   chooseClass: (className: string) => void;
   chooseObject: (objectId: number | null) => void;
   removeExemplar: (index: number) => void;
@@ -29,17 +42,34 @@ interface PicturePromptEditorOptions {
   report: (text: string) => void;
 }
 
-const DRAW_COLOR = "#ffcc00";
+interface KindChoice {
+  modelKey: string;
+  kind: DrawingKindValue;
+}
 
-function kindOf(state: WorkspaceState | null): DrawingKindValue | null {
-  const kinds = state?.model.drawing_kinds ?? [];
-  if (kinds.includes("mark")) return "mark";
-  if (kinds.includes("exemplar")) return "exemplar";
-  return null;
+const DRAW_COLOR = "#ffcc00";
+const KIND_PREFERENCE: DrawingKindValue[] = ["mark", "exemplar"];
+const NO_KINDS: DrawingKindEntry[] = [];
+
+/**
+ * The drawing the user chose for the current model, or else the one the model reads.
+ */
+function kindOf(kinds: DrawingKindEntry[], chosen: DrawingKindValue | null): DrawingKindValue | null {
+  if (chosen !== null && kinds.some((entry) => entry.value === chosen)) return chosen;
+  const preferred = KIND_PREFERENCE.find((value) => kinds.some((entry) => entry.value === value && entry.is_used));
+  return preferred ?? kinds[0]?.value ?? null;
+}
+
+function modelKeyOf(state: WorkspaceState | null): string {
+  return state === null ? "" : `${state.model.selection.backend}/${state.model.selection.preset_name}`;
 }
 
 export function usePicturePromptEditor({ state, call, report }: PicturePromptEditorOptions): PicturePromptEditor {
-  const kind = kindOf(state);
+  const kinds = state?.model.drawing_kinds ?? NO_KINDS;
+  const modelKey = modelKeyOf(state);
+  const [kindChoice, setKindChoice] = useState<KindChoice | null>(null);
+  const kind = kindOf(kinds, kindChoice?.modelKey === modelKey ? kindChoice.kind : null);
+  const isKindUsed = kinds.some((entry) => entry.value === kind && entry.is_used);
   const prompt = state?.picture_prompt ?? null;
   const isSequential = state?.model.is_sequential ?? false;
   const isPointSupported = state?.model.is_point_supported ?? true;
@@ -49,6 +79,7 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
     [state?.classes],
   );
   const [isEnabled, setIsEnabled] = useState(true);
+  const [isExcluding, setIsExcluding] = useState(false);
   const [chosenClass, setChosenClass] = useState<string | null>(null);
   const [activeObjectId, setActiveObjectId] = useState<number | null>(null);
   const className = chosenClass !== null && classNames.includes(chosenClass) ? chosenClass : (classNames[0] ?? null);
@@ -89,13 +120,14 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
   );
 
   const onBox = useCallback(
-    (box: Box, isNegative: boolean) => {
+    (box: Box, isInverted: boolean) => {
       if (picture === null || className === null) {
         report("Add a class first; drawings are attached to a class.");
         return;
       }
       if (kind === "exemplar") {
-        void call(() => api.addExemplar(picture, className, box, !isNegative));
+        const isPositive = isExcluding === isInverted;
+        void call(() => api.addExemplar(picture, className, box, isPositive));
         return;
       }
       if (activeMark !== null) {
@@ -110,11 +142,12 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
         box,
       });
     },
-    [picture, className, kind, activeMark, call, report, saveMark, reusableObjectId],
+    [picture, className, kind, isExcluding, activeMark, call, report, saveMark, reusableObjectId],
   );
 
   const onPoint = useCallback(
-    (point: [number, number], isNegative: boolean) => {
+    (point: [number, number], isInverted: boolean) => {
+      const isNegative = isExcluding !== isInverted;
       if (picture === null || className === null) {
         report("Add a class first; marks are attached to a class.");
         return;
@@ -132,7 +165,7 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
         return;
       }
       if (isNegative) {
-        report("Click on the object first; a right-click then excludes a spot from it.");
+        report("Click on the object first; Exclude then removes a spot from it.");
         return;
       }
       void saveMark({
@@ -143,7 +176,7 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
         box: null,
       });
     },
-    [picture, className, isPointSupported, activeMark, report, saveMark, reusableObjectId],
+    [picture, className, isPointSupported, isExcluding, activeMark, report, saveMark, reusableObjectId],
   );
 
   const drawing: ViewerDrawing | null = useMemo(() => {
@@ -158,8 +191,7 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
           scale={scale}
           classColors={classColors}
           activeObjectId={activeObjectId}
-          isExemplarShown={kind === "exemplar"}
-          isMarkShown={kind === "mark"}
+          activeKind={kind}
         />
       ),
     };
@@ -183,15 +215,23 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
   );
 
   return {
+    kinds,
     kind,
+    isKindUsed,
     prompt,
     isEnabled,
+    isExcluding,
     className,
     activeObjectId,
     isSequential,
     isPointSupported,
     drawing,
     setIsEnabled,
+    setIsExcluding,
+    chooseKind: (chosen) => {
+      setActiveObjectId(null);
+      setKindChoice({ modelKey, kind: chosen });
+    },
     chooseClass,
     chooseObject,
     removeExemplar: (index) => {

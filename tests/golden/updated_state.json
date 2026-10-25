@@ -30,7 +30,9 @@
   "classes": [
     {
       "color": "#e6194b",
+      "exemplar_count": 0,
       "name": "person",
+      "object_count": 0,
       "phrases": [
         "person"
       ],
@@ -38,7 +40,9 @@
     },
     {
       "color": "#3cb44b",
+      "exemplar_count": 0,
       "name": "cat",
+      "object_count": 0,
       "phrases": [
         "cat"
       ],
@@ -77,6 +81,20 @@
     "pause_reason": null
   },
   "is_busy": false,
+  "label_mode": {
+    "choice": "automatic",
+    "modes": [
+      {
+        "title": "Single label",
+        "value": "single_label"
+      },
+      {
+        "title": "Multi-label",
+        "value": "multi_label"
+      }
+    ],
+    "native": null
+  },
   "last_export": null,
   "media": [
     {
@@ -124,69 +142,225 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": {
+              "gflops": 531.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 48.3,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/llmdet_base",
             "licenses": [],
-            "name": "llmdet_base"
+            "name": "llmdet_base",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "iSEE-Laboratory/llmdet_base"
           },
           {
+            "benchmark": {
+              "gflops": 1563.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 51.1,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/llmdet_large",
             "licenses": [],
-            "name": "llmdet_large"
+            "name": "llmdet_large",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "iSEE-Laboratory/llmdet_large"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 44.7,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/llmdet_tiny",
             "licenses": [],
-            "name": "llmdet_tiny"
+            "name": "llmdet_tiny",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "iSEE-Laboratory/llmdet_tiny"
           },
           {
+            "benchmark": {
+              "gflops": 531.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_base_all",
             "licenses": [],
-            "name": "mm_base_all"
+            "name": "mm_base_all",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_base_all"
           },
           {
+            "benchmark": {
+              "gflops": 531.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_base_o365v1_goldg_v3det",
             "licenses": [],
-            "name": "mm_base_o365v1_goldg_v3det"
+            "name": "mm_base_o365v1_goldg_v3det",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_base_o365v1_goldg_v3det"
           },
           {
+            "benchmark": {
+              "gflops": 1563.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_large_all",
             "licenses": [],
-            "name": "mm_large_all"
+            "name": "mm_large_all",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_large_all"
           },
           {
+            "benchmark": {
+              "gflops": 1563.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_large_o365v2_oiv6_goldg",
             "licenses": [],
-            "name": "mm_large_o365v2_oiv6_goldg"
+            "name": "mm_large_o365v2_oiv6_goldg",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_large_o365v2_oiv6_goldg"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 35.7,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_tiny_o365v1_goldg",
             "licenses": [],
-            "name": "mm_tiny_o365v1_goldg"
+            "name": "mm_tiny_o365v1_goldg",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 36.5,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_tiny_o365v1_goldg_grit",
             "licenses": [],
-            "name": "mm_tiny_o365v1_goldg_grit"
+            "name": "mm_tiny_o365v1_goldg_grit",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_grit"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 41.4,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_tiny_o365v1_goldg_grit_v3det",
             "licenses": [],
-            "name": "mm_tiny_o365v1_goldg_grit_v3det"
+            "name": "mm_tiny_o365v1_goldg_grit_v3det",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_grit_v3det"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 40.5,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/mm_tiny_o365v1_goldg_v3det",
             "licenses": [],
-            "name": "mm_tiny_o365v1_goldg_v3det"
+            "name": "mm_tiny_o365v1_goldg_v3det",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "openmmlab-community/mm_grounding_dino_tiny_o365v1_goldg_v3det"
           },
           {
+            "benchmark": {
+              "gflops": 531.3,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "grounding_dino/original_base",
             "licenses": [],
-            "name": "original_base"
+            "name": "original_base",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "IDEA-Research/grounding-dino-base"
           },
           {
+            "benchmark": {
+              "gflops": 326.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 27.4,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "grounding_dino/original_tiny",
             "licenses": [],
-            "name": "original_tiny"
+            "name": "original_tiny",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "IDEA-Research/grounding-dino-tiny"
           }
         ],
         "value": "grounding_dino"
@@ -197,39 +371,130 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": {
+              "gflops": 404.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 20.8,
+              "lvis_split": "val"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v1_base_patch16",
             "licenses": [],
-            "name": "v1_base_patch16"
+            "name": "v1_base_patch16",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlvit-base-patch16"
           },
           {
+            "benchmark": {
+              "gflops": 105.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 19.3,
+              "lvis_split": "val"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v1_base_patch32",
             "licenses": [],
-            "name": "v1_base_patch32"
+            "name": "v1_base_patch32",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlvit-base-patch32"
           },
           {
+            "benchmark": {
+              "gflops": 2205.5,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 34.6,
+              "lvis_split": "val"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v1_large_patch14",
             "licenses": [],
-            "name": "v1_large_patch14"
+            "name": "v1_large_patch14",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlvit-large-patch14"
           },
           {
+            "benchmark": {
+              "gflops": 638.2,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 31.8,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v2_base_patch16",
             "licenses": [],
-            "name": "v2_base_patch16"
+            "name": "v2_base_patch16",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlv2-base-patch16"
           },
           {
+            "benchmark": {
+              "gflops": 638.2,
+              "is_lvis_zero_shot": false,
+              "lvis_ap": 43.9,
+              "lvis_split": "val"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v2_base_patch16_ensemble",
             "licenses": [],
-            "name": "v2_base_patch16_ensemble"
+            "name": "v2_base_patch16_ensemble",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlv2-base-patch16-ensemble"
           },
           {
+            "benchmark": {
+              "gflops": 3195.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 38.1,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v2_large_patch14",
             "licenses": [],
-            "name": "v2_large_patch14"
+            "name": "v2_large_patch14",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlv2-large-patch14"
           },
           {
+            "benchmark": {
+              "gflops": 3195.0,
+              "is_lvis_zero_shot": false,
+              "lvis_ap": 44.6,
+              "lvis_split": "val"
+            },
+            "is_sequential": false,
             "label": "owl_vit/v2_large_patch14_ensemble",
             "licenses": [],
-            "name": "v2_large_patch14_ensemble"
+            "name": "v2_large_patch14_ensemble",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "google/owlv2-large-patch14-ensemble"
           }
         ],
         "value": "owl_vit"
@@ -240,9 +505,21 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": {
+              "gflops": 177.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": 30.3,
+              "lvis_split": "minival"
+            },
+            "is_sequential": false,
             "label": "omdet_turbo/swin_tiny",
             "licenses": [],
-            "name": "swin_tiny"
+            "name": "swin_tiny",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "omlab/omdet-turbo-swin-tiny-hf"
           }
         ],
         "value": "omdet_turbo"
@@ -253,24 +530,72 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": {
+              "gflops": 542.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "florence2/base",
             "licenses": [],
-            "name": "base"
+            "name": "base",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "florence-community/Florence-2-base"
           },
           {
+            "benchmark": {
+              "gflops": 542.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "florence2/base_ft",
             "licenses": [],
-            "name": "base_ft"
+            "name": "base_ft",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "florence-community/Florence-2-base-ft"
           },
           {
+            "benchmark": {
+              "gflops": 2072.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "florence2/large",
             "licenses": [],
-            "name": "large"
+            "name": "large",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "florence-community/Florence-2-large"
           },
           {
+            "benchmark": {
+              "gflops": 2072.0,
+              "is_lvis_zero_shot": true,
+              "lvis_ap": null,
+              "lvis_split": null
+            },
+            "is_sequential": false,
             "label": "florence2/large_ft",
             "licenses": [],
-            "name": "large_ft"
+            "name": "large_ft",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "florence-community/Florence-2-large-ft"
           }
         ],
         "value": "florence2"
@@ -281,32 +606,60 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yolo_world/l",
             "licenses": [
               "ultralytics"
             ],
-            "name": "l"
+            "name": "l",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "yolov8l-worldv2.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yolo_world/m",
             "licenses": [
               "ultralytics"
             ],
-            "name": "m"
+            "name": "m",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "yolov8m-worldv2.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yolo_world/s",
             "licenses": [
               "ultralytics"
             ],
-            "name": "s"
+            "name": "s",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "yolov8s-worldv2.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yolo_world/x",
             "licenses": [
               "ultralytics"
             ],
-            "name": "x"
+            "name": "x",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text"
+            ],
+            "weights_path": "yolov8x-worldv2.pt"
           }
         ],
         "value": "yolo_world"
@@ -317,86 +670,175 @@
         "mode": null,
         "presets": [
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/11l",
             "licenses": [
               "ultralytics"
             ],
-            "name": "11l"
+            "name": "11l",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-11l-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/11m",
             "licenses": [
               "ultralytics"
             ],
-            "name": "11m"
+            "name": "11m",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-11m-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/11s",
             "licenses": [
               "ultralytics"
             ],
-            "name": "11s"
+            "name": "11s",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-11s-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/26l",
             "licenses": [
               "ultralytics"
             ],
-            "name": "26l"
+            "name": "26l",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-26l-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/26m",
             "licenses": [
               "ultralytics"
             ],
-            "name": "26m"
+            "name": "26m",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-26m-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/26n",
             "licenses": [
               "ultralytics"
             ],
-            "name": "26n"
+            "name": "26n",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-26n-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/26s",
             "licenses": [
               "ultralytics"
             ],
-            "name": "26s"
+            "name": "26s",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-26s-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/26x",
             "licenses": [
               "ultralytics"
             ],
-            "name": "26x"
+            "name": "26x",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-26x-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/v8l",
             "licenses": [
               "ultralytics"
             ],
-            "name": "v8l"
+            "name": "v8l",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-v8l-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/v8m",
             "licenses": [
               "ultralytics"
             ],
-            "name": "v8m"
+            "name": "v8m",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-v8m-seg.pt"
           },
           {
+            "benchmark": null,
+            "is_sequential": false,
             "label": "yoloe/v8s",
             "licenses": [
               "ultralytics"
             ],
-            "name": "v8s"
+            "name": "v8s",
+            "prompt_mode": "classes",
+            "query_kinds": [
+              "text",
+              "visual"
+            ],
+            "weights_path": "yoloe-v8s-seg.pt"
           }
         ],
         "value": "yoloe"
       }
     ],
+    "benchmark_phrase_count": 2,
     "box_detectors": [],
     "description": "",
     "devices": "<volatile>",
@@ -416,13 +858,8 @@
         "value": "ultralytics"
       }
     ],
-    "mode": null,
     "modes": [],
     "precisions": "<volatile>",
-    "prompt_mode": "classes",
-    "query_kinds": [
-      "text"
-    ],
     "selection": {
       "backend": "grounding_dino",
       "batch_size": 4,

@@ -8,11 +8,20 @@ from typing import ClassVar
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import FileResponse
 
-from ..export import ExportFormat, ExportOptions, ExportReport, ExportScope
+from ..export import (
+    CropImageFormat,
+    CropOptions,
+    ExportFormat,
+    ExportOptions,
+    ExportReport,
+    ExportScope,
+    LabelPreview,
+    LabelPreviewer,
+)
 from ..media import FrameKey
-from ..workspace import ExportCoordinator, ExportRequest, Workspace
+from ..workspace import ExportCoordinator, ExportPreviewSource, ExportRequest, Workspace
 from .json_value import JsonObject
-from .schema import ExportBody, PictureFindings
+from .schema import ExportBody, ExportPreviewBody, PictureFindings
 from .web_context import WebContext
 
 
@@ -51,6 +60,31 @@ class ExportRoutes:
                 workspace.exports.plan(), ExportCoordinator.default_directory(context.working_directory)
             )
 
+        @router.post("/export/preview")
+        async def export_preview(body: ExportPreviewBody) -> JsonObject:
+            source: ExportPreviewSource = context.workspace.exports.preview_source(
+                ExportScope(body.scope), body.minimum_confidence, self._listed(body.listed_findings)
+            )
+            previewer: LabelPreviewer = LabelPreviewer(source.media)
+            preview: LabelPreview = await asyncio.to_thread(
+                previewer.preview,
+                source.items,
+                source.task,
+                source.shown_key,
+                ExportFormat(body.export_format),
+                body.is_confidence_included,
+                CropOptions(
+                    image_format=CropImageFormat(body.crop_image_format), margin_percent=body.crop_margin_percent
+                ),
+                source.class_names,
+            )
+            return {
+                "file_name": preview.file_name,
+                "text": preview.text,
+                "is_shown_picture_only": preview.is_shown_picture_only,
+                "is_truncated": preview.is_truncated,
+            }
+
         @router.post("/export")
         async def export(body: ExportBody) -> JsonObject:
             options: ExportOptions = ExportOptions(
@@ -61,14 +95,14 @@ class ExportRoutes:
                 minimum_confidence=body.minimum_confidence,
                 is_annotated_image_saved=body.is_annotated_image_saved,
                 is_annotated_video_saved=body.is_annotated_video_saved,
-            )
-            listed: dict[FrameKey, frozenset[int]] | None = (
-                None
-                if body.listed_findings is None
-                else {key: frozenset(indices) for key, indices in PictureFindings.grouped(body.listed_findings).items()}
+                crop_options=CropOptions(
+                    image_format=CropImageFormat(body.crop_image_format), margin_percent=body.crop_margin_percent
+                ),
             )
             request: ExportRequest = ExportRequest(
-                options=options, listed_indices=listed, is_label_confidence_shown=body.is_label_confidence_shown
+                options=options,
+                listed_indices=self._listed(body.listed_findings),
+                is_label_confidence_shown=body.is_label_confidence_shown,
             )
             return context.replies.reply(context.workspace.exports.start(request, body.is_skipping_approved))
 
@@ -85,6 +119,12 @@ class ExportRoutes:
             return FileResponse(archive_path, filename=archive_name, media_type="application/zip")
 
         return router
+
+    @staticmethod
+    def _listed(listed_findings: list[PictureFindings] | None) -> dict[FrameKey, frozenset[int]] | None:
+        if listed_findings is None:
+            return None
+        return {key: frozenset(indices) for key, indices in PictureFindings.grouped(listed_findings).items()}
 
     @staticmethod
     def _zip(report: ExportReport, archive_path: Path) -> None:

@@ -2,19 +2,21 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import ClassVar
 
+from ..recognition import RecognitionTask
 from .class_definition import ClassDefinition
 from .class_list_file import ClassListFile
 
 
 class ClassListStore:
     """
-    Class list of the last run, remembered in a data directory, typically ``ovir_gui_data`` under the working directory.
+    Class list of every task in the last run, remembered in a data directory, typically ``ovir_gui_data`` under the
+    working directory.
 
-    The list is kept in ``last_classes.txt`` so that it can be restored at the next start. The directory is created
-    only when written to.
+    Each task keeps its list in ``last_classes_<task>.txt`` so that it can be restored at the next start. The
+    directory is created only when written to.
     """
 
-    LAST_CLASSES_FILE_NAME: ClassVar[str] = "last_classes.txt"
+    LAST_CLASSES_FILE_PREFIX: ClassVar[str] = "last_classes_"
 
     def __init__(self, root_directory: Path) -> None:
         """
@@ -37,16 +39,21 @@ class ClassListStore:
         """
         return self._root_directory
 
-    def load(self) -> tuple[ClassDefinition, ...] | None:
+    def load(self, task: RecognitionTask) -> tuple[ClassDefinition, ...] | None:
         """
-        Read the class list remembered from the last run.
+        Read the class list of one task remembered from the last run.
+
+        Parameters
+        ----------
+        task : RecognitionTask
+            Task the classes belong to.
 
         Returns
         -------
         tuple[ClassDefinition, ...] | None
             Classes in class id order, or ``None`` when nothing has been remembered or the file is unreadable.
         """
-        last_classes_file: ClassListFile = self._last_classes_file()
+        last_classes_file: ClassListFile = self._last_classes_file(task)
         if not last_classes_file.path.is_file():
             return None
         try:
@@ -54,12 +61,14 @@ class ClassListStore:
         except (OSError, ValueError):
             return None
 
-    def save(self, definitions: Iterable[ClassDefinition]) -> None:
+    def save(self, task: RecognitionTask, definitions: Iterable[ClassDefinition]) -> None:
         """
-        Remember the class list for the next run.
+        Remember the class list of one task for the next run.
 
         Parameters
         ----------
+        task : RecognitionTask
+            Task the classes belong to.
         definitions : Iterable[ClassDefinition]
             Classes in class id order.
 
@@ -69,7 +78,7 @@ class ClassListStore:
             If the data directory or the file cannot be written.
         """
         self._root_directory.mkdir(parents=True, exist_ok=True)
-        self._last_classes_file().write(definitions)
+        self._last_classes_file(task).write(definitions)
 
-    def _last_classes_file(self) -> ClassListFile:
-        return ClassListFile(self._root_directory / self.LAST_CLASSES_FILE_NAME)
+    def _last_classes_file(self, task: RecognitionTask) -> ClassListFile:
+        return ClassListFile(self._root_directory / f"{self.LAST_CLASSES_FILE_PREFIX}{task.value}.txt")

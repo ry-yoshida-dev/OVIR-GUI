@@ -14,9 +14,10 @@ interface DialogProps {
   width?: number | string;
   height?: number | string;
   isModal?: boolean;
+  className?: string;
 }
 
-export function Dialog({ title, onClose, children, footer, width, height, isModal = true }: DialogProps) {
+export function Dialog({ title, onClose, children, footer, width, height, isModal = true, className }: DialogProps) {
   const id = useId();
   useEffect(() => {
     openDialogs.push(id);
@@ -54,7 +55,11 @@ export function Dialog({ title, onClose, children, footer, width, height, isModa
         event.preventDefault();
       }}
     >
-      <div className="dialog" style={{ width, height, pointerEvents: "auto" }} role="dialog">
+      <div
+        className={className === undefined ? "dialog" : `dialog ${className}`}
+        style={{ width, height, pointerEvents: "auto" }}
+        role="dialog"
+      >
         <div className="dialog-header">
           <span className="grow">{title}</span>
           <button className="ghost icon" onClick={onClose} aria-label="Close">

@@ -5,7 +5,7 @@ from PIL import Image
 
 from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
-from ..recognition import ClassScore, FrameResult, ImageSize, RecognitionTask
+from ..recognition import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
 from .classification_model import ClassificationModel
 from .classifier_prompt_builder import ClassifierPromptBuilder
 from .recognizer import Recognizer
@@ -28,6 +28,7 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
         super().__init__(model, ClassificationModel)
         self._classifier: OpenVocabularyClassifier = model.settings.build()
         self._prompts: ClassifierPromptBuilder = ClassifierPromptBuilder()
+        self._native_label_mode: LabelMode = ClassificationModel.native_label_mode_of(model.backend)
 
     def _apply_model(self) -> None:
         self._classifier.settings = self._model.settings
@@ -44,9 +45,12 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
             for image, result in zip(images, results, strict=True)
         ]
 
-    @staticmethod
-    def _convert(result: ClassificationResult, query_labels: tuple[str, ...], image_size: ImageSize) -> FrameResult:
+    def _convert(
+        self, result: ClassificationResult, query_labels: tuple[str, ...], image_size: ImageSize
+    ) -> FrameResult:
         matched_query_ids: list[int] = [int(query_id) for query_id in result.matched_query_ids.tolist()]
+        logit_scale: float = self._classifier.logit_scale
+        logit_bias: float = self._classifier.logit_bias
         return FrameResult(
             task=RecognitionTask.CLASSIFICATION,
             image_size=image_size,
@@ -56,7 +60,9 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
                     score=float(result.scores[class_id]),
                     logit=float(result.class_logits[class_id]),
                     query_label=query_labels[matched_query_ids[class_id]],
+                    similarity=(float(result.class_logits[class_id]) - logit_bias) / logit_scale,
                 )
                 for class_id, class_name in enumerate(result.class_names)
             ),
+            native_label_mode=self._native_label_mode,
         )

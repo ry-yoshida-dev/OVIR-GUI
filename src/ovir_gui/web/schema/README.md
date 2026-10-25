@@ -14,9 +14,11 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | [exemplar_body.py](./exemplar_body.py) | `ExemplarBody` carries an exemplar box drawn on a picture. |
 | [exemplar_removal_body.py](./exemplar_removal_body.py) | `ExemplarRemovalBody` names an exemplar box to remove from a picture. |
 | [export_body.py](./export_body.py) | `ExportBody` describes the export chosen in the export dialog. |
+| [export_preview_body.py](./export_preview_body.py) | `ExportPreviewBody` describes the export chosen in the export dialog, whose label file is previewed. |
 | [finding_reference.py](./finding_reference.py) | `FindingReference` identifies one finding of the shown results. |
 | [image_prompt_reference.py](./image_prompt_reference.py) | `ImagePromptReference` identifies one reference image of a class. |
 | [inference_body.py](./inference_body.py) | `InferenceBody` chooses which pictures are inferred and whether automatically. |
+| [label_mode_body.py](./label_mode_body.py) | `LabelModeBody` sets the label mode of classifications: automatic, single- or multi-label. |
 | [license_body.py](./license_body.py) | `LicenseBody` names the licensed module whose license the user accepted. |
 | [mark_body.py](./mark_body.py) | `MarkBody` carries the points and box marking one object on a picture. |
 | [mark_removal_body.py](./mark_removal_body.py) | `MarkRemovalBody` names an object to unmark on one picture or on its whole file. |

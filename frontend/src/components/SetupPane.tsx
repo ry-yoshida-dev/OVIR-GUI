@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type {
   MediaEntry,
@@ -11,7 +12,8 @@ import type { ModelSelector } from "../hooks/useModelSelection";
 import { AddMediaMenu } from "./AddMediaMenu";
 import type { AppDialog } from "./AppDialogs";
 import { ClassEditor } from "./ClassEditor";
-import { ClassesGlyph, GearGlyph, MediaGlyph, ModelGlyph } from "./Glyphs";
+import { effectiveMediaSelection } from "../lib/mediaSelection";
+import { ClassesGlyph, GearGlyph, MediaGlyph, ModelGlyph, TrashGlyph } from "./Glyphs";
 import { InferControl } from "./InferControl";
 import { InferenceSettings } from "./InferenceSettings";
 import { InfoTip } from "./InfoTip";
@@ -62,6 +64,13 @@ export function SetupPane({
   onShowMedia,
   onInfer,
 }: SetupPaneProps) {
+  const [checkedMediaPaths, setCheckedMediaPaths] = useState<Set<string>>(new Set());
+  const openPaths = useMemo(() => new Set(orderedMedia.map((entry) => entry.path)), [orderedMedia]);
+  if ([...checkedMediaPaths].some((path) => !openPaths.has(path)))
+    setCheckedMediaPaths(new Set([...checkedMediaPaths].filter((path) => openPaths.has(path))));
+  const checkedPaths = effectiveMediaSelection(orderedMedia, checkedMediaPaths, null);
+  const removeMedia = (paths: string[]) => void call(() => api.closeMedia(paths));
+
   return (
     <div className="pane" style={{ width, flex: "none" }}>
       <PaneHeader title="Setup" />
@@ -114,7 +123,7 @@ export function SetupPane({
           actions={
             <InfoTip label="Editing classes">
               Double-click to rename or add a class. Write{" "}
-              <span className="mono">car: car, suv</span> to query a class by
+              <span className="snippet">car: car, suv</span> to query a class by
               several phrases; drag phrases between classes.
             </InfoTip>
           }
@@ -124,6 +133,7 @@ export function SetupPane({
           isStretched
         >
           <ClassEditor
+            key={task}
             classes={state.classes}
             classSet={state.class_set}
             isImagePromptSupported={state.model.is_image_prompt_supported}
@@ -143,20 +153,33 @@ export function SetupPane({
           onToggle={() => onToggleSection("media")}
           isStretched
           actions={
-            <AddMediaMenu
-              onUploadFiles={onUploadFiles}
-              onUploadFolder={onUploadFolder}
-              onOpenFromServer={() => onOpenDialog({ kind: "browse" })}
-              onOpenMenu={onOpenMenu}
-            />
+            <>
+              <button
+                className="section-action"
+                disabled={checkedPaths.length === 0}
+                onClick={() => removeMedia(checkedPaths)}
+                title="Remove the checked files from the list; their results are kept (Delete)"
+                aria-label="Remove the checked files"
+              >
+                <TrashGlyph />
+              </button>
+              <AddMediaMenu
+                onUploadFiles={onUploadFiles}
+                onUploadFolder={onUploadFolder}
+                onOpenFromServer={() => onOpenDialog({ kind: "browse" })}
+                onOpenMenu={onOpenMenu}
+              />
+            </>
           }
         >
           <MediaList
             media={orderedMedia}
             currentPath={currentPath}
             backgroundKey={state.background_key}
+            checkedPaths={checkedMediaPaths}
+            onCheckedChange={setCheckedMediaPaths}
             onSelect={onShowMedia}
-            onClose={(paths) => void call(() => api.closeMedia(paths))}
+            onRemove={removeMedia}
           />
         </Section>
       </div>

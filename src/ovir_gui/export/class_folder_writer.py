@@ -9,9 +9,11 @@ from .picture_files import PictureFiles
 
 class ClassFolderWriter:
     """
-    Copies every classified picture into a folder named after its exported class, ``_unlabeled`` without one.
+    Copies every classified picture into a folder named after each of its exported classes, ``_unlabeled`` without
+    one.
 
-    Copies of pictures sharing a file name get a numbered name; the sources are never touched.
+    A multi-label picture is copied once per class. Copies of pictures sharing a file name get a numbered name; the
+    sources are never touched.
     """
 
     UNLABELED_DIRECTORY_NAME: ClassVar[str] = "_unlabeled"
@@ -40,16 +42,24 @@ class ClassFolderWriter:
             source: Path | None = pictures.path_of(item.frame_key)
             if source is None:
                 continue
-            folder: Path = directory / (self._folder_name(item.label) if item.label else self.UNLABELED_DIRECTORY_NAME)
-            folder.mkdir(parents=True, exist_ok=True)
-            target: Path = folder / source.name
-            number: int = 1
-            while target.exists():
-                number += 1
-                target = folder / f"{source.stem}_{number}{source.suffix}"
-            shutil.copyfile(source, target)
-            written.append(target)
+            folder_names: tuple[str, ...] = (
+                tuple(self._folder_name(label) for label in item.labels)
+                if item.labels
+                else (self.UNLABELED_DIRECTORY_NAME,)
+            )
+            written.extend(self._copy(source, directory / folder_name) for folder_name in dict.fromkeys(folder_names))
         return tuple(written)
+
+    @staticmethod
+    def _copy(source: Path, folder: Path) -> Path:
+        folder.mkdir(parents=True, exist_ok=True)
+        target: Path = folder / source.name
+        number: int = 1
+        while target.exists():
+            number += 1
+            target = folder / f"{source.stem}_{number}{source.suffix}"
+        shutil.copyfile(source, target)
+        return target
 
     @classmethod
     def _folder_name(cls, label: str) -> str:

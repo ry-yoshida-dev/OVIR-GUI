@@ -13,6 +13,7 @@ def finding_of(index: int, class_name: str, query_label: str, confidence: float,
         confidence=confidence,
         box=PixelBox(left, 0.0, left + 10.0, 10.0),
         area=100.0,
+        similarity=None,
     )
 
 

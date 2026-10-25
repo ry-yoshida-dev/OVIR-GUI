@@ -22,6 +22,11 @@ device, precision, batch size, thresholds and, for classifiers, the text templat
 - **Review**: a filterable, sortable result table and a Review panel of confidence and NMS IoU histograms over every result, for all classes, each class and each phrase, with kept counts. Dragging, arrow keys or typing on a chart moves its threshold at once without recognizing again; the reset button beside a chart (or double-clicking it) takes a class or phrase back to its parent value, and the reset button in the Review heading restores every threshold of the shown chart type. Filtered-out findings are shown faded or hidden, chosen in the view settings.
   (detectors and segmenters keep findings down to a low floor), keeping or rejecting single findings,
   a class timeline per video and statistics.
+- **Statistics** (Ctrl+I): per-class kept counts, review outcome, picture coverage, confidence spread against the
+  minimum and COCO object sizes; a curve per class of what every minimum confidence would keep, dragged to set it;
+  classes covering the same objects or appearing together (runner-up classes and top-score margins for
+  classifiers); pictures worth a look, such as crowded, empty or borderline ones; and the agreement with another
+  model per class and per picture.
 - **Comparison**: results of several models are kept side by side, and one can be overlaid on another.
 - **Export**: YOLO, COCO and LabelMe boxes or mask polygons, mask images, class folders, CSV tables and annotated images and videos.
 - **Embedding**: another web application, such as a GIS, can show the interface in a window of its own page and drive

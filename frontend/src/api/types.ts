@@ -42,10 +42,24 @@ export interface CurrentPicture {
   is_sampled: boolean;
 }
 
+export type LvisSplitValue = "minival" | "val";
+
+export interface ModelBenchmark {
+  lvis_ap: number | null;
+  lvis_split: LvisSplitValue | null;
+  is_lvis_zero_shot: boolean;
+  gflops: number | null;
+}
+
 export interface PresetEntry {
   name: string;
   label: string;
   licenses: string[];
+  weights_path: string;
+  prompt_mode: PromptModeValue;
+  query_kinds: QueryKindValue[];
+  is_sequential: boolean;
+  benchmark: ModelBenchmark | null;
 }
 
 export interface BoxDetectorEntry {
@@ -80,6 +94,11 @@ export type PromptModeValue = "classes" | "marks" | "automatic";
 export type QueryKindValue = "text" | "visual" | "exemplar" | "mark";
 
 export type DrawingKindValue = "exemplar" | "mark";
+
+export interface DrawingKindEntry {
+  value: DrawingKindValue;
+  is_used: boolean;
+}
 
 export interface ModelTuning {
   confidence_label: string | null;
@@ -120,9 +139,7 @@ export interface TaskState {
 export interface ModelState {
   backends: BackendEntry[];
   modes: { value: SegmentationModeValue; title: string }[];
-  mode: SegmentationModeValue | null;
-  prompt_mode: PromptModeValue;
-  drawing_kinds: DrawingKindValue[];
+  drawing_kinds: DrawingKindEntry[];
   is_sequential: boolean;
   is_point_supported: boolean;
   tuning: ModelTuning;
@@ -132,10 +149,10 @@ export interface ModelState {
   licenses: LicenseEntry[];
   selection: ModelSelection;
   is_image_prompt_supported: boolean;
-  query_kinds: QueryKindValue[];
   text_templates: string[] | null;
   weights_path: string;
   description: string;
+  benchmark_phrase_count: number;
 }
 
 export interface ProfileOption {
@@ -174,6 +191,8 @@ export interface ClassEntry {
   color: string;
   phrases: string[];
   references: ReferenceEntry[];
+  exemplar_count: number;
+  object_count: number;
 }
 
 export interface ClassSetState {
@@ -188,6 +207,16 @@ export interface Thresholds {
   default_minimum: number;
   class_minimums: Record<string, number>;
   phrase_minimums: Record<string, Record<string, number>>;
+}
+
+export type LabelModeValue = "single_label" | "multi_label";
+
+export type LabelModeChoice = "automatic" | LabelModeValue;
+
+export interface LabelModeState {
+  choice: LabelModeChoice;
+  native: LabelModeValue | null;
+  modes: { value: LabelModeValue; title: string }[];
 }
 
 export interface DuplicateSuppression {
@@ -265,6 +294,7 @@ export interface WorkspaceState {
   class_set: ClassSetState;
   thresholds: Thresholds;
   suppression: DuplicateSuppression;
+  label_mode: LabelModeState;
   standard_minimum: number;
   standard_overlap_threshold: number;
   status: { message: string; serial: number };
@@ -288,6 +318,7 @@ export interface Finding {
   confidence: number;
   box: Box | null;
   area: number | null;
+  similarity?: number | null;
   is_accepted: boolean;
   is_passing: boolean;
 }
@@ -326,6 +357,7 @@ export interface ClassScore {
   class_name: string;
   score: number;
   logit: number;
+  similarity: number | null;
   query: string;
 }
 
@@ -400,6 +432,30 @@ export interface HistogramPayload {
   bin_width: number;
 }
 
+export interface ConfidenceSummaryPayload {
+  count: number;
+  minimum: number;
+  lower_decile: number;
+  lower_quartile: number;
+  median: number;
+  upper_quartile: number;
+  upper_decile: number;
+  maximum: number;
+  mean: number;
+}
+
+export interface ThresholdCurvePayload {
+  finding_counts: number[];
+  picture_counts: number[];
+}
+
+export interface SizeDistributionPayload {
+  small_count: number;
+  medium_count: number;
+  large_count: number;
+  median_area_share: number | null;
+}
+
 export interface ClassStatisticsPayload {
   class_name: string;
   picture_count: number;
@@ -407,9 +463,56 @@ export interface ClassStatisticsPayload {
   rejected_count: number;
   below_minimum_count: number;
   kept_count: number;
-  mean_confidence: number | null;
-  median_confidence: number | null;
-  histogram: HistogramPayload;
+  peak_count: number;
+  confidences: ConfidenceSummaryPayload | null;
+  kept_confidences: ConfidenceSummaryPayload | null;
+  threshold_curve: ThresholdCurvePayload;
+  sizes: SizeDistributionPayload | null;
+}
+
+export interface ClassMatrixPayload {
+  class_names: string[];
+  counts: number[][];
+}
+
+export interface PictureStatisticsPayload {
+  path: string;
+  frame: number | null;
+  label: string;
+  finding_count: number;
+  kept_count: number;
+  kept_class_names: string[];
+  best_confidence: number | null;
+  borderline_count: number;
+  top_margin: number | null;
+}
+
+export interface PictureListsPayload {
+  most_kept: PictureStatisticsPayload[];
+  empty: PictureStatisticsPayload[];
+  borderline: PictureStatisticsPayload[];
+  ambiguous: PictureStatisticsPayload[];
+}
+
+export interface ResultStatisticsPayload {
+  picture_count: number;
+  recognized_count: number;
+  finding_count: number;
+  kept_count: number;
+  rejected_count: number;
+  below_minimum_count: number;
+  empty_picture_count: number;
+  borderline_picture_count: number;
+  threshold_step_count: number;
+  borderline_margin: number;
+  overlap_threshold: number;
+  classes: ClassStatisticsPayload[];
+  kept_count_distribution: number[];
+  picture_lists: PictureListsPayload;
+  co_occurrence: ClassMatrixPayload;
+  overlaps: ClassMatrixPayload | null;
+  runner_ups: ClassMatrixPayload | null;
+  margins: HistogramPayload | null;
 }
 
 export interface ClassComparisonPayload {
@@ -419,22 +522,36 @@ export interface ClassComparisonPayload {
   matched_count: number;
   shown_only_count: number;
   compared_only_count: number;
+  agreement: number | null;
+  mean_matched_overlap: number | null;
+}
+
+export interface PictureDisagreementPayload {
+  path: string;
+  frame: number | null;
+  label: string;
+  shown_count: number;
+  compared_count: number;
+  matched_count: number;
+  shown_only_count: number;
+  compared_only_count: number;
+}
+
+export interface ProfileComparisonPayload {
+  picture_count: number;
+  iou_threshold: number;
+  disagreeing_picture_count: number;
+  classes: ClassComparisonPayload[];
+  pictures: PictureDisagreementPayload[];
+  confusion: ClassMatrixPayload | null;
 }
 
 export interface StatisticsPayload {
   model: string | null;
+  compared_model: string | null;
   task: TaskValue;
-  statistics: {
-    picture_count: number;
-    recognized_count: number;
-    classes: ClassStatisticsPayload[];
-    histogram: HistogramPayload;
-  } | null;
-  comparison: {
-    picture_count: number;
-    iou_threshold: number;
-    classes: ClassComparisonPayload[];
-  } | null;
+  statistics: ResultStatisticsPayload | null;
+  comparison: ProfileComparisonPayload | null;
 }
 
 export interface ClassSetListEntry {
@@ -462,7 +579,13 @@ export interface ExportFormat {
   value: string;
   label: string;
   is_confidence_supported: boolean;
+  purpose: ExportPurposeValue;
+  group_label: string;
 }
+
+export type ExportPurposeValue = "annotations" | "crops" | "class_folders";
+
+export type CropImageFormatValue = "jpeg" | "png";
 
 export type ExportScopeValue = "kept" | "listed";
 
@@ -474,6 +597,28 @@ export interface ExportChoice {
   minimum_confidence: number;
   is_annotated_image_saved: boolean;
   is_annotated_video_saved: boolean;
+  crop_image_format: CropImageFormatValue;
+  crop_margin_percent: number;
+}
+
+export interface ExportPreviewChoice {
+  export_format: string;
+  is_confidence_included: boolean;
+  scope: ExportScopeValue;
+  minimum_confidence: number;
+  crop_image_format: CropImageFormatValue;
+  crop_margin_percent: number;
+}
+
+export interface ExportPreviewRequest extends ExportPreviewChoice {
+  listed_findings: PictureFindings[] | null;
+}
+
+export interface LabelPreview {
+  file_name: string;
+  text: string;
+  is_shown_picture_only: boolean;
+  is_truncated: boolean;
 }
 
 export interface ExportRequest extends ExportChoice {
@@ -490,7 +635,9 @@ export interface ExportPlan {
   pending_count: number;
   issue: string;
   formats: ExportFormat[];
+  purposes: { value: ExportPurposeValue; label: string; description: string }[];
   scopes: { value: ExportScopeValue; label: string; description: string }[];
+  crop_image_formats: { value: CropImageFormatValue; label: string }[];
   default_directory: string;
 }
 

@@ -119,22 +119,6 @@ export function ResultTable({
     else onOrderChange(null);
   };
 
-  const openTableMenu = (x: number, y: number) =>
-    menu.open(x, y, [
-      {
-        label: `Keep All Listed (${findingRows.length})`,
-        isDisabled: findingRows.length === 0,
-        onSelect: () => onSetAccepted(findingRows, true),
-      },
-      {
-        label: `Reject All Listed (${findingRows.length})`,
-        isDisabled: findingRows.length === 0,
-        onSelect: () => onSetAccepted(findingRows, false),
-      },
-      { isSeparator: true, label: "" },
-      { label: "Clear Filters", isDisabled: filteredCount === 0, onSelect: () => onFilterChange({}) },
-    ]);
-
   const moveSelection = (delta: number) => {
     const index = rows.findIndex((row) => row.key === selectedKey);
     const next = rows[clamp(index + delta, 0, rows.length - 1)];
@@ -225,6 +209,24 @@ export function ResultTable({
           </>
         )}
         <span className="grow" />
+        {!isCollapsed && findingRows.length > 0 && (
+          <>
+            <button
+              className="ghost small"
+              title="Keep every listed finding so it is exported"
+              onClick={() => onSetAccepted(findingRows, true)}
+            >
+              Keep All
+            </button>
+            <button
+              className="ghost small"
+              title="Reject every listed finding so it is left out of the export"
+              onClick={() => onSetAccepted(findingRows, false)}
+            >
+              Reject All
+            </button>
+          </>
+        )}
         <span className="muted small">{findingRows.length} listed</span>
       </ResultsHeading>
       {!isCollapsed && (
@@ -233,10 +235,6 @@ export function ResultTable({
           className="table-wrap"
           tabIndex={0}
           onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            openTableMenu(event.clientX, event.clientY);
-          }}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();
@@ -262,13 +260,8 @@ export function ResultTable({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    title="Click to sort; right-click to filter"
+                    title="Click to sort"
                     onClick={() => cycleOrder(column.key)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setPopup({ column, x: event.clientX, y: event.clientY });
-                    }}
                   >
                     {column.label}
                     {order?.key === column.key && (order.isDescending ? " ▾" : " ▴")}

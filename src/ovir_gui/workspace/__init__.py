@@ -5,6 +5,7 @@ from .class_workbench import ClassWorkbench
 from .deferred_save import DeferredSave
 from .export_coordinator import ExportCoordinator
 from .export_plan import ExportPlan
+from .export_preview_source import ExportPreviewSource
 from .export_request import ExportRequest
 from .inference_engine import InferenceEngine
 from .inference_job import InferenceJob
@@ -46,6 +47,7 @@ __all__ = [
     "DeferredSave",
     "ExportCoordinator",
     "ExportPlan",
+    "ExportPreviewSource",
     "ExportRequest",
     "InferenceEngine",
     "InferenceJob",

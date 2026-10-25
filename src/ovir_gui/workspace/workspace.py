@@ -10,10 +10,10 @@ from ..models import (
     RecognitionModel,
     RecognizerSession,
 )
-from ..prompting import PicturePromptBoard
+from ..prompting import PicturePromptBoard, PicturePrompts
 from ..recognition import RecognitionTask
 from ..results import ResultLibrary
-from ..storage import ResultsSnapshot, Session
+from ..storage import ResultsSnapshot, SessionMedia
 from ..vocabulary import ClassDefinition
 from ..wording import CountedNoun
 from .background_planner import BackgroundPlanner
@@ -57,7 +57,8 @@ class Workspace:
     background as far as the inference mode allows: the shown picture only, or every picture with the shown media
     first. While the shown video plays, its frames ahead of playback are recognized first, so the player can show them
     as it goes. A foreground job (Infer, Infer All, Update Outdated, export) interrupts it after the current
-    mini-batch. Editing the classes keeps every result and reports pictures recognized with other classes as outdated.
+    mini-batch. Every task keeps its own classes and drawings, shown again when the task is chosen. Editing the classes
+    keeps every result and reports pictures recognized with other classes as outdated.
     Results are saved shortly after every change, the session whenever it changes.
     """
 
@@ -99,17 +100,23 @@ class Workspace:
             lambda error: self._notifier.inform(f"Could not save the results: {error}"),
         )
         self._review: ReviewSettings = ReviewSettings(
-            stores.class_threshold_store, stores.duplicate_suppression_store, self._settings, self._notifier
+            stores.class_threshold_store,
+            stores.duplicate_suppression_store,
+            stores.label_mode_store,
+            self._settings,
+            self._notifier,
         )
-        self._workbench: ClassWorkbench = ClassWorkbench(stores.class_set_store)
-        remembered_classes: tuple[ClassDefinition, ...] | None = stores.class_list_store.load()
-        self._workbench.restore(
-            tuple(ClassDefinition.named(name) for name in self.DEFAULT_CLASS_NAMES)
-            if remembered_classes is None
-            else remembered_classes
-        )
-        self._workbench.picture_board.replace(stores.picture_prompt_store.load())
-        self._workbench.picture_board.retain_classes(self._workbench.class_names)
+        self._workbench: ClassWorkbench = ClassWorkbench(stores.class_set_store, self._settings)
+        remembered_prompts: dict[RecognitionTask, PicturePrompts] = stores.picture_prompt_store.load()
+        for task in RecognitionTask:
+            remembered_classes: tuple[ClassDefinition, ...] | None = stores.class_list_store.load(task)
+            self._workbench.restore(
+                task,
+                tuple(ClassDefinition.named(name) for name in self.DEFAULT_CLASS_NAMES)
+                if remembered_classes is None
+                else remembered_classes,
+                remembered_prompts[task],
+            )
         self._planner: BackgroundPlanner = BackgroundPlanner()
         self._models: ModelChoice = ModelChoice(
             model_selector,
@@ -245,7 +252,7 @@ class Workspace:
     @property
     def review(self) -> ReviewSettings:
         """
-        Minimums and duplicate suppression of the review, per task.
+        Label mode, minimums and duplicate suppression of the review, per task.
 
         Returns
         -------
@@ -410,7 +417,7 @@ class Workspace:
     @property
     def workbench(self) -> ClassWorkbench:
         """
-        Classes with their phrases and reference images.
+        Classes of the current task with their phrases and reference images.
 
         Returns
         -------
@@ -534,20 +541,10 @@ class Workspace:
 
     def restore_session(self) -> None:
         """
-        Open the media of the last session again and show the picture shown then; missing files are skipped.
+        Open the media the current task had open in the last session again and show the picture shown then; missing
+        files are skipped. The media of the other tasks are opened when they are shown.
         """
-        session: Session = self._stores.session_store.load()
-        existing: list[Path] = [path for path in session.media_paths if path.is_file()]
-        missing_count: int = len(session.media_paths) - len(existing)
-        if not existing:
-            if missing_count:
-                self._notifier.inform(f"None of the {missing_count} files of the last session exist any more.")
-            return
-        self.open_paths(existing)
-        if session.current_path is not None and session.current_path in self._working.media:
-            self.show(session.current_path, session.current_frame_index)
-        missing_note: str = f" ({missing_count} missing skipped)" if missing_count else ""
-        self._notifier.inform(f"Restored {CountedNoun('file').of(len(existing))} of the last session{missing_note}.")
+        self._open_remembered_media()
 
     def close_media(self, paths: Iterable[Path]) -> None:
         """
@@ -648,7 +645,7 @@ class Workspace:
 
     def select_task(self, task: RecognitionTask) -> None:
         """
-        Switch to another task; its model, results and class minimums are shown.
+        Switch to another task; its model, classes, media, results and class minimums are shown.
 
         Parameters
         ----------
@@ -666,16 +663,19 @@ class Workspace:
             raise ValueError(f"No {task.value} models are available.")
         if task is self._settings.task:
             return
+        is_media_kept: bool = self._working.switch_media(self._settings.task, task)
         self._settings.task = task
         self._working.compared_profile = None
-        self._working.summary = ""
         self._planner.unpin()
         self._profiles.show_profile_of_task()
         self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
+        if not is_media_kept:
+            self._open_remembered_media()
 
     def edit_classes(self, edit: Callable[[ClassWorkbench], object]) -> None:
         """
-        Change the classes, phrases or reference images, then remember them and recognize outdated pictures again.
+        Change the classes, phrases or reference images of the current task, then remember them and recognize
+        outdated pictures again.
 
         Parameters
         ----------
@@ -684,7 +684,8 @@ class Workspace:
         """
         edit(self._workbench)
         self._notifier.save_reporting_failure(
-            lambda: self._stores.class_list_store.save(self._workbench.classes), "Could not remember the classes"
+            lambda: self._stores.class_list_store.save(self._settings.task, self._workbench.classes),
+            "Could not remember the classes",
         )
         self._planner.forget_failures()
         self._planner.resume()
@@ -705,8 +706,8 @@ class Workspace:
 
     def edit_picture_prompts(self, frame_key: FrameKey, edit: Callable[[PicturePromptBoard], object]) -> None:
         """
-        Change the exemplar boxes or object marks drawn on a picture, remember them, and recognize the shown picture
-        again when the chosen model reads them there.
+        Change the exemplar boxes or object marks drawn on a picture for the current task, remember them, and
+        recognize the shown picture again when the chosen model reads them there.
 
         Parameters
         ----------
@@ -723,7 +724,7 @@ class Workspace:
         self.media_item(frame_key.path)
         edit(self._workbench.picture_board)
         self._notifier.save_reporting_failure(
-            lambda: self._stores.picture_prompt_store.save(self._workbench.picture_board.prompts),
+            lambda: self._stores.picture_prompt_store.save(self._workbench.picture_prompts_by_task),
             "Could not remember the drawings",
         )
         model: RecognitionModel = self._models.current_model()
@@ -741,6 +742,22 @@ class Workspace:
         """
         self._notifier.save_reporting_failure(self._results_save.save_now, "Could not save the results")
         self._session.save()
+
+    def _open_remembered_media(self) -> None:
+        remembered: SessionMedia | None = self._session.take_unopened_media(self._settings.task)
+        if remembered is None:
+            return
+        existing: list[Path] = [path for path in remembered.paths if path.is_file()]
+        missing_count: int = len(remembered.paths) - len(existing)
+        if not existing:
+            if missing_count:
+                self._notifier.inform(f"None of the {missing_count} files of the last session exist any more.")
+            return
+        self.open_paths(existing)
+        if remembered.current_path is not None and remembered.current_path in self._working.media:
+            self.show(remembered.current_path, remembered.current_frame_index)
+        missing_note: str = f" ({missing_count} missing skipped)" if missing_count else ""
+        self._notifier.inform(f"Restored {CountedNoun('file').of(len(existing))} of the last session{missing_note}.")
 
     def _load_results(self) -> ResultLibrary:
         try:

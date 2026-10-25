@@ -10,6 +10,7 @@ from .annotated_image_writer import AnnotatedImageWriter
 from .annotated_video_writer import AnnotatedVideoWriter
 from .box_annotation_writer import BoxAnnotationWriter
 from .class_folder_writer import ClassFolderWriter
+from .cropped_object_writer import CroppedObjectWriter
 from .export_format import ExportFormat
 from .export_item import ExportItem
 from .export_options import ExportOptions
@@ -100,17 +101,15 @@ class ResultExporter:
             output_directory=directory,
             picture_count=len(items),
             finding_count=sum(
-                (1 if item.label is not None else 0)
-                if task is RecognitionTask.CLASSIFICATION
-                else len(item.result.instances)
+                len(item.labels) if task is RecognitionTask.CLASSIFICATION else len(item.result.instances)
                 for item in items
             ),
             written_paths=tuple(written),
             annotated_count=annotated_count,
         )
 
-    @staticmethod
     def _write_format(
+        self,
         items: Sequence[ExportItem],
         task: RecognitionTask,
         options: ExportOptions,
@@ -148,3 +147,7 @@ class ResultExporter:
                 return MaskImageWriter().write(items, pictures, class_names, directory)
             case ExportFormat.CLASS_FOLDERS:
                 return ClassFolderWriter().write(items, pictures, directory)
+            case ExportFormat.CROPPED_OBJECTS:
+                return CroppedObjectWriter(options.crop_options, is_confidence_included).write(
+                    items, self._media, directory
+                )

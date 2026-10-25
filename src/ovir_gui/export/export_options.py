@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from .crop_options import CropOptions
 from .export_format import ExportFormat
 from .export_scope import ExportScope
 
@@ -26,6 +27,8 @@ class ExportOptions:
         Whether every exported picture is also saved with its findings drawn.
     is_annotated_video_saved : bool
         Whether every exported video is also saved with its findings drawn on every frame.
+    crop_options : CropOptions
+        Image format and margin of cropped objects; ignored by other formats.
 
     Raises
     ------
@@ -40,6 +43,7 @@ class ExportOptions:
     minimum_confidence: float = 0.0
     is_annotated_image_saved: bool = False
     is_annotated_video_saved: bool = False
+    crop_options: CropOptions = field(default_factory=CropOptions)
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.minimum_confidence <= 1.0:

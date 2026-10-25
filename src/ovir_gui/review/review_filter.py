@@ -1,20 +1,26 @@
 from collections.abc import Sequence
 
-from ..recognition import Finding, PixelBox
+from ..recognition import Finding, FrameResult, LabelMode, PixelBox
 from .class_thresholds import ClassThresholds
 from .duplicate_suppression import DuplicateSuppression
+from .label_mode_choice import LabelModeChoice
 
 
 class ReviewFilter:
     """
-    Which stored findings pass the review: those reaching the minimum of their phrase, then without the duplicates
-    the suppression removes.
+    Which stored findings pass the review: among the findings the label mode lists, those reaching the minimum of
+    their phrase, then without the duplicates the suppression removes.
 
     Rejected findings suppress like kept ones, so rejecting a box never brings back the boxes it hid. Results are
-    stored before both steps, so changing the minimums or the suppression needs no new recognition.
+    stored before every step, so changing the label mode, the minimums or the suppression needs no new recognition.
     """
 
-    def __init__(self, thresholds: ClassThresholds, suppression: DuplicateSuppression) -> None:
+    def __init__(
+        self,
+        thresholds: ClassThresholds,
+        suppression: DuplicateSuppression,
+        label_mode: LabelModeChoice = LabelModeChoice.AUTOMATIC,
+    ) -> None:
         """
         Parameters
         ----------
@@ -22,9 +28,12 @@ class ReviewFilter:
             Minimum confidences.
         suppression : DuplicateSuppression
             Removal of overlapping boxes of one class.
+        label_mode : LabelModeChoice, optional
+            How many classes a classified picture may keep.
         """
         self._thresholds: ClassThresholds = thresholds
         self._suppression: DuplicateSuppression = suppression
+        self._label_mode: LabelModeChoice = label_mode
 
     @property
     def thresholds(self) -> ClassThresholds:
@@ -49,6 +58,66 @@ class ReviewFilter:
             Overlaps and whether the suppression runs.
         """
         return self._suppression
+
+    @property
+    def label_mode(self) -> LabelModeChoice:
+        """
+        Label mode chosen for classifications.
+
+        Returns
+        -------
+        LabelModeChoice
+            Chosen mode, possibly automatic.
+        """
+        return self._label_mode
+
+    def label_mode_of(self, result: FrameResult) -> LabelMode:
+        """
+        Label mode applied to one result.
+
+        Parameters
+        ----------
+        result : FrameResult
+            Stored result.
+
+        Returns
+        -------
+        LabelMode
+            Chosen mode, or the native mode of the result when automatic.
+        """
+        return self._label_mode.resolved(result.native_label_mode)
+
+    def findings_of(self, result: FrameResult) -> tuple[Finding, ...]:
+        """
+        Findings of a result the review lists.
+
+        Parameters
+        ----------
+        result : FrameResult
+            Stored result.
+
+        Returns
+        -------
+        tuple[Finding, ...]
+            The best class or every class of a classification, or every instance.
+        """
+        return result.findings_of(self.label_mode_of(result))
+
+    def passing_indices_of(self, result: FrameResult) -> frozenset[int]:
+        """
+        Listed findings of a result passing the review.
+
+        Parameters
+        ----------
+        result : FrameResult
+            Stored result.
+
+        Returns
+        -------
+        frozenset[int]
+            Indices of the listed findings reaching their minimum and not removed as duplicates.
+        """
+        return self.passing_indices(self.findings_of(result))
 
     def reaching_indices(self, findings: Sequence[Finding]) -> frozenset[int]:
         """

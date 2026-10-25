@@ -1,5 +1,5 @@
 from ...media import ClassColors
-from ...prompting import ReferenceBoard
+from ...prompting import PicturePrompts, ReferenceBoard
 from ...review import ClassThresholds, DuplicateSuppression
 from ...storage import ClassSet, ClassSetEntry
 from ...workspace import ClassWorkbench
@@ -8,8 +8,8 @@ from ..json_value import JsonObject, JsonValue
 
 class ClassViewBuilder:
     """
-    JSON documents of the classes: the edited classes with their phrases and reference images, saved class sets, and
-    the class minimums and duplicate suppression reviewing their findings.
+    JSON documents of the classes: the edited classes with their phrases, reference images and counts of drawings,
+    saved class sets, and the class minimums and duplicate suppression reviewing their findings.
     """
 
     def classes(self, workbench: ClassWorkbench) -> list[JsonValue]:
@@ -24,11 +24,13 @@ class ClassViewBuilder:
         Returns
         -------
         list[JsonValue]
-            Name, color, phrases and reference images of every class, in class order.
+            Name, color, phrases, reference images and counts of exemplar boxes and marked objects of every class,
+            in class order.
         """
         board: ReferenceBoard = workbench.reference_board
+        prompts: PicturePrompts = workbench.picture_board.prompts
         return [
-            self._class(index, definition.name, definition.text_queries, board)
+            self._class(index, definition.name, definition.text_queries, board, prompts)
             for index, definition in enumerate(workbench.classes)
         ]
 
@@ -152,13 +154,15 @@ class ClassViewBuilder:
         return {
             "name": name,
             "classes": [
-                self._class(index, definition.name, definition.text_queries, board)
+                self._class(index, definition.name, definition.text_queries, board, PicturePrompts())
                 for index, definition in enumerate(class_set.classes)
             ],
         }
 
     @staticmethod
-    def _class(index: int, name: str, phrases: tuple[str, ...], board: ReferenceBoard) -> JsonObject:
+    def _class(
+        index: int, name: str, phrases: tuple[str, ...], board: ReferenceBoard, prompts: PicturePrompts
+    ) -> JsonObject:
         references: list[JsonValue] = []
         for reference_image in board.reference_images_of(name):
             width, height = board.pixels_of(reference_image).size
@@ -177,4 +181,8 @@ class ClassViewBuilder:
             "color": ClassColors.hex_of(index),
             "phrases": list[JsonValue](phrases),
             "references": references,
+            "exemplar_count": sum(1 for box in prompts.exemplars if box.class_name == name),
+            "object_count": len(
+                {(mark.frame_key.path, mark.object_id) for mark in prompts.marks if mark.class_name == name}
+            ),
         }

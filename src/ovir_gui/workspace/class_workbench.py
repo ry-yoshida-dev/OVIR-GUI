@@ -4,46 +4,50 @@ from pathlib import Path
 from PIL import Image
 
 from ..media import ClassColors
-from ..prompting import PicturePromptBoard, ReferenceBoard, ReferenceBox, ReferenceImage
+from ..prompting import PicturePromptBoard, PicturePrompts, ReferenceBoard, ReferenceBox, ReferenceImage
+from ..recognition import RecognitionTask
 from ..storage import ClassSet, ClassSetArchive, ClassSetStore
-from ..vocabulary import ClassDefinition, ClassListFile, ClassVocabulary
+from ..vocabulary import ClassDefinition, ClassListFile
+from .recognition_settings import RecognitionSettings
+from .task_classes import TaskClasses
 
 
 class ClassWorkbench:
     """
-    Classes to detect with their phrases and reference images, edited by class id, and the class set they belong to.
+    Classes to recognize with their phrases and reference images, edited by class id, and the class set they belong
+    to, kept apart for every task.
 
-    Edits that would break the vocabulary rules raise ``ValueError`` and change nothing. Reference boxes, and the
-    exemplar boxes and object marks drawn on pictures, follow their class when it is renamed and are dropped with it.
-    The workbench remembers the saved class set the classes were last loaded from or saved to, and whether they were
-    edited since.
+    Every property and edit acts on the classes of the current task of the settings, so switching tasks shows the
+    classes last used for that task. Edits that would break the vocabulary rules raise ``ValueError`` and change
+    nothing. Reference boxes, and the exemplar boxes and object marks drawn on pictures, follow their class when it is
+    renamed and are dropped with it. The workbench remembers the saved class set the classes of each task were last
+    loaded from or saved to, and whether they were edited since.
     """
 
-    def __init__(self, class_set_store: ClassSetStore) -> None:
+    def __init__(self, class_set_store: ClassSetStore, settings: RecognitionSettings) -> None:
         """
         Parameters
         ----------
         class_set_store : ClassSetStore
-            Saved class sets.
+            Saved class sets, shared by every task.
+        settings : RecognitionSettings
+            Settings naming the current task.
         """
         self._class_set_store: ClassSetStore = class_set_store
-        self._vocabulary: ClassVocabulary = ClassVocabulary()
-        self._board: ReferenceBoard = ReferenceBoard()
-        self._picture_board: PicturePromptBoard = PicturePromptBoard()
-        self._class_set_name: str = ""
-        self._is_edited: bool = False
+        self._settings: RecognitionSettings = settings
+        self._task_classes: dict[RecognitionTask, TaskClasses] = {task: TaskClasses() for task in RecognitionTask}
 
     @property
     def classes(self) -> tuple[ClassDefinition, ...]:
         """
-        Classes in class-id order.
+        Classes of the current task in class-id order.
 
         Returns
         -------
         tuple[ClassDefinition, ...]
             Every class.
         """
-        return self._vocabulary.classes
+        return self._current.vocabulary.classes
 
     @property
     def class_names(self) -> tuple[str, ...]:
@@ -55,7 +59,7 @@ class ClassWorkbench:
         tuple[str, ...]
             Name of every class.
         """
-        return self._vocabulary.class_names
+        return self._current.vocabulary.class_names
 
     def class_colors(self) -> dict[str, str]:
         """
@@ -69,6 +73,18 @@ class ClassWorkbench:
         return {name: ClassColors.hex_of(index) for index, name in enumerate(self.class_names)}
 
     @property
+    def picture_prompts_by_task(self) -> dict[RecognitionTask, PicturePrompts]:
+        """
+        Exemplar boxes and object marks drawn for the classes of every task.
+
+        Returns
+        -------
+        dict[RecognitionTask, PicturePrompts]
+            Drawings per task.
+        """
+        return {task: classes.picture_board.prompts for task, classes in self._task_classes.items()}
+
+    @property
     def picture_board(self) -> PicturePromptBoard:
         """
         Exemplar boxes and object marks drawn on the pictures for the classes.
@@ -78,7 +94,7 @@ class ClassWorkbench:
         PicturePromptBoard
             Drawings; they follow renamed classes and are dropped with removed ones.
         """
-        return self._picture_board
+        return self._current.picture_board
 
     @property
     def reference_board(self) -> ReferenceBoard:
@@ -90,7 +106,7 @@ class ClassWorkbench:
         ReferenceBoard
             Board holding every reference box and image.
         """
-        return self._board
+        return self._current.reference_board
 
     @property
     def class_set_store(self) -> ClassSetStore:
@@ -114,9 +130,9 @@ class ClassWorkbench:
         str
             Set name; empty for classes not tied to a saved set or when the set no longer exists.
         """
-        if self._class_set_name and not self._class_set_store.has_class_set(self._class_set_name):
+        if self._current.class_set_name and not self._class_set_store.has_class_set(self._current.class_set_name):
             return ""
-        return self._class_set_name
+        return self._current.class_set_name
 
     @property
     def is_edited(self) -> bool:
@@ -128,7 +144,7 @@ class ClassWorkbench:
         bool
             True after any edit of classes, phrases or reference images.
         """
-        return self._is_edited
+        return self._current.is_edited
 
     @property
     def is_unsaved(self) -> bool:
@@ -140,19 +156,28 @@ class ClassWorkbench:
         bool
             True when classes exist and are edited or not tied to a saved set.
         """
-        return bool(self.classes) and (self._is_edited or not self.class_set_name)
+        return bool(self.classes) and (self._current.is_edited or not self.class_set_name)
 
-    def restore(self, definitions: Iterable[ClassDefinition]) -> None:
+    def restore(
+        self, task: RecognitionTask, definitions: Iterable[ClassDefinition], picture_prompts: PicturePrompts
+    ) -> None:
         """
-        Replace every class, e.g. with the classes of the last run, without marking them edited.
+        Replace every class and drawing of one task, e.g. with those of the last run, without marking them edited.
 
         Parameters
         ----------
+        task : RecognitionTask
+            Task the classes belong to.
         definitions : Iterable[ClassDefinition]
             Classes in class-id order.
+        picture_prompts : PicturePrompts
+            Drawings of the task; those of classes not listed are dropped.
         """
-        self._replace(definitions)
-        self._associate("")
+        classes: TaskClasses = self._task_classes[task]
+        classes.picture_board.replace(picture_prompts)
+        self._replace_in(classes, definitions)
+        classes.class_set_name = ""
+        classes.is_edited = False
 
     def set_classes(self, definitions: Iterable[ClassDefinition]) -> None:
         """
@@ -164,7 +189,7 @@ class ClassWorkbench:
             Classes in class-id order; repeated names and phrases already used by an earlier class are dropped.
         """
         self._replace(definitions)
-        self._is_edited = True
+        self._current.is_edited = True
 
     def add_class(self, position: int, text: str) -> int:
         """
@@ -187,9 +212,9 @@ class ClassWorkbench:
         ValueError
             If the class is invalid, its name is taken or a phrase queries another class.
         """
-        self._vocabulary.insert(position, ClassDefinition.parse(text))
-        self._is_edited = True
-        return min(position, len(self._vocabulary) - 1)
+        self._current.vocabulary.insert(position, ClassDefinition.parse(text))
+        self._current.is_edited = True
+        return min(position, len(self._current.vocabulary) - 1)
 
     def add_phrases(self, class_index: int, position: int, text: str) -> None:
         """
@@ -215,8 +240,8 @@ class ClassWorkbench:
         if not phrases:
             raise ValueError("Type at least one phrase.")
         self._require_class(class_index)
-        self._vocabulary.insert_phrases(class_index, position, phrases)
-        self._is_edited = True
+        self._current.vocabulary.insert_phrases(class_index, position, phrases)
+        self._current.is_edited = True
 
     def rename_class(self, class_index: int, name: str) -> None:
         """
@@ -237,10 +262,10 @@ class ClassWorkbench:
             If the class does not exist.
         """
         self._require_class(class_index)
-        previous: ClassDefinition = self._vocabulary.rename_class(class_index, name)
-        self._board.rename_class(previous.name, self._vocabulary.class_names[class_index])
-        self._picture_board.rename_class(previous.name, self._vocabulary.class_names[class_index])
-        self._is_edited = True
+        previous: ClassDefinition = self._current.vocabulary.rename_class(class_index, name)
+        self._current.reference_board.rename_class(previous.name, self._current.vocabulary.class_names[class_index])
+        self._current.picture_board.rename_class(previous.name, self._current.vocabulary.class_names[class_index])
+        self._current.is_edited = True
 
     def rename_phrase(self, class_index: int, phrase_index: int, phrase: str) -> None:
         """
@@ -263,8 +288,8 @@ class ClassWorkbench:
             If the class or phrase does not exist.
         """
         self._require_phrase(class_index, phrase_index)
-        self._vocabulary.rename_phrase(class_index, phrase_index, phrase)
-        self._is_edited = True
+        self._current.vocabulary.rename_phrase(class_index, phrase_index, phrase)
+        self._current.is_edited = True
 
     def remove(
         self,
@@ -287,14 +312,14 @@ class ClassWorkbench:
         class_names: tuple[str, ...] = self.class_names
         for class_index, reference_image in reference_images:
             if 0 <= class_index < len(class_names):
-                self._board.remove_reference_image(class_names[class_index], reference_image)
+                self._current.reference_board.remove_reference_image(class_names[class_index], reference_image)
         for class_index, positions in phrase_indices.items():
             if 0 <= class_index < len(class_names):
-                self._vocabulary.remove_phrases(class_index, positions)
-        self._vocabulary.remove_classes(class_indices)
-        self._board.retain_classes(self._vocabulary.class_names)
-        self._picture_board.retain_classes(self._vocabulary.class_names)
-        self._is_edited = True
+                self._current.vocabulary.remove_phrases(class_index, positions)
+        self._current.vocabulary.remove_classes(class_indices)
+        self._current.reference_board.retain_classes(self._current.vocabulary.class_names)
+        self._current.picture_board.retain_classes(self._current.vocabulary.class_names)
+        self._current.is_edited = True
 
     def move_phrase(self, class_index: int, phrase_index: int, target_class_index: int, position: int) -> None:
         """
@@ -318,8 +343,8 @@ class ClassWorkbench:
         """
         self._require_phrase(class_index, phrase_index)
         self._require_class(target_class_index)
-        self._vocabulary.move_phrase(class_index, phrase_index, target_class_index, position)
-        self._is_edited = True
+        self._current.vocabulary.move_phrase(class_index, phrase_index, target_class_index, position)
+        self._current.is_edited = True
 
     def promote_phrase(self, class_index: int, phrase_index: int, position: int) -> int:
         """
@@ -347,8 +372,8 @@ class ClassWorkbench:
             If the class or phrase does not exist.
         """
         self._require_phrase(class_index, phrase_index)
-        new_index: int = self._vocabulary.promote_phrase(class_index, phrase_index, position)
-        self._is_edited = True
+        new_index: int = self._current.vocabulary.promote_phrase(class_index, phrase_index, position)
+        self._current.is_edited = True
         return new_index
 
     def move_reference_image(self, class_index: int, reference_image: ReferenceImage, target_class_index: int) -> None:
@@ -372,8 +397,10 @@ class ClassWorkbench:
         self._require_class(class_index)
         self._require_class(target_class_index)
         class_names: tuple[str, ...] = self.class_names
-        self._board.move_reference_image(class_names[class_index], reference_image, class_names[target_class_index])
-        self._is_edited = True
+        self._current.reference_board.move_reference_image(
+            class_names[class_index], reference_image, class_names[target_class_index]
+        )
+        self._current.is_edited = True
 
     def add_reference_boxes(self, boxes: Sequence[ReferenceBox], image: Image.Image) -> None:
         """
@@ -397,8 +424,8 @@ class ClassWorkbench:
             if box.class_name not in self.class_names:
                 raise ValueError(f"No class named '{box.class_name}'.")
         for box in boxes:
-            self._board.add(box, image)
-        self._is_edited = True
+            self._current.reference_board.add(box, image)
+        self._current.is_edited = True
 
     def save_class_set(self, name: str) -> None:
         """
@@ -416,7 +443,7 @@ class ClassWorkbench:
         OSError
             If the class set cannot be written.
         """
-        self._class_set_store.write_class_set(name, ClassSet.of(self.classes, self._board))
+        self._class_set_store.write_class_set(name, ClassSet.of(self.classes, self._current.reference_board))
         self._associate(name.strip())
 
     def load_class_set(self, name: str) -> None:
@@ -470,7 +497,7 @@ class ClassWorkbench:
 
     def rename_class_set(self, name: str, new_name: str) -> None:
         """
-        Rename a saved class set; the classes stay tied to it under its new name.
+        Rename a saved class set; the classes of every task stay tied to it under its new name.
 
         Parameters
         ----------
@@ -487,30 +514,39 @@ class ClassWorkbench:
             If the file cannot be renamed.
         """
         self._class_set_store.rename_class_set(name, new_name)
-        if self._class_set_name == name.strip():
-            self._class_set_name = new_name.strip()
+        for classes in self._task_classes.values():
+            if classes.class_set_name == name.strip():
+                classes.class_set_name = new_name.strip()
+
+    @property
+    def _current(self) -> TaskClasses:
+        return self._task_classes[self._settings.task]
 
     def _replace(self, definitions: Iterable[ClassDefinition]) -> None:
-        self._vocabulary.replace(definitions)
-        self._board.retain_classes(self._vocabulary.class_names)
-        self._picture_board.retain_classes(self._vocabulary.class_names)
+        self._replace_in(self._current, definitions)
+
+    @staticmethod
+    def _replace_in(classes: TaskClasses, definitions: Iterable[ClassDefinition]) -> None:
+        classes.vocabulary.replace(definitions)
+        classes.reference_board.retain_classes(classes.vocabulary.class_names)
+        classes.picture_board.retain_classes(classes.vocabulary.class_names)
 
     def _apply_class_set(self, class_set: ClassSet, source_name: str) -> None:
         if not class_set.classes:
             raise ValueError(f"Class set '{source_name}' lists no class.")
-        self._board.replace(class_set.reference_boxes, class_set.reference_pixels)
+        self._current.reference_board.replace(class_set.reference_boxes, class_set.reference_pixels)
         self._replace(class_set.classes)
 
     def _associate(self, name: str) -> None:
-        self._class_set_name = name
-        self._is_edited = False
+        self._current.class_set_name = name
+        self._current.is_edited = False
 
     def _require_class(self, class_index: int) -> None:
-        if not 0 <= class_index < len(self._vocabulary):
-            raise IndexError(f"class index must be in [0, {len(self._vocabulary)}). got {class_index}")
+        if not 0 <= class_index < len(self._current.vocabulary):
+            raise IndexError(f"class index must be in [0, {len(self._current.vocabulary)}). got {class_index}")
 
     def _require_phrase(self, class_index: int, phrase_index: int) -> None:
         self._require_class(class_index)
-        phrase_count: int = len(self._vocabulary.classes[class_index].text_queries)
+        phrase_count: int = len(self._current.vocabulary.classes[class_index].text_queries)
         if not 0 <= phrase_index < phrase_count:
             raise IndexError(f"phrase index must be in [0, {phrase_count}). got {phrase_index}")

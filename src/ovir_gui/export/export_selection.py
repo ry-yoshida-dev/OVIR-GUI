@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
 from ..media import FrameKey
-from ..recognition import Finding, FrameResult, RecognitionTask
+from ..recognition import FrameResult, RecognitionTask
 from ..results import StoredResult
 from ..review import ReviewFilter
 from .export_item import ExportItem
@@ -19,7 +19,7 @@ class ExportSelection:
     Attributes
     ----------
     review_filter : ReviewFilter
-        Minimums and duplicate suppression of the review.
+        Label mode, minimums and duplicate suppression of the review.
     minimum_confidence : float
         Minimum confidence of the export.
     listed_indices : Mapping[FrameKey, frozenset[int]] | None
@@ -44,7 +44,7 @@ class ExportSelection:
         Returns
         -------
         tuple[int, ...]
-            Indices in result order of the findings kept, passing the review, above the export minimum and, if
+            Indices in listing order of the findings kept, passing the review, above the export minimum and, if
             required, listed.
         """
         kept: frozenset[int] = stored.kept_indices(self.review_filter)
@@ -53,7 +53,7 @@ class ExportSelection:
         )
         return tuple(
             finding.index
-            for finding in stored.result.findings
+            for finding in self.review_filter.findings_of(stored.result)
             if finding.index in kept
             and finding.confidence >= self.minimum_confidence
             and (listed is None or finding.index in listed)
@@ -75,18 +75,16 @@ class ExportSelection:
         Returns
         -------
         ExportItem
-            The result with only the exported instances, labeled with the exported class of a classification
-            (``None`` when its top class is not exported).
+            The result with only the exported instances, labelled with the exported classes of a classification.
         """
         result: FrameResult = stored.result
         kept: tuple[int, ...] = self.exported_indices(frame_key, stored)
         if result.task is RecognitionTask.CLASSIFICATION:
-            top: Finding = result.findings[0]
-            label: str | None = top.class_name if top.index in kept else None
-            return ExportItem(frame_key=frame_key, result=result, label=label, seconds=seconds)
+            labels: tuple[str, ...] = tuple(result.class_scores[index].class_name for index in kept)
+            return ExportItem(frame_key=frame_key, result=result, labels=labels, seconds=seconds)
         return ExportItem(
             frame_key=frame_key,
             result=replace(result, instances=tuple(result.instances[index] for index in kept)),
-            label=None,
+            labels=(),
             seconds=seconds,
         )

@@ -4,9 +4,11 @@ from .class_row_body import ClassRowBody
 from .exemplar_body import ExemplarBody
 from .exemplar_removal_body import ExemplarRemovalBody
 from .export_body import ExportBody
+from .export_preview_body import ExportPreviewBody
 from .finding_reference import FindingReference
 from .image_prompt_reference import ImagePromptReference
 from .inference_body import InferenceBody
+from .label_mode_body import LabelModeBody
 from .license_body import LicenseBody
 from .mark_body import MarkBody
 from .mark_removal_body import MarkRemovalBody
@@ -40,9 +42,11 @@ __all__ = [
     "ExemplarBody",
     "ExemplarRemovalBody",
     "ExportBody",
+    "ExportPreviewBody",
     "FindingReference",
     "ImagePromptReference",
     "InferenceBody",
+    "LabelModeBody",
     "LicenseBody",
     "MarkBody",
     "MarkRemovalBody",

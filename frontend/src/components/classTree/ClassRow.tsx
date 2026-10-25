@@ -1,4 +1,4 @@
-import type { DragEvent, MouseEvent, ReactNode } from "react";
+import type { DragEvent, ReactNode } from "react";
 import type { ClassEntry } from "../../api/types";
 import type { DropTarget } from "./classTreeModel";
 
@@ -14,18 +14,23 @@ interface ClassRowProps {
   onSelect: () => void;
   onRename: () => void;
   onToggleExpanded: () => void;
-  onContextMenu: (event: MouseEvent) => void;
   onDragOver: (event: DragEvent, target: DropTarget) => void;
 }
 
 const BEFORE_CLASS_RATIO = 0.3;
+
+function countedOf(count: number, noun: string): string {
+  return count > 0 ? `${count} ${noun}${count === 1 ? "" : "s"}` : "";
+}
 
 function countsTextOf(entry: ClassEntry): string {
   return [
     entry.phrases.length === 1 && entry.phrases[0] === entry.name
       ? ""
       : `${entry.phrases.length} prompt${entry.phrases.length === 1 ? "" : "s"}`,
-    entry.references.length > 0 ? `${entry.references.length} image${entry.references.length === 1 ? "" : "s"}` : "",
+    countedOf(entry.references.length, "image"),
+    countedOf(entry.exemplar_count, "exemplar"),
+    countedOf(entry.object_count, "object"),
   ]
     .filter((part) => part !== "")
     .join(" · ");
@@ -43,7 +48,6 @@ export function ClassRow({
   onSelect,
   onRename,
   onToggleExpanded,
-  onContextMenu,
   onDragOver,
 }: ClassRowProps) {
   return (
@@ -57,7 +61,6 @@ export function ClassRow({
       ].join(" ")}
       onClick={onSelect}
       onDoubleClick={onRename}
-      onContextMenu={onContextMenu}
       onDragOver={(event) => {
         const bounds = event.currentTarget.getBoundingClientRect();
         const isUpper = event.clientY - bounds.top < bounds.height * BEFORE_CLASS_RATIO;

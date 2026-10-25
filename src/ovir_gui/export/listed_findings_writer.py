@@ -71,10 +71,9 @@ class ListedFindingsWriter:
             stored: StoredResult | None = self._catalog.stored_of(frame_key)
             if stored is None:
                 raise KeyError(f"{frame_key.label} has not been recognized.")
-            all_findings: tuple[Finding, ...] = stored.result.findings
-            if not 0 <= index < len(all_findings):
+            if not 0 <= index < stored.result.candidate_count:
                 raise IndexError(f"No finding {index} in {frame_key.label}.")
-            finding: Finding = all_findings[index]
+            finding: Finding = stored.result.finding_of(index)
             item: MediaItem | None = self._media.get(frame_key.path)
             seconds: str = (
                 ""

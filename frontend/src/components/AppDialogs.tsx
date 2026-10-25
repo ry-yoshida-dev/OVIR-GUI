@@ -1,5 +1,5 @@
 import { api, errorMessage } from "../api/client";
-import type { ExportChoice, PictureFindings, WorkspaceState } from "../api/types";
+import type { ExportChoice, ExportScopeValue, PictureFindings, WorkspaceState } from "../api/types";
 import type { Call, RunAction } from "../hooks/useActionRunner";
 import { groupFindings, type TableRow } from "../lib/resultTable";
 import { ClassSetDialog } from "./ClassSetDialog";
@@ -56,15 +56,14 @@ export function AppDialogs({
   onReport,
   onClose,
 }: AppDialogsProps) {
+  const listedPayloadOf = (scope: ExportScopeValue): PictureFindings[] | null =>
+    scope === "listed" && isFiltered ? groupFindings(filteredRows) : null;
+
   const exportResults = (choice: ExportChoice): Promise<boolean> => {
-    const listedPayload: PictureFindings[] | null =
-      choice.scope === "listed" && isFiltered
-        ? groupFindings(filteredRows)
-        : null;
     return runAction((isSkippingApproved) =>
       api.exportResults({
         ...choice,
-        listed_findings: listedPayload,
+        listed_findings: listedPayloadOf(choice.scope),
         is_label_confidence_shown: isLabelConfidenceShown,
         is_skipping_approved: isSkippingApproved,
       }),
@@ -105,6 +104,9 @@ export function AppDialogs({
           hasVideos={hasVideos}
           listedFindingCount={listedFindingRows.length}
           onExport={exportResults}
+          onLoadPreview={(choice) =>
+            api.exportPreview({ ...choice, listed_findings: listedPayloadOf(choice.scope) })
+          }
           onDownloadCsv={() => void saveCsv(listedFindingRows)}
           onClose={onClose}
         />

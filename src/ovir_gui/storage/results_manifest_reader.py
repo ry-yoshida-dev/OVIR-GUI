@@ -1,17 +1,19 @@
 import os
 from collections.abc import Sequence
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 
 from ..media import FrameKey
-from ..models import ModelProfile, ProfileOption
+from ..models import ClassificationModel, ModelProfile, ProfileOption
 from ..prompting import PromptSignature, QueriedClass, QueryKind, ReferenceBox, ReferenceImage
 from ..recognition import (
     ClassScore,
     FrameResult,
     ImageSize,
     InstanceMask,
+    LabelMode,
     PixelBox,
     RecognitionTask,
     RecognizedInstance,
@@ -28,7 +30,11 @@ class ResultsManifestReader:
     Rebuilds a ``ResultLibrary`` from a manifest written by ``ResultsManifestWriter`` and its mask bits.
 
     Results of media files that no longer exist or changed since (other modification time or size) are dropped.
+    Rejections of classifications in a version 1 manifest, which indexed the best class by 0, are moved to the
+    position of that class.
     """
+
+    CLASS_INDEXED_VERSION: ClassVar[int] = 2
 
     def __init__(self, mask_bits: Sequence[UInt8Array]) -> None:
         """
@@ -94,16 +100,16 @@ class ResultsManifestReader:
                 signature_index: int = JsonFields.integer_of(frame_entry.get("signature"), "signature")
                 if not 0 <= signature_index < len(signatures):
                     raise ValueError(f"frame signature must index signatures. got {signature_index}")
+                result: FrameResult = self._result_of(profile, frame_entry)
+                rejected: frozenset[int] = frozenset(
+                    JsonFields.integer_of(index, "rejected")
+                    for index in JsonFields.list_of(frame_entry.get("rejected", []), "rejected")
+                )
+                if result.class_scores and version < self.CLASS_INDEXED_VERSION:
+                    rejected = self._class_indexed(result, rejected)
                 catalog.restore(
                     frame_key,
-                    StoredResult(
-                        result=self._result_of(profile.task, frame_entry),
-                        signature=signatures[signature_index],
-                        rejected_indices=frozenset(
-                            JsonFields.integer_of(index, "rejected")
-                            for index in JsonFields.list_of(frame_entry.get("rejected", []), "rejected")
-                        ),
-                    ),
+                    StoredResult(result=result, signature=signatures[signature_index], rejected_indices=rejected),
                 )
         return library
 
@@ -192,7 +198,14 @@ class ResultsManifestReader:
             )
         return PromptSignature(tuple(classes))
 
-    def _result_of(self, task: RecognitionTask, entry: dict[str, JsonValue]) -> FrameResult:
+    @staticmethod
+    def _class_indexed(result: FrameResult, rejected: frozenset[int]) -> frozenset[int]:
+        if 0 not in rejected:
+            return frozenset()
+        return frozenset({result.findings_of(LabelMode.SINGLE_LABEL)[0].index})
+
+    def _result_of(self, profile: ModelProfile, entry: dict[str, JsonValue]) -> FrameResult:
+        task: RecognitionTask = profile.task
         size: list[JsonValue] = JsonFields.list_of(entry.get("size"), "size")
         if len(size) != 2:
             raise ValueError(f"size needs a width and a height. got {size}")
@@ -203,17 +216,24 @@ class ResultsManifestReader:
             scores: list[ClassScore] = []
             for score_value in JsonFields.list_of(entry.get("scores"), "scores"):
                 fields: list[JsonValue] = JsonFields.list_of(score_value, "score")
-                if len(fields) != 4:
-                    raise ValueError(f"a score needs 4 fields. got {fields}")
+                if len(fields) not in (4, 5):
+                    raise ValueError(f"a score needs 4 or 5 fields. got {fields}")
+                similarity: JsonValue = fields[4] if len(fields) == 5 else None
                 scores.append(
                     ClassScore(
                         class_name=JsonFields.string_of(fields[0], "class"),
                         score=JsonFields.number_of(fields[1], "score"),
                         logit=JsonFields.number_of(fields[2], "logit"),
                         query_label=JsonFields.string_of(fields[3], "query"),
+                        similarity=None if similarity is None else JsonFields.number_of(similarity, "similarity"),
                     )
                 )
-            return FrameResult(task=task, image_size=image_size, class_scores=tuple(scores))
+            return FrameResult(
+                task=task,
+                image_size=image_size,
+                class_scores=tuple(scores),
+                native_label_mode=ClassificationModel.native_label_mode_of(profile.backend),
+            )
         return FrameResult(
             task=task,
             image_size=image_size,

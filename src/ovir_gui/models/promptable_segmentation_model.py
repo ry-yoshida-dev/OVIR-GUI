@@ -165,7 +165,7 @@ class PromptableSegmentationModel(RecognitionModel):
     @property
     def usage_description(self) -> str:
         if self.is_point_supported:
-            return "Click on an object (right-click excludes a spot) or drag a box around it."
+            return "Click on an object (Exclude removes a spot) or drag a box around it."
         return "Drag a box around each object; this model takes boxes only."
 
     @property

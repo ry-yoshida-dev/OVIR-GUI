@@ -2,10 +2,10 @@
 
 ## Overview
 
-User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits the classes (via `ClassWorkbench`) and the settings, and exposes its collaborators for everything else. They share the `WorkingState` (open media, shown picture, shown and compared profiles) and the `RecognitionSettings` (task, model choices, sampling, inference mode) owned by the thread behind a `TaskScheduler`, so no part needs locks:
+User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits the classes (via `ClassWorkbench`) and the settings, and exposes its collaborators for everything else. They share the `WorkingState` (open media and shown picture of the current task, the media kept for the other tasks, shown and compared profiles) and the `RecognitionSettings` (task, model choices, sampling, inference mode) owned by the thread behind a `TaskScheduler`, so no part needs locks:
 
 - `ModelChoice` picks the model of every task and the accepted licenses; `SessionMapper` restores and saves the session.
-- `ResultReadModel` answers what the stored results say (statuses, freshness, statistics, comparison); `ReviewSettings` holds the minimums and the duplicate suppression; `ResultProfiles` switches the shown and compared profile and records the user's review.
+- `ResultReadModel` answers what the stored results say (statuses, freshness, statistics, comparison); `ReviewSettings` holds the label mode of classifications, the minimums and the duplicate suppression; `ResultProfiles` switches the shown and compared profile and records the user's review.
 - `InferenceRunner` starts foreground jobs and background jobs on the `InferenceEngine`, whose single worker thread reports to the `InferenceOutcomeHandler`; `PromptAssembler` builds their prompts and `BackgroundPlanner` chooses what the background recognizes next.
 - `ExportCoordinator` plans and writes exports and `PlaybackPreparer` encodes browser-playable video copies, both off the owning thread.
 - `StatusNotifier` tells every `WorkspaceObserver` what changed (`WorkspaceTopic`) and keeps the status messages; `DeferredSave` writes the results shortly after changes, never overlapping a write at quit.
@@ -19,10 +19,11 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [action_reply.py](./action_reply.py) | `ActionReply` is the answer of the workspace to a request such as Detect, Detect All or Export. |
 | [action_status.py](./action_status.py) | `ActionStatus` enumerates how the workspace answered a request of the user. |
 | [background_planner.py](./background_planner.py) | `BackgroundPlanner` chooses what to recognize next in the background for the inference mode, frames ahead of a playing video first, and remembers what failed. |
-| [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set. |
+| [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes of the current task with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set; every task keeps its own. |
 | [deferred_save.py](./deferred_save.py) | `DeferredSave` writes one piece of workspace state shortly after it changes, off the owning thread, never overlapping or replacing a newer write. |
-| [export_coordinator.py](./export_coordinator.py) | `ExportCoordinator` plans and starts exports of the stored results, recognizing pending pictures through an export job first, and writes them off the owning thread. |
+| [export_coordinator.py](./export_coordinator.py) | `ExportCoordinator` plans and starts exports of the stored results, recognizing pending pictures through an export job first, writes them off the owning thread and gathers what a label preview is written from. |
 | [export_plan.py](./export_plan.py) | `ExportPlan` describes what an export would write now. |
+| [export_preview_source.py](./export_preview_source.py) | `ExportPreviewSource` holds what a label preview is written from, gathered on the owning thread. |
 | [export_request.py](./export_request.py) | `ExportRequest` is the export chosen by the user. |
 | [inference_engine.py](./inference_engine.py) | `InferenceEngine` runs recognition jobs on one worker thread, foreground jobs first and background jobs in between. |
 | [inference_job.py](./inference_job.py) | `InferenceJob` holds the pictures to recognize with one model and prompt. |
@@ -44,13 +45,15 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [recognition_settings.py](./recognition_settings.py) | `RecognitionSettings` holds the task, the model of each task, the video sampling and the inference mode remembered in the session. |
 | [result_profiles.py](./result_profiles.py) | `ResultProfiles` switches the shown and compared result profile, forgets profiles and records which findings the user keeps. |
 | [result_read_model.py](./result_read_model.py) | `ResultReadModel` answers what the stored results say about the open media: statuses, freshness, summaries, statistics and comparison. |
-| [review_settings.py](./review_settings.py) | `ReviewSettings` keeps the class minimums and the duplicate suppression of every task and remembers them. |
+| [review_settings.py](./review_settings.py) | `ReviewSettings` keeps the label mode of classifications and the class minimums and duplicate suppression of every task, and remembers them. |
 | [run_progress.py](./run_progress.py) | `RunProgress` is the progress of a running job, foreground or background. |
 | [scheduled_call.py](./scheduled_call.py) | `ScheduledCall` is a callback scheduled to run later that can still be cancelled. |
-| [session_mapper.py](./session_mapper.py) | `SessionMapper` restores the valid choices of the remembered session and saves the current one. |
+| [session_mapper.py](./session_mapper.py) | `SessionMapper` restores the valid choices of the remembered session, hands out the remembered media of each task when it is first shown, and saves the current session. |
 | [status_notifier.py](./status_notifier.py) | `StatusNotifier` tells the observers what changed and keeps the status and activity messages. |
+| [task_classes.py](./task_classes.py) | `TaskClasses` holds the classes, reference images, drawings and class set of one task. |
+| [task_media.py](./task_media.py) | `TaskMedia` holds the open media and shown picture of a task that is not shown. |
 | [task_scheduler.py](./task_scheduler.py) | `TaskScheduler` abstracts the thread owning the workspace state, like the GUI thread of a desktop application. |
-| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media, shown picture and profiles. |
+| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media and shown picture of the current task, the media kept for the other tasks, and profiles. |
 | [workspace.py](./workspace.py) | `Workspace` is the facade over the open media, classes, settings and the collaborators handling results, jobs and exports. |
 | [workspace_observer.py](./workspace_observer.py) | `WorkspaceObserver` is a view following the workspace, always called on the owning thread. |
 | [workspace_stores.py](./workspace_stores.py) | `WorkspaceStores` is the data directory the workspace reads at start and writes after changes. |

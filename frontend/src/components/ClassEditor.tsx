@@ -263,13 +263,13 @@ export function ClassEditor({
           disabled={classSet.names.length === 0}
           title={
             classSet.names.length === 0
-              ? "No class set saved yet; save the classes to list them here."
-              : `Class sets saved in ${classSet.directory}; choose one to load it.`
+              ? "Save the classes to load them here later and pick up where you left off."
+              : `Class sets saved in ${classSet.directory}; choose one to load it and resume.`
           }
           onChange={(event) => void chooseClassSet(event.target.value)}
         >
           <option value="" disabled>
-            {classSet.names.length === 0 ? "No saved sets" : "Choose a class set…"}
+            {classSet.names.length === 0 ? "Save to reuse later" : "Load a saved set…"}
           </option>
           {classSet.names.map((name) => (
             <option key={name} value={name}>
@@ -320,7 +320,7 @@ export function ClassEditor({
             if (selected.kind === "phrase") {
               setEditing({ kind: "rename-phrase", classIndex: selected.classIndex, phraseIndex: selected.phraseIndex });
             }
-          } else if (event.key === "Enter" && selected === null) {
+          } else if (event.key === "Enter") {
             startNewRow();
           }
         }}
@@ -355,21 +355,6 @@ export function ClassEditor({
                 onSelect={() => setSelected({ kind: "class", classIndex })}
                 onRename={() => setEditing({ kind: "rename-class", classIndex })}
                 onToggleExpanded={() => setExpanded((current) => toggledMembership(current, entry.name))}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  setSelected({ kind: "class", classIndex });
-                  menu.open(event.clientX, event.clientY, [
-                    { label: "Rename", shortcut: "F2", onSelect: () => setEditing({ kind: "rename-class", classIndex }) },
-                    ...promptEntries(entry, classIndex),
-                    { label: "New Class Below", onSelect: () => setEditing({ kind: "new-class", position: classIndex + 1 }) },
-                    { isSeparator: true, label: "" },
-                    {
-                      label: "Remove Class",
-                      shortcut: "Del",
-                      onSelect: () => void run(() => api.removeClassRows(removalOf({ kind: "class", classIndex }))),
-                    },
-                  ]);
-                }}
                 onDragOver={onDragOver}
               />
               {isExpanded &&
@@ -398,32 +383,6 @@ export function ClassEditor({
                       }
                       onSelect={() => setSelected({ kind: "phrase", classIndex, phraseIndex })}
                       onRename={() => setEditing({ kind: "rename-phrase", classIndex, phraseIndex })}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        setSelected({ kind: "phrase", classIndex, phraseIndex });
-                        menu.open(event.clientX, event.clientY, [
-                          {
-                            label: "Rename",
-                            shortcut: "F2",
-                            onSelect: () => setEditing({ kind: "rename-phrase", classIndex, phraseIndex }),
-                          },
-                          {
-                            label: "New Phrase Below",
-                            onSelect: () => setEditing({ kind: "new-phrase", classIndex, position: phraseIndex + 1 }),
-                          },
-                          {
-                            label: "Make a Class of Its Own",
-                            onSelect: () => void run(() => api.movePhrase(classIndex, phraseIndex, null, classIndex + 1)),
-                          },
-                          { isSeparator: true, label: "" },
-                          {
-                            label: "Remove Phrase",
-                            shortcut: "Del",
-                            onSelect: () =>
-                              void run(() => api.removeClassRows(removalOf({ kind: "phrase", classIndex, phraseIndex }))),
-                          },
-                        ]);
-                      }}
                       onDragStart={(event) => onDragStart(event, { kind: "phrase", classIndex, phraseIndex })}
                       onDragEnd={() => setDropTarget(null)}
                       onDragOver={(event) => onDragOver(event, { kind: "before-phrase", classIndex, phraseIndex })}

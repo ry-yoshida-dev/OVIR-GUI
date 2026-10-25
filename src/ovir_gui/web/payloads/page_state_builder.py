@@ -3,9 +3,10 @@ from pathlib import Path
 
 from ...export import ExportReport
 from ...media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind
-from ...models import ModelProfile
+from ...models import ClassificationModel, ModelProfile
 from ...prompting import FramePrompt, ObjectMark, PicturePrompts
-from ...review import DuplicateSuppression
+from ...recognition import LabelMode, RecognitionTask
+from ...review import DuplicateSuppression, LabelModeChoice
 from ...storage import ClassThresholdStore
 from ...workspace import MediaStatus, RunProgress, Workspace
 from ..json_value import JsonObject, JsonValue
@@ -82,6 +83,7 @@ class PageStateBuilder:
             "suppression": self._class_views.suppression(workspace.review.duplicate_suppression),
             "standard_minimum": ClassThresholdStore.default_minimum_of(workspace.task),
             "standard_overlap_threshold": DuplicateSuppression.DEFAULT_OVERLAP_THRESHOLD,
+            "label_mode": self._label_mode(workspace.review.label_mode, shown),
             "status": {"message": workspace.notifier.status_message, "serial": workspace.notifier.status_serial},
             "activity": workspace.notifier.activity_message,
             "summary": workspace.summary,
@@ -159,6 +161,19 @@ class PageStateBuilder:
             if item.video is None or frame_key.frame_index is None
             else item.video.timestamp_of(frame_key.frame_index),
             "is_sampled": frame_key.frame_index is None or workspace.sampling.is_sampled(frame_key.frame_index),
+        }
+
+    @staticmethod
+    def _label_mode(choice: LabelModeChoice, shown: ModelProfile | None) -> JsonObject:
+        native: LabelMode | None = (
+            ClassificationModel.native_label_mode_of(shown.backend)
+            if shown is not None and shown.task is RecognitionTask.CLASSIFICATION
+            else None
+        )
+        return {
+            "choice": choice.value,
+            "native": None if native is None else native.value,
+            "modes": [{"value": mode.value, "title": mode.title} for mode in LabelMode],
         }
 
     @staticmethod

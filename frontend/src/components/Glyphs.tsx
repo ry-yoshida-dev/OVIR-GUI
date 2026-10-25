@@ -26,10 +26,35 @@ export function Glyph({
   );
 }
 
+export function AnnotationsGlyph() {
+  return (
+    <Glyph>
+      <g fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3.5 1.75h5.75l3.25 3.25v9.25h-9z" />
+        <path d="M9.25 1.75V5h3.25M5.75 8h4.5M5.75 10.5h4.5M5.75 13h2.5" />
+      </g>
+    </Glyph>
+  );
+}
+
 export function ChevronGlyph() {
   return (
     <Glyph className="chevron-glyph">
       <path d="M4.5 6.25 8 9.75l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </Glyph>
+  );
+}
+
+export function ClassFoldersGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M1.75 4.25A1 1 0 0 1 2.75 3.25h3.5l1.5 1.5h5.5a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
     </Glyph>
   );
 }
@@ -41,6 +66,36 @@ export function ClassesGlyph() {
         <path d="M2.25 3.25v3.6a1 1 0 0 0 .3.7l6.2 6.2a1 1 0 0 0 1.4 0l3.1-3.1a1 1 0 0 0 0-1.4l-6.2-6.2a1 1 0 0 0-.7-.3h-3.6a.5.5 0 0 0-.5.5Z" />
         <circle cx="5.25" cy="5.75" r="0.9" />
       </g>
+    </Glyph>
+  );
+}
+
+export function CropGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M4.25 1.25v10.5h10.5M1.25 4.25h10.5v10.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Glyph>
+  );
+}
+
+export function ExpandGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M9.75 2.25h4v4M13.75 2.25 9.25 6.75M6.25 13.75h-4v-4M2.25 13.75l4.5-4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Glyph>
   );
 }

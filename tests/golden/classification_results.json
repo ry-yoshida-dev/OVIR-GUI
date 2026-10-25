@@ -11,7 +11,30 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "query": "person",
+          "similarity": 0.3
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "car",
+          "similarity": 0.25
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "dog",
+          "similarity": 0.2
         }
       ],
       "frame": null,
@@ -45,7 +68,30 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "query": "person",
+          "similarity": 0.3
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "car",
+          "similarity": 0.25
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "dog",
+          "similarity": 0.2
         }
       ],
       "frame": null,
@@ -79,7 +125,30 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "query": "person",
+          "similarity": 0.3
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "car",
+          "confidence": 0.7,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "car",
+          "similarity": 0.25
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "dog",
+          "confidence": 0.5,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "dog",
+          "similarity": 0.2
         }
       ],
       "frame": 0,
@@ -113,7 +182,30 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "query": "person",
+          "similarity": 0.3
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "car",
+          "confidence": 0.66,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "car",
+          "similarity": 0.25
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "dog",
+          "confidence": 0.46,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "dog",
+          "similarity": 0.2
         }
       ],
       "frame": 4,
@@ -147,7 +239,30 @@
           "index": 0,
           "is_accepted": true,
           "is_passing": true,
-          "query": "person"
+          "query": "person",
+          "similarity": 0.3
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "car",
+          "confidence": 0.62,
+          "index": 1,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "car",
+          "similarity": 0.25
+        },
+        {
+          "area": null,
+          "box": null,
+          "class_name": "dog",
+          "confidence": 0.42,
+          "index": 2,
+          "is_accepted": true,
+          "is_passing": true,
+          "query": "dog",
+          "similarity": 0.2
         }
       ],
       "frame": 8,

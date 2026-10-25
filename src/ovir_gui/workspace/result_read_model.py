@@ -231,10 +231,11 @@ class ResultReadModel:
                 if len(recognized_of_file) == len(expected):
                     done_file_count += 1
             finding_count: int = 0
+            review_filter: ReviewFilter = self._review.filter_of(profile.task)
             for key in self.recognized_keys(catalog):
                 stored: StoredResult | None = catalog.stored_of(key)
                 if stored is not None:
-                    finding_count += len(stored.result.findings)
+                    finding_count += len(review_filter.findings_of(stored.result))
             summaries.append(
                 ProfileSummary(
                     profile=profile,
@@ -263,12 +264,16 @@ class ResultReadModel:
         if catalog is None:
             return None
         return ResultStatistics.of(
-            catalog, self.recognized_keys(catalog), self._workbench.class_names, self._review.review_filter
+            self._settings.task,
+            catalog,
+            self.recognized_keys(catalog),
+            self._workbench.class_names,
+            self._review.review_filter,
         )
 
     def comparison(self) -> ProfileComparison | None:
         """
-        Class-by-class comparison of the shown and the compared results over the open media.
+        Class-by-class comparison of the kept findings of the shown and the compared results over the open media.
 
         Returns
         -------
@@ -279,7 +284,9 @@ class ResultReadModel:
         compared: ResultCatalog | None = self.compared_catalog()
         if shown is None or compared is None:
             return None
-        return ProfileComparison.between(shown, compared, self.recognized_keys(shown), self._workbench.class_names)
+        return ProfileComparison.between(
+            shown, compared, self.recognized_keys(shown), self._workbench.class_names, self._review.review_filter
+        )
 
     def outdated_keys(self, profile: ModelProfile, frame_keys: tuple[FrameKey, ...]) -> dict[FrameKey, PromptChange]:
         """

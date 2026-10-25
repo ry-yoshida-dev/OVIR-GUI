@@ -207,7 +207,8 @@ class InferenceOutcomeHandler:
         result: FrameResult = outcome.results[frame_keys.index(self._working.current_key)]
         load_note: str = " (model loaded)" if outcome.is_model_reloaded else ""
         per_picture_ms: float = outcome.inference_seconds * 1000 / max(1, len(frame_keys))
+        finding_count: int = len(result.findings_of(result.native_label_mode))
         self._working.summary = (
             f"{job.model.preset.label} | {job.model.weights_path} | {job.prompt.description} | "
-            + f"{len(result.findings)} {job.model.task.finding_noun}s | {per_picture_ms:.0f} ms/picture{load_note}"
+            + f"{finding_count} {job.model.task.finding_noun}s | {per_picture_ms:.0f} ms/picture{load_note}"
         )

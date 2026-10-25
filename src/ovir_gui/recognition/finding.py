@@ -6,13 +6,13 @@ from .pixel_box import PixelBox
 @dataclass(frozen=True)
 class Finding:
     """
-    One reviewable answer of a result, listed as one row: the predicted class of a classified image or one detected
-    or segmented instance.
+    One reviewable answer of a result, listed as one row: one class of a classified image or one detected or
+    segmented instance.
 
     Attributes
     ----------
     index : int
-        Position of the finding in its result.
+        Position of the class score or the instance in its result.
     class_name : str
         Class it reports.
     query_label : str
@@ -23,6 +23,9 @@ class Finding:
         Bounding box; ``None`` for a classification.
     area : float | None
         Pixel count of a mask or area of a box; ``None`` for a classification.
+    similarity : float | None
+        Cosine similarity of the image and the matched query of a classification; ``None`` for an instance or a
+        classification stored before it was recorded.
     """
 
     index: int
@@ -31,3 +34,4 @@ class Finding:
     confidence: float
     box: PixelBox | None
     area: float | None
+    similarity: float | None

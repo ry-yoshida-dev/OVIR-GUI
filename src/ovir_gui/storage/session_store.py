@@ -7,13 +7,16 @@ from ..recognition import RecognitionTask
 from .json_fields import JsonFields, JsonValue
 from .json_file import JsonFile
 from .session import Session
+from .session_media import SessionMedia
 
 
 class SessionStore:
     """
-    Open media, shown picture, task, sampling and model choices remembered in ``session.json`` of a data directory.
+    Open media and shown picture of each task, the task, sampling and model choices remembered in ``session.json``
+    of a data directory.
 
     Parts that cannot be read are dropped one by one, so a preset removed from a library loses only its selection.
+    A file of the earlier format, holding one media list for all tasks, gives that list to its stored task.
     The directory is created only when written to.
     """
 
@@ -53,26 +56,16 @@ class SessionStore:
         if content is None:
             return Session()
         try:
-            media_paths: tuple[Path, ...] = tuple(
-                Path(JsonFields.string_of(media_path, "media path"))
-                for media_path in JsonFields.list_of(content.get("media", []), "media")
-            )
-            current_value: JsonValue = content.get("current")
-            current_path: Path | None = (
-                None if current_value is None else Path(JsonFields.string_of(current_value, "current"))
-            )
-            if current_path not in media_paths:
-                current_path = None
-            frame_value: JsonValue = content.get("frame")
             task_value: JsonValue = content.get("task")
+            task: RecognitionTask | None = (
+                None if task_value is None else RecognitionTask(JsonFields.string_of(task_value, "task"))
+            )
             step_value: JsonValue = content.get("frame_step")
             mode_value: JsonValue = content.get("inference_mode")
             auto_value: JsonValue = content.get("is_auto_inference")
             return Session(
-                media_paths=media_paths,
-                current_path=current_path,
-                current_frame_index=None if frame_value is None else JsonFields.integer_of(frame_value, "frame"),
-                task=None if task_value is None else RecognitionTask(JsonFields.string_of(task_value, "task")),
+                media=self._media_of(content, task),
+                task=task,
                 frame_step=None if step_value is None else JsonFields.integer_of(step_value, "frame_step"),
                 inference_mode=(
                     None
@@ -102,9 +95,7 @@ class SessionStore:
             If the data directory or the file cannot be written.
         """
         content: dict[str, JsonValue] = {
-            "media": [str(media_path) for media_path in session.media_paths],
-            "current": None if session.current_path is None else str(session.current_path),
-            "frame": session.current_frame_index,
+            "media": {task.value: self._media_content(media) for task, media in session.media.items()},
             "task": None if session.task is None else session.task.value,
             "frame_step": session.frame_step,
             "inference_mode": None if session.inference_mode is None else session.inference_mode.value,
@@ -112,6 +103,52 @@ class SessionStore:
             "selections": [self._selection_content(selection) for selection in session.selections.values()],
         }
         self._file.write(content)
+
+    @staticmethod
+    def _media_content(media: SessionMedia) -> JsonValue:
+        return {
+            "paths": [str(media_path) for media_path in media.paths],
+            "current": None if media.current_path is None else str(media.current_path),
+            "frame": media.current_frame_index,
+        }
+
+    @classmethod
+    def _media_of(
+        cls, content: dict[str, JsonValue], task: RecognitionTask | None
+    ) -> dict[RecognitionTask, SessionMedia]:
+        value: JsonValue = content.get("media", {})
+        if isinstance(value, list):
+            if task is None:
+                return {}
+            return {
+                task: cls._task_media_of(
+                    {"paths": value, "current": content.get("current"), "frame": content.get("frame")}
+                )
+            }
+        media: dict[RecognitionTask, SessionMedia] = {}
+        for task_name, entry in JsonFields.object_of(value, "media").items():
+            try:
+                media[RecognitionTask(task_name)] = cls._task_media_of(JsonFields.object_of(entry, "task media"))
+            except (TypeError, ValueError):
+                continue
+        return media
+
+    @staticmethod
+    def _task_media_of(content: dict[str, JsonValue]) -> SessionMedia:
+        paths: tuple[Path, ...] = tuple(
+            Path(JsonFields.string_of(media_path, "media path"))
+            for media_path in JsonFields.list_of(content.get("paths", []), "media paths")
+        )
+        current_value: JsonValue = content.get("current")
+        current_path: Path | None = (
+            None if current_value is None else Path(JsonFields.string_of(current_value, "current"))
+        )
+        frame_value: JsonValue = content.get("frame")
+        return SessionMedia(
+            paths=paths,
+            current_path=current_path if current_path in paths else None,
+            current_frame_index=None if frame_value is None else JsonFields.integer_of(frame_value, "frame"),
+        )
 
     @staticmethod
     def _selection_content(selection: ModelSelection) -> JsonValue:

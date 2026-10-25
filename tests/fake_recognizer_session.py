@@ -102,6 +102,7 @@ class FakeRecognizerSession(RecognizerSession):
                         score=round(0.9 - 0.2 * position - frame_offset, 4),
                         logit=float(position),
                         query_label=name,
+                        similarity=round(0.3 - 0.05 * position, 4),
                     )
                     for position, name in enumerate(names)
                 ),

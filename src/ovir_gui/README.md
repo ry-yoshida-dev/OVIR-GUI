@@ -8,7 +8,7 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 
 | Component | Description |
 | --- | --- |
-| [analysis/](./analysis/README.md) | Per-class statistics, confidence histograms and model-to-model comparison of results. |
+| [analysis/](./analysis/README.md) | Class, picture and class-relation statistics of results and model-to-model comparison. |
 | [cli/](./cli/README.md) | `CommandLine` parsing of the `ovir-gui` arguments into `LaunchOptions`. |
 | [export/](./export/README.md) | `ResultExporter` and the writers saving results as tables, box/segmentation labels, masks, class folders and annotated media. |
 | [media/](./media/README.md) | Image and video files, frame keys, frame sampling and pixel loading. |

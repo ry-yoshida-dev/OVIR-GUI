@@ -10,10 +10,11 @@ from open_vocabulary_classification import (
     ImagePooling,
     ImageTiling,
     Precision,
+    ScoreActivation,
 )
 
 from ..prompting import QueryKind
-from ..recognition import RecognitionTask
+from ..recognition import LabelMode, RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
 from .model_preset import ModelPreset
@@ -103,6 +104,32 @@ class ClassificationModel(RecognitionModel):
             Pooling values, sorted.
         """
         return tuple(sorted(pooling.value for pooling in ClassifierBackend(backend).supported_image_poolings))
+
+    @staticmethod
+    def native_label_mode_of(backend: str) -> LabelMode:
+        """
+        Label mode the scores of a classifier family are made for.
+
+        Parameters
+        ----------
+        backend : str
+            Classifier family.
+
+        Returns
+        -------
+        LabelMode
+            Single-label for a softmax over the classes (CLIP), multi-label for a sigmoid of every class (SigLIP).
+
+        Raises
+        ------
+        ValueError
+            If the family is unknown.
+        """
+        match ClassifierBackend(backend).score_activation:
+            case ScoreActivation.SOFTMAX:
+                return LabelMode.SINGLE_LABEL
+            case ScoreActivation.SIGMOID:
+                return LabelMode.MULTI_LABEL
 
     @property
     def settings(self) -> ClassifierSettings:

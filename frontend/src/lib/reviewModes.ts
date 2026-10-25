@@ -1,4 +1,4 @@
-export type ReviewModeValue = "confidence" | "overlap";
+export type ReviewModeValue = "confidence" | "similarity" | "overlap";
 
 export type HistogramHighlight = "at-or-above" | "below";
 
@@ -23,6 +23,16 @@ const REVIEW_MODES: Record<ReviewModeValue, ReviewMode> = {
     valueHint:
       "Findings with a lower confidence are dimmed or hidden and not exported.",
   },
+  similarity: {
+    value: "similarity",
+    title: "Similarity",
+    step: 0.01,
+    minimum: -1,
+    maximum: 1,
+    highlight: "at-or-above",
+    valueHint:
+      "Cosine similarity of each picture and the best phrase of its top class, before the scores are compared across classes.",
+  },
   overlap: {
     value: "overlap",
     title: "NMS",
@@ -35,7 +45,11 @@ const REVIEW_MODES: Record<ReviewModeValue, ReviewMode> = {
   },
 };
 
-export const REVIEW_MODE_ORDER: ReviewModeValue[] = ["confidence", "overlap"];
+export const REVIEW_MODE_ORDER: ReviewModeValue[] = [
+  "confidence",
+  "similarity",
+  "overlap",
+];
 
 export function reviewModeOf(value: ReviewModeValue): ReviewMode {
   return REVIEW_MODES[value];

@@ -1,4 +1,4 @@
-import type { ClassEntry } from "../api/types";
+import type { ClassEntry, DrawingKindValue } from "../api/types";
 import type { PicturePromptEditor } from "../hooks/usePicturePromptEditor";
 import { InfoTip } from "./InfoTip";
 
@@ -8,24 +8,89 @@ interface PromptToolbarProps {
   frameStep: number;
 }
 
+const KIND_LABELS: Record<DrawingKindValue, { label: string; hint: string }> = {
+  exemplar: { label: "Exemplars", hint: "Boxes showing what the class looks like; every look-alike is found" },
+  mark: { label: "Objects", hint: "Clicks and boxes marking single objects, each segmented on its own" },
+};
+
+const POLARITIES: { label: string; isExcluding: boolean }[] = [
+  { label: "+ Include", isExcluding: false },
+  { label: "− Exclude", isExcluding: true },
+];
+
+const INCLUDE_HINTS: Record<DrawingKindValue, string> = {
+  exemplar: "Boxes mark examples of the class",
+  mark: "Clicks mark spots on the object",
+};
+
+const EXCLUDE_HINTS: Record<DrawingKindValue, string> = {
+  exemplar: "Boxes mark look-alikes that are not the class",
+  mark: "Clicks mark spots that are not part of the object",
+};
+
 function hintOf(editor: PicturePromptEditor, frameStep: number): string {
-  if (editor.kind === "exemplar") return "Drag a box around an example (+); right-drag or Ctrl-drag around a look-alike to exclude (−).";
+  if (editor.kind === "exemplar") {
+    return "Drag a box around an example with Include (+), or around a look-alike with Exclude (−); hold Ctrl to switch for one box.";
+  }
   if (!editor.isPointSupported) return "Drag a box around each object.";
   const sampling = frameStep > 1 ? ` Tracking reads every ${frameStep}th frame; sample every frame for smooth tracks.` : "";
   const tail = editor.isSequential ? ` Mark again on a later frame to correct it, then infer every sampled frame.${sampling}` : "";
-  return `Click on an object, right-click to exclude a spot, or drag a box.${tail}`;
+  return `Click on an object or drag a box; with Exclude (−), a click removes a spot from the object. Hold Ctrl to switch for one click.${tail}`;
 }
 
 export function PromptToolbar({ editor, classes, frameStep }: PromptToolbarProps) {
   const prompt = editor.prompt;
   if (editor.kind === null || prompt === null) return null;
   const marksHere = new Set(prompt.marks.map((mark) => mark.object_id));
+  const kind = editor.kind;
+  const kindLabel = KIND_LABELS[kind].label;
+  const isPolarityChoosable = kind === "exemplar" || editor.isPointSupported;
   return (
     <div className="prompt-toolbar">
       <label title="Draw on the picture; turn off to select and pan">
         <input type="checkbox" checked={editor.isEnabled} onChange={(event) => editor.setIsEnabled(event.target.checked)} />
-        {editor.kind === "exemplar" ? "Exemplars" : "Mark objects"}
+        {editor.kinds.length > 1 ? "Draw" : kindLabel}
       </label>
+      {editor.kinds.length > 1 && (
+        <div className="segmented" role="tablist" aria-label="Drawing">
+          {editor.kinds.map((entry) => (
+            <button
+              key={entry.value}
+              role="tab"
+              aria-selected={entry.value === editor.kind}
+              className={entry.value === editor.kind ? "active" : ""}
+              title={`${KIND_LABELS[entry.value].hint}${entry.is_used ? "" : " (not read by the chosen model)"}`}
+              onClick={() => editor.chooseKind(entry.value)}
+            >
+              {KIND_LABELS[entry.value].label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!editor.isKindUsed && (
+        <span
+          className="badge warning"
+          title={`${kindLabel} are kept with their class and read by the models that take them; choose such a model in Models to use them.`}
+        >
+          Not used by this model
+        </span>
+      )}
+      {isPolarityChoosable && (
+        <div className="segmented" role="tablist" aria-label="Polarity">
+          {POLARITIES.map((polarity) => (
+            <button
+              key={polarity.label}
+              role="tab"
+              aria-selected={polarity.isExcluding === editor.isExcluding}
+              className={polarity.isExcluding === editor.isExcluding ? "active" : ""}
+              title={polarity.isExcluding ? EXCLUDE_HINTS[kind] : INCLUDE_HINTS[kind]}
+              onClick={() => editor.setIsExcluding(polarity.isExcluding)}
+            >
+              {polarity.label}
+            </button>
+          ))}
+        </div>
+      )}
       <select
         value={editor.className ?? ""}
         disabled={classes.length === 0}
