@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { AggregationStep } from "../api/types";
+import type { AggregationStep, ScoreActivationValue } from "../api/types";
 import {
   DIAGRAM_CLASSES,
   DIAGRAM_PROMPTS,
@@ -18,6 +18,7 @@ import {
 
 interface AggregationDiagramProps {
   steps: readonly AggregationStep[];
+  activation: ScoreActivationValue;
   highlightedStep: number | null;
 }
 
@@ -57,6 +58,7 @@ const SOFTMAX_X = 1220;
 const CLASS_SCORE_GAP = 42;
 const IMAGE_Y = 367;
 const COLUMN_SUBSCRIPTS = ["₁", "₂"];
+const ACTIVATION_TITLES: Record<ScoreActivationValue, string> = { softmax: "Softmax", sigmoid: "Sigmoid" };
 
 function Text({ x, y, className, size, weight = 400, anchor = "middle", transform, children }: TextProps) {
   return (
@@ -351,15 +353,23 @@ function ImageBranch({ operatorX }: { operatorX: number }) {
   );
 }
 
-function TimingBadge({ x, mark, title, isActive }: { x: number; mark: string; title: string; isActive: boolean }) {
+function TimingBadge({
+  x,
+  mark,
+  title,
+  spanRight,
+}: {
+  x: number;
+  mark: string;
+  title: string;
+  spanRight: number | null;
+}) {
+  const isActive = spanRight !== null;
   return (
     <>
-      <circle cx={x + 4} cy={38} r={11} className={isActive ? "badge-active" : "badge-idle"} />
-      <Text x={x + 4} y={42.5} className={isActive ? "fill-surface" : "fill-muted"} size={12} weight={700}>
-        {mark}
-      </Text>
-      <Text x={x + 21} y={42.5} className={isActive ? "fill-ink" : "fill-muted"} size={12} weight={700} anchor="start">
-        {title}
+      {isActive && <path d={`M${x - 6},60 V54 H${spanRight} V60`} className="stroke-muted" fill="none" />}
+      <Text x={x - 6} y={42.5} className={isActive ? "fill-ink" : "fill-muted"} size={13} weight={700} anchor="start">
+        {`${mark} ${title}`}
       </Text>
     </>
   );
@@ -368,10 +378,11 @@ function TimingBadge({ x, mark, title, isActive }: { x: number; mark: string; ti
 /**
  * Overview of how the prompts and templates of the example classes become class scores: the sentences become text
  * vectors, steps on text vectors merge them into representative vectors, each is compared with the image vector, steps
- * on similarities reduce the similarities, a softmax runs over the candidates left and each class takes its best one.
+ * on similarities reduce the similarities, the activation of the model scores the candidates left (a softmax shares the
+ * score among them, a sigmoid scores each on its own) and each class takes its best one.
  * A highlighted step stands out while the others fade.
  */
-export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagramProps) {
+export function AggregationDiagram({ steps, activation, highlightedStep }: AggregationDiagramProps) {
   const indexedSteps = steps.map((step, index) => ({ step, index }));
   const embeddingSteps = indexedSteps.filter(({ step }) => step.timing === "embedding");
   const similaritySteps = indexedSteps.filter(({ step }) => step.timing === "similarity");
@@ -400,7 +411,7 @@ export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagra
   );
 
   const candidates = similarities.cells;
-  const probabilities = probabilitiesOf(candidates);
+  const probabilities = probabilitiesOf(candidates, activation);
   const probabilityX = SOFTMAX_X + 60;
   const probabilityLayout = layoutOf(candidates, probabilityX);
   const classX = probabilityX + probabilityLayout.width + CLASS_SCORE_GAP;
@@ -448,17 +459,7 @@ export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagra
       <StageLabel x={VECTOR_X + sentenceLayout.width / 2} lines={["Text", "vectors"]} />
       {vectors.parts}
       {hasEmbedding && (
-        <>
-          <rect
-            x={VECTOR_X - 8}
-            y={56}
-            width={vectors.x + vectors.layout.width + 16 - VECTOR_X}
-            height={198}
-            rx={10}
-            className="zone"
-          />
-          <StageLabel x={vectors.x + vectors.layout.width / 2} lines={["Representative", "vectors"]} />
-        </>
+        <StageLabel x={vectors.x + vectors.layout.width / 2} lines={["Representative", "vectors"]} />
       )}
 
       <line x1={operatorX} y1={350} x2={operatorX} y2={Math.min(...vectorCenters)} className="stroke-ink" />
@@ -480,20 +481,7 @@ export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagra
       <StageLabel x={similarityX + similarityLayout.width / 2} lines={["Similarities"]} />
       {similarities.parts}
       {hasSimilarity && (
-        <>
-          <rect
-            x={similarityX - 8}
-            y={56}
-            width={similarities.x + similarities.layout.width + 16 - similarityX}
-            height={198}
-            rx={10}
-            className="zone"
-          />
-          <StageLabel
-            x={similarities.x + similarities.layout.width / 2}
-            lines={["Representative", "similarities"]}
-          />
-        </>
+        <StageLabel x={similarities.x + similarities.layout.width / 2} lines={["Representative", "similarities"]} />
       )}
 
       {centersOf(similarities.layout).map((center) => (
@@ -508,7 +496,7 @@ export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagra
         weight={700}
         transform={`rotate(-90 ${SOFTMAX_X + 20} 165)`}
       >
-        Softmax
+        {ACTIVATION_TITLES[activation]}
       </Text>
       {centersOf(probabilityLayout).map((center) => (
         <Arrow key={center} x1={SOFTMAX_X + 42} y1={center} x2={probabilityX - 4} y2={center} />
@@ -585,8 +573,18 @@ export function AggregationDiagram({ steps, highlightedStep }: AggregationDiagra
         );
       })}
 
-      <TimingBadge x={VECTOR_X} mark="①" title="Text vectors" isActive={hasEmbedding} />
-      <TimingBadge x={Math.max(similarityX, 810)} mark="②" title="Similarities" isActive={hasSimilarity} />
+      <TimingBadge
+        x={VECTOR_X}
+        mark="①"
+        title="Text vectors"
+        spanRight={hasEmbedding ? vectors.x + vectors.layout.width + 6 : null}
+      />
+      <TimingBadge
+        x={similarityX}
+        mark="②"
+        title="Similarities"
+        spanRight={hasSimilarity ? similarities.x + similarities.layout.width + 6 : null}
+      />
       <ImageBranch operatorX={operatorX} />
     </svg>
   );

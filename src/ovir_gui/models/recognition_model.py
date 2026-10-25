@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
-from open_vocabulary_classification import PromptAggregation
+from open_vocabulary_classification import PromptAggregation, ScoreActivation
 
 from ..prompting import PromptMode, QueryKind
 from ..recognition import RecognitionTask
@@ -224,6 +224,18 @@ class RecognitionModel(ABC):
         -------
         PromptAggregation | None
             ``None`` unless a subclass aggregates prompts and templates.
+        """
+        return None
+
+    @property
+    def score_activation(self) -> ScoreActivation | None:
+        """
+        Activation turning the logits of the model into scores.
+
+        Returns
+        -------
+        ScoreActivation | None
+            ``None`` unless a subclass scores classes from logits.
         """
         return None
 

@@ -1,4 +1,4 @@
-import type { AggregationMethodValue, AggregationUnitValue } from "../api/types";
+import type { AggregationMethodValue, AggregationUnitValue, ScoreActivationValue } from "../api/types";
 
 export interface DiagramClass {
   name: string;
@@ -38,6 +38,7 @@ export const DIAGRAM_PROMPTS: DiagramPrompt[] = [
 export const DIAGRAM_TEMPLATES = ["a photo of a { }", "a drawing of a { }"];
 export const LOGIT_SCALE = 100;
 const SENTENCE_SIMILARITY = 0.8;
+const SIGMOID_LOGIT_BIAS = -29.5;
 
 /**
  * Item at a position of a list known to hold it.
@@ -160,13 +161,20 @@ export function reducedSimilarities(
 }
 
 /**
- * Softmax of the logits of every candidate.
+ * Score of every candidate: a softmax shares the score among the candidates, a sigmoid scores each on its own after
+ * the bias of the example model.
  */
-export function probabilitiesOf(cells: readonly DiagramCell[]): number[] {
-  const maximum = Math.max(...cells.map((cell) => cell.logit));
-  const exponentials = cells.map((cell) => Math.exp(cell.logit - maximum));
-  const total = exponentials.reduce((sum, value) => sum + value, 0);
-  return exponentials.map((value) => value / total);
+export function probabilitiesOf(cells: readonly DiagramCell[], activation: ScoreActivationValue): number[] {
+  switch (activation) {
+    case "softmax": {
+      const maximum = Math.max(...cells.map((cell) => cell.logit));
+      const exponentials = cells.map((cell) => Math.exp(cell.logit - maximum));
+      const total = exponentials.reduce((sum, value) => sum + value, 0);
+      return exponentials.map((value) => value / total);
+    }
+    case "sigmoid":
+      return cells.map((cell) => 1 / (1 + Math.exp(-(cell.logit + SIGMOID_LOGIT_BIAS))));
+  }
 }
 
 /**

@@ -67,12 +67,13 @@ export function ModelPanel({
             />
           </>
         )}
-        {model.aggregation !== null && (
+        {model.aggregation !== null && model.score_activation !== null && (
           <>
             <span>Aggregation</span>
             <AggregationField
               steps={model.aggregation}
               methods={model.aggregation_methods}
+              activation={model.score_activation}
               isDisabled={isDisabled}
               onChange={(steps) => onSelectionChange({ ...selection, aggregation: steps })}
             />

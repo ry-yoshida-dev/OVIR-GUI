@@ -145,6 +145,7 @@ export interface ModelSelection {
 export type AggregationUnitValue = "template" | "prompt" | "template_and_prompt";
 export type AggregationTimingValue = "embedding" | "similarity";
 export type AggregationMethodValue = "mean" | "max" | "median" | "min" | "logsumexp";
+export type ScoreActivationValue = "softmax" | "sigmoid";
 
 export interface AggregationStep {
   unit: AggregationUnitValue;
@@ -174,6 +175,7 @@ export interface ModelState {
   saved_templates: string[];
   aggregation: AggregationStep[] | null;
   aggregation_methods: { value: AggregationMethodValue; title: string }[];
+  score_activation: ScoreActivationValue | null;
   weights_path: string;
   description: string;
   benchmark_phrase_count: number;

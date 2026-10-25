@@ -308,6 +308,18 @@ class ClassificationModel(RecognitionModel):
         return self._settings.text_templates
 
     @property
+    def score_activation(self) -> ScoreActivation:
+        """
+        Activation turning the logits of the classifier into scores.
+
+        Returns
+        -------
+        ScoreActivation
+            Softmax over the candidates (CLIP) or sigmoid of every candidate (SigLIP).
+        """
+        return self._settings.backend.score_activation
+
+    @property
     def aggregation(self) -> PromptAggregation:
         """
         How the prompts and templates of every class become its score.

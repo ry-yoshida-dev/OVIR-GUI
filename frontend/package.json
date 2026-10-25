@@ -13,6 +13,7 @@
   "dependencies": {
     "@video-player-ui/core": "https://github.com/ry-yoshida-dev/VideoPlayerUI/releases/download/v0.1.1/video-player-ui-core-0.1.1.tgz",
     "@video-player-ui/web": "https://github.com/ry-yoshida-dev/VideoPlayerUI/releases/download/v0.1.1/video-player-ui-web-0.1.1.tgz",
+    "katex": "^0.19.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

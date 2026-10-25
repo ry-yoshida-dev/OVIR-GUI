@@ -130,6 +130,7 @@ class ModelPanelBuilder:
             "text_templates": None if text_templates is None else list[JsonValue](text_templates),
             "saved_templates": list[JsonValue](workspace.text_templates.templates),
             "aggregation": None if aggregation is None else self._steps(aggregation),
+            "score_activation": None if model.score_activation is None else model.score_activation.value,
             "aggregation_methods": [
                 {"value": method.value, "title": ClassificationModel.method_title_of(method)}
                 for method in AggregationMethod

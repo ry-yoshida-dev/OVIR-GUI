@@ -1,11 +1,12 @@
 import { type DragEvent, type RefObject, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
-import type { AggregationMethodValue, AggregationStep } from "../api/types";
+import type { AggregationMethodValue, AggregationStep, ScoreActivationValue } from "../api/types";
 import {
   type AggregationRows,
   EMBEDDING_METHOD,
   type RowTiming,
   UNIT_TITLES,
   canAggregateTogether,
+  isSameSteps,
   stepIndexOf,
   stepsOf,
   swapped,
@@ -14,11 +15,13 @@ import {
 } from "../lib/aggregationRows";
 import { placeInViewport } from "../lib/viewportPlacement";
 import { AggregationDiagram } from "./AggregationDiagram";
+import { AggregationMethodPicker } from "./AggregationMethodPicker";
 
 interface AggregationPanelProps {
   anchor: RefObject<HTMLElement | null>;
   aggregation: AggregationRows;
   methods: { value: AggregationMethodValue; title: string }[];
+  activation: ScoreActivationValue;
   isDisabled: boolean;
   onChange: (aggregation: AggregationRows) => void;
   onClose: () => void;
@@ -32,7 +35,6 @@ const TIMINGS: { value: RowTiming; title: string }[] = [
   { value: "embedding", title: "① Text vectors" },
   { value: "similarity", title: "② Similarities" },
 ];
-const NO_METHOD = "—";
 
 interface Preview {
   aggregation: AggregationRows;
@@ -47,7 +49,15 @@ interface Preview {
  * and pointing at a timing or at aggregating together shows the overview that choice gives before it is made.
  * It closes with its close button or Escape.
  */
-export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onChange, onClose }: AggregationPanelProps) {
+export function AggregationPanel({
+  anchor,
+  aggregation,
+  methods,
+  activation,
+  isDisabled,
+  onChange,
+  onClose,
+}: AggregationPanelProps) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const [highlightedStep, setHighlightedStep] = useState<number | null>(null);
@@ -83,16 +93,11 @@ export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onC
   const steps: AggregationStep[] = stepsOf(aggregation);
   const isTogetherPossible = canAggregateTogether(aggregation);
   const isTogether = aggregation.isTogether && isTogetherPossible;
-  const hasEmbedding = steps.some((step) => step.timing === "embedding");
-  const note =
-    steps.length === 0
-      ? "Nothing is aggregated: every sentence is a candidate, and a class scores its best one."
-      : hasEmbedding
-        ? "Steps on text vectors change what the picture is compared with: changing them needs a Re-run. Steps on similarities apply at once."
-        : "Every step is on similarities: changes apply at once, without a Re-run.";
+  const isOrderChosen = isTogetherPossible && !isTogether;
 
   const shownSteps: AggregationStep[] = preview === null ? steps : stepsOf(preview.aggregation);
   const shownHighlight = preview === null ? highlightedStep : previewHighlightOf(preview, shownSteps);
+  const note = noteOf(steps, shownSteps);
   const previewProps = (next: AggregationRows, rowIndex: number | null) => ({
     onMouseEnter: () => setPreview({ aggregation: next, rowIndex }),
     onMouseLeave: () => setPreview(null),
@@ -134,7 +139,7 @@ export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onC
         </button>
       </div>
       <div className="aggregation-diagram">
-        <AggregationDiagram steps={shownSteps} highlightedStep={shownHighlight} />
+        <AggregationDiagram steps={shownSteps} activation={activation} highlightedStep={shownHighlight} />
       </div>
       <div className="aggregation-controls">
         <span className="aggregation-heading">Unit</span>
@@ -155,10 +160,14 @@ export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onC
               {...dropProps(index)}
             >
               <span
-                className="drag-handle"
-                draggable={!isDisabled}
-                title="Drag to change the order"
-                aria-label="Drag to change the order"
+                className={isOrderChosen ? "drag-handle" : "drag-handle inactive"}
+                draggable={!isDisabled && isOrderChosen}
+                title={
+                  isOrderChosen
+                    ? "Drag to change which runs first"
+                    : "The order matters when both run at the same timing, one after the other"
+                }
+                aria-label="Drag to change which runs first"
                 onDragStart={(event) => {
                   setDraggedIndex(index);
                   event.dataTransfer.effectAllowed = "move";
@@ -195,27 +204,22 @@ export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onC
                   </button>
                 ))}
               </span>
-              <select
-                className="aggregation-method"
-                aria-label={`Method of ${UNIT_TITLES[row.unit]}`}
-                value={row.timing === "none" ? NO_METHOD : row.method}
-                disabled={isDisabled || !isMethodChosen}
-                onChange={(event) =>
-                  onChange(withMethod(aggregation, index, event.target.value as AggregationMethodValue))
+              <AggregationMethodPicker
+                label={`Method of ${UNIT_TITLES[row.unit]}`}
+                value={row.timing === "none" ? null : row.method}
+                methods={methods.filter((method) => row.timing === "similarity" || method.value === EMBEDDING_METHOD)}
+                activation={activation}
+                isDisabled={isDisabled || !isMethodChosen}
+                disabledTitle={disabledMethodTitleOf(row.timing, isTogether && index === 1)}
+                onChoose={(method) => onChange(withMethod(aggregation, index, method))}
+                onPreview={(method) =>
+                  setPreview(
+                    method === null
+                      ? null
+                      : { aggregation: withMethod(aggregation, index, method), rowIndex: index },
+                  )
                 }
-              >
-                {row.timing === "none" ? (
-                  <option value={NO_METHOD}>{NO_METHOD}</option>
-                ) : (
-                  methods
-                    .filter((method) => row.timing === "similarity" || method.value === EMBEDDING_METHOD)
-                    .map((method) => (
-                      <option key={method.value} value={method.value}>
-                        {method.title}
-                      </option>
-                    ))
-                )}
-              </select>
+              />
             </div>,
           ];
         })}
@@ -234,7 +238,7 @@ export function AggregationPanel({ anchor, aggregation, methods, isDisabled, onC
           />
           Aggregate templates and prompts together
         </label>
-        <span className="aggregation-note">{note}</span>
+        <span className={note.isRerun ? "aggregation-note rerun" : "aggregation-note"}>{note.text}</span>
       </div>
     </div>
   );
@@ -244,4 +248,37 @@ function previewHighlightOf(preview: Preview, steps: readonly AggregationStep[])
   if (preview.rowIndex === null) return steps.length === 1 && steps[0]?.unit === "template_and_prompt" ? 0 : null;
   const row = preview.aggregation.rows[preview.rowIndex];
   return row === undefined ? null : stepIndexOf(steps, row);
+}
+
+function noteOf(
+  steps: readonly AggregationStep[],
+  shownSteps: readonly AggregationStep[],
+): { text: string; isRerun: boolean } {
+  if (!isSameSteps(steps, shownSteps)) {
+    const embeddingOf = (candidates: readonly AggregationStep[]) =>
+      candidates.filter((step) => step.timing === "embedding");
+    return isSameSteps(embeddingOf(steps), embeddingOf(shownSteps))
+      ? { text: "This change applies at once, without a Re-run.", isRerun: false }
+      : { text: "This change needs a Re-run: steps on text vectors change what the picture is compared with.", isRerun: true };
+  }
+  if (steps.length === 0)
+    return { text: "Nothing is aggregated: every sentence is a candidate, and a class scores its best one.", isRerun: false };
+  return steps.some((step) => step.timing === "embedding")
+    ? {
+        text: "Steps on text vectors change what the picture is compared with: changing them needs a Re-run. Steps on similarities apply at once.",
+        isRerun: false,
+      }
+    : { text: "Every step is on similarities: changes apply at once, without a Re-run.", isRerun: false };
+}
+
+function disabledMethodTitleOf(timing: RowTiming, isFollowingTogether: boolean): string {
+  if (isFollowingTogether) return "Aggregated together with the method of the first row";
+  switch (timing) {
+    case "none":
+      return "Not aggregated";
+    case "embedding":
+      return "Text vectors are averaged and normalized again";
+    case "similarity":
+      return "";
+  }
 }

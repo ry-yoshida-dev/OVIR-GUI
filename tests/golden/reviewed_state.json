@@ -883,6 +883,7 @@
     "saved_templates": [
       "a photo of a {}."
     ],
+    "score_activation": null,
     "selection": {
       "aggregation": null,
       "backend": "grounding_dino",
