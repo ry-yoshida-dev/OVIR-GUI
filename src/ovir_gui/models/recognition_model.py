@@ -16,6 +16,7 @@ from .threshold_controls import ThresholdControls
 if TYPE_CHECKING:
     from .detection_model import DetectionModel
     from .recognizer import Recognizer
+    from .template_combination import TemplateCombination
 
 
 class RecognitionModel(ABC):
@@ -209,6 +210,18 @@ class RecognitionModel(ABC):
         Returns
         -------
         tuple[str, ...] | None
+            ``None`` unless a subclass fills phrases into templates.
+        """
+        return None
+
+    @property
+    def template_combination(self) -> "TemplateCombination | None":
+        """
+        How the sentences of a phrase, one per text template, turn into its score.
+
+        Returns
+        -------
+        TemplateCombination | None
             ``None`` unless a subclass fills phrases into templates.
         """
         return None

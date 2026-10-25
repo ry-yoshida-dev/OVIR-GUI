@@ -43,4 +43,6 @@ Request bodies of the JSON API, validated by FastAPI before a route handler of t
 | [task_body.py](./task_body.py) | `TaskBody` names the task to switch to. |
 | [suppression_body.py](./suppression_body.py) | `SuppressionBody` sets the review suppression of overlapping boxes for the current task. |
 | [text_body.py](./text_body.py) | `TextBody` carries a text. |
+| [text_templates_body.py](./text_templates_body.py) | `TextTemplatesBody` carries the text templates saved for reuse by classifiers. |
 | [thresholds_body.py](./thresholds_body.py) | `ThresholdsBody` sets the minimum confidence of the classes and phrases for the current task. |
+| [weights_body.py](./weights_body.py) | `WeightsBody` names the downloaded weights of a preset to delete. |

@@ -1,5 +1,6 @@
 import bisect
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import replace
 from pathlib import Path
 
 from ..media import FrameKey
@@ -177,6 +178,18 @@ class ResultCatalog:
         if stored is None:
             raise KeyError(f"{frame_key.label} has not been recognized")
         self._results[frame_key] = stored.with_accepted(frozenset(indices), is_accepted)
+
+    def rescore(self, rescored: Callable[[FrameResult], FrameResult]) -> None:
+        """
+        Replace every result by a copy scored again, keeping its signature and rejections.
+
+        Parameters
+        ----------
+        rescored : Callable[[FrameResult], FrameResult]
+            Result scored again from a stored one.
+        """
+        for frame_key, stored in self._results.items():
+            self._results[frame_key] = replace(stored, result=rescored(stored.result))
 
     def prompt_change_of(self, frame_key: FrameKey, current: PromptSignature) -> PromptChange | None:
         """

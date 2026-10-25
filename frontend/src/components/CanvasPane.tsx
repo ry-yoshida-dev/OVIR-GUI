@@ -142,6 +142,7 @@ export function CanvasPane({
         {isGalleryShown ? (
           <ClassificationGallery
             rows={rows}
+            options={display}
             media={state.media}
             currentPictureKey={resultPictureKey}
             selectedKey={selectedRowKey}

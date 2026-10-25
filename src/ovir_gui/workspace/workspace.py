@@ -4,11 +4,15 @@ from typing import ClassVar
 
 from ..media import FrameKey, InferenceMode, MediaCollection, MediaItem, VideoSampling
 from ..models import (
+    ClassificationModel,
     LicenseConsent,
     ModelProfile,
+    ModelSelection,
     ModelSelector,
     RecognitionModel,
     RecognizerSession,
+    TemplateCombination,
+    WeightsStorage,
 )
 from ..prompting import PicturePromptBoard, PicturePrompts
 from ..recognition import RecognitionTask
@@ -34,6 +38,7 @@ from .run_progress import RunProgress
 from .session_mapper import SessionMapper
 from .status_notifier import StatusNotifier
 from .task_scheduler import TaskScheduler
+from .text_template_library import TextTemplateLibrary
 from .working_state import WorkingState
 from .workspace_stores import WorkspaceStores
 from .workspace_topic import WorkspaceTopic
@@ -71,6 +76,7 @@ class Workspace:
         stores: WorkspaceStores,
         scheduler: TaskScheduler,
         session: RecognizerSession | None = None,
+        weights_storage: WeightsStorage | None = None,
     ) -> None:
         """
         Parameters
@@ -83,6 +89,8 @@ class Workspace:
             Thread owning the workspace.
         session : RecognizerSession | None, optional
             Session keeping the loaded model; a new one by default.
+        weights_storage : WeightsStorage | None, optional
+            Downloaded weights of the presets; the caches of this computer by default.
         """
         self._stores: WorkspaceStores = stores
         self._notifier: StatusNotifier = StatusNotifier()
@@ -105,6 +113,9 @@ class Workspace:
             self._settings,
             self._notifier,
         )
+        self._text_templates: TextTemplateLibrary = TextTemplateLibrary(
+            stores.text_template_store, model_selector, self._notifier
+        )
         self._workbench: ClassWorkbench = ClassWorkbench(stores.class_set_store, self._settings)
         remembered_prompts: dict[RecognitionTask, PicturePrompts] = stores.picture_prompt_store.load()
         for task in RecognitionTask:
@@ -121,11 +132,12 @@ class Workspace:
             model_selector,
             LicenseConsent(stores.license_consent_store.load()),
             stores.license_consent_store,
+            WeightsStorage.on_this_computer() if weights_storage is None else weights_storage,
             self._settings,
             self._planner,
             self._notifier,
             lambda: self._jobs.is_busy,
-            lambda: self._settings_changed(WorkspaceTopic.STATE),
+            self._model_chosen,
         )
         self._read_model: ResultReadModel = ResultReadModel(
             self._working, self._settings, self._library, self._workbench, self._review, self._planner
@@ -195,6 +207,7 @@ class Workspace:
             self._models.current_model,
         )
         self._session.apply_stored()
+        self._library.apply_template_combination(self._template_combination())
         self._profiles.show_profile_of_task()
 
     @property
@@ -256,6 +269,18 @@ class Workspace:
             Review settings; changing them only filters the stored results again.
         """
         return self._review
+
+    @property
+    def text_templates(self) -> TextTemplateLibrary:
+        """
+        Text templates saved for reuse by every classifier.
+
+        Returns
+        -------
+        TextTemplateLibrary
+            Saved templates of the data directory.
+        """
+        return self._text_templates
 
     @property
     def playback(self) -> PlaybackPreparer:
@@ -365,24 +390,24 @@ class Workspace:
     @property
     def sampling(self) -> VideoSampling:
         """
-        Sampled frames of videos.
+        Sampled frames of videos in the current task.
 
         Returns
         -------
         VideoSampling
-            Current sampling.
+            Sampling of the current task.
         """
         return self._settings.sampling
 
     @property
     def inference_mode(self) -> InferenceMode:
         """
-        Which pictures are inferred, automatically while the user works and by Infer.
+        Which pictures of the current task are inferred, automatically while the user works and by Infer.
 
         Returns
         -------
         InferenceMode
-            Current mode.
+            Mode of the current task.
         """
         return self._settings.inference_mode
 
@@ -604,7 +629,7 @@ class Workspace:
 
     def set_sampling(self, frame_step: int) -> None:
         """
-        Recognize every ``frame_step``-th frame of videos; results of other frames are kept.
+        Recognize every ``frame_step``-th frame of videos in the current task; results of other frames are kept.
 
         Parameters
         ----------
@@ -624,7 +649,7 @@ class Workspace:
 
     def set_inference(self, mode: InferenceMode, is_auto: bool) -> None:
         """
-        Choose which pictures are inferred, and whether automatically.
+        Choose which pictures of the current task are inferred, and whether automatically.
 
         Parameters
         ----------
@@ -641,7 +666,8 @@ class Workspace:
 
     def select_task(self, task: RecognitionTask) -> None:
         """
-        Switch to another task; its model, classes, media, results and class minimums are shown.
+        Switch to another task; its model, classes, media, results, compared results, class minimums, sampling and
+        inference choices are shown.
 
         Parameters
         ----------
@@ -660,10 +686,11 @@ class Workspace:
         if task is self._settings.task:
             return
         is_media_kept: bool = self._working.switch_media(self._settings.task, task)
+        kept_comparison: ModelProfile | None = self._working.switch_comparison(self._settings.task, task)
         self._settings.task = task
-        self._working.compared_profile = None
         self._planner.unpin()
         self._profiles.show_profile_of_task()
+        self._profiles.restore_comparison(kept_comparison)
         self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
         if not is_media_kept:
             self._open_remembered_media()
@@ -761,6 +788,21 @@ class Workspace:
         except (OSError, ValueError) as error:
             self._notifier.replace_status(f"Could not restore the saved results: {error}")
             return ResultLibrary()
+
+    def _template_combination(self) -> TemplateCombination:
+        selection: ModelSelection | None = self._settings.selections.get(RecognitionTask.CLASSIFICATION)
+        if selection is None or selection.template_combination is None:
+            return ClassificationModel.DEFAULT_COMBINATION
+        return selection.template_combination
+
+    def _model_chosen(self) -> None:
+        combination: TemplateCombination = self._template_combination()
+        if combination is self._library.template_combination:
+            self._settings_changed(WorkspaceTopic.STATE)
+            return
+        self._library.apply_template_combination(combination)
+        self._results_save.schedule()
+        self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
 
     def _settings_changed(self, *topics: WorkspaceTopic) -> None:
         self._session.save()

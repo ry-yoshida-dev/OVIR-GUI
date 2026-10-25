@@ -23,6 +23,7 @@ import type {
   ResultsPayload,
   ShowReply,
   StatisticsPayload,
+  StoredWeightsPayload,
   TaskValue,
   Thresholds,
   TimelinePayload,
@@ -150,6 +151,9 @@ export const api = {
   selectModel: (selection: ModelSelection) => put("/api/model", selection),
   selectPreset: (backend: string, presetName: string) =>
     put("/api/model/preset", { backend, preset_name: presetName }),
+  storedWeights: () => get<StoredWeightsPayload>("/api/model/weights"),
+  deleteWeights: (weightsPath: string) =>
+    post("/api/model/weights/delete", { weights_path: weightsPath }),
   acceptLicense: (dependency: string) =>
     post("/api/licenses/accept", { dependency }),
   run: (isSkippingApproved = false) =>
@@ -173,6 +177,8 @@ export const api = {
   setThresholds: (thresholds: Thresholds) => put("/api/thresholds", thresholds),
   setSuppression: (suppression: DuplicateSuppression) =>
     put("/api/suppression", suppression),
+  setTextTemplates: (templates: string[]) =>
+    put("/api/text-templates", { templates }),
   setLabelMode: (labelMode: LabelModeValue) =>
     put("/api/label-mode", { label_mode: labelMode }),
   tableCsv: (findings: { path: string; frame: number | null; index: number }[]) =>

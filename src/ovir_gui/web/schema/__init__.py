@@ -33,7 +33,9 @@ from .suppression_body import SuppressionBody
 from .table_body import TableBody
 from .task_body import TaskBody
 from .text_body import TextBody
+from .text_templates_body import TextTemplatesBody
 from .thresholds_body import ThresholdsBody
+from .weights_body import WeightsBody
 
 __all__ = [
     "AcceptanceBody",
@@ -71,5 +73,7 @@ __all__ = [
     "TableBody",
     "TaskBody",
     "TextBody",
+    "TextTemplatesBody",
     "ThresholdsBody",
+    "WeightsBody",
 ]

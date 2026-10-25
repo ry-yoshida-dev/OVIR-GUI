@@ -6,23 +6,25 @@ import { clamp } from "../lib/numbers";
 import {
   type ColumnCondition,
   type ColumnDefinition,
+  filterOfScope,
   type ColumnKey,
   columnsOf,
   formatNumber,
   frameText,
   pictureKeyOf,
   type ResultScope,
-  runnerUpTextOf,
   type SortOrder,
   type TableFilter,
   type TableRow,
 } from "../lib/resultTable";
-import { FilterPopup } from "./FilterPopup";
+import { PLAIN_TEMPLATE } from "../lib/textTemplate";
+import { FilterPanel } from "./FilterPanel";
 import { ExportGlyph, FilterGlyph } from "./Glyphs";
-import { useMenu } from "./Menu";
 import { MediaKindGlyph } from "./MediaKindGlyph";
 import { MixedCheckbox } from "./MixedCheckbox";
 import { ResultsHeading } from "./ResultsHeading";
+import { ScoreBars } from "./ScoreBars";
+import { TemplateText } from "./TemplateText";
 
 interface ResultTableProps {
   task: TaskValue;
@@ -81,15 +83,17 @@ export function ResultTable({
   isExportDisabled,
   onExport,
 }: ResultTableProps) {
-  const menu = useMenu();
   const scroller = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(400);
-  const [popup, setPopup] = useState<{ column: ColumnDefinition; x: number; y: number } | null>(null);
+  const [panelKey, setPanelKey] = useState<ColumnKey | null>(null);
+  const filterButton = useRef<HTMLButtonElement>(null);
   const headerRow = useRef<HTMLTableRowElement>(null);
   const [fonts, setFonts] = useState<ColumnFonts | null>(null);
   const [paddings, setPaddings] = useState<number[]>([]);
   const columns = useMemo(() => columnsOf(task, scope), [task, scope]);
+  const filterableColumns = useMemo(() => columns.filter((column) => column.isFilterable), [columns]);
+  const scopedFilter = useMemo(() => filterOfScope(filter, scope), [filter, scope]);
   const statusLeadCount = columns.findIndex((column) => column.key === "class");
 
   useLayoutEffect(() => {
@@ -142,9 +146,15 @@ export function ResultTable({
   const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
   const last = Math.min(rows.length, Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN);
   const visibleRows = rows.slice(first, last);
-  const filteredCount = Object.keys(filter).filter((key) => columns.some((column) => column.key === key)).length;
+  const filteredCount = Object.keys(scopedFilter).length;
   const findingRows = useMemo(() => rows.filter((row) => row.kind === "finding"), [rows]);
   const keptCount = findingRows.filter((row) => row.finding.is_accepted).length;
+  const totalFindingCount = useMemo(() => allRows.filter((row) => row.kind === "finding").length, [allRows]);
+  const firstPanelKey =
+    filterableColumns.find((column) => scopedFilter[column.key] !== undefined)?.key ??
+    filterableColumns.find((column) => column.key === "class")?.key ??
+    filterableColumns[0]?.key ??
+    null;
 
   const setCondition = (key: ColumnKey, condition: ColumnCondition | undefined) => {
     const next = { ...filter };
@@ -187,8 +197,6 @@ export function ResultTable({
         );
       case "frame":
         return frameText(row.frame, row.seconds);
-      case "runner_up":
-        return <span className="muted">{runnerUpTextOf(row.scores) ?? ""}</span>;
       default:
         break;
     }
@@ -207,8 +215,25 @@ export function ResultTable({
         );
       case "prompt":
         return finding.matched_prompt;
+      case "template":
+        if (finding.matched_template === null) return null;
+        return finding.matched_template === PLAIN_TEMPLATE ? (
+          <span className="muted">None</span>
+        ) : (
+          <TemplateText template={finding.matched_template} />
+        );
       case "confidence":
-        return formatNumber(finding.confidence, "confidence");
+        return (
+          <>
+            {formatNumber(finding.confidence, "confidence")}
+            {row.scores.length > 0 && (
+              <ScoreBars
+                scores={row.scores}
+                colorOf={(className) => classColorOf(classColors, className, SWATCH_FALLBACK_COLOR)}
+              />
+            )}
+          </>
+        );
       case "area":
         return finding.area === null ? "" : formatNumber(finding.area, "area");
       case "x1":
@@ -230,35 +255,20 @@ export function ResultTable({
         onToggle={onToggleCollapsed}
       >
         {!isCollapsed && (
-          <>
-            <button
-              className={`ghost small filter-button${filteredCount > 0 ? " active" : ""}`}
-              title="Filter the listed rows by column"
-              aria-label="Filter"
-              onClick={(event) => {
-                const bounds = event.currentTarget.getBoundingClientRect();
-                menu.openBelow(
-                  event.currentTarget,
-                  columns.map((column) => ({
-                    label: column.label,
-                    isChecked: filter[column.key] !== undefined,
-                    onSelect: () => setPopup({ column, x: bounds.left, y: bounds.bottom + 4 }),
-                  })),
-                );
-              }}
-            >
-              <FilterGlyph />
-              {filteredCount > 0 && filteredCount}
-            </button>
-            {filteredCount > 0 && (
-              <button className="ghost small" onClick={() => onFilterChange({})}>
-                Clear Filters
-              </button>
-            )}
-          </>
+          <button
+            ref={filterButton}
+            className={`small filter-button${filteredCount > 0 ? " active" : ""}${panelKey === null ? "" : " open"}`}
+            title="Filter the listed findings"
+            onClick={() => setPanelKey(panelKey === null ? firstPanelKey : null)}
+          >
+            <FilterGlyph />
+            Filter{filteredCount > 0 && ` · ${filteredCount}`}
+          </button>
         )}
+        <span className="muted small">
+          {filteredCount > 0 ? `${findingRows.length} of ${totalFindingCount}` : findingRows.length} listed
+        </span>
         <span className="grow" />
-        <span className="muted small">{findingRows.length} listed</span>
         <button
           className="small export-button"
           disabled={isExportDisabled}
@@ -316,7 +326,7 @@ export function ResultTable({
                         className="funnel"
                         onClick={(event) => {
                           event.stopPropagation();
-                          setPopup({ column, x: event.clientX, y: event.clientY });
+                          setPanelKey(column.key);
                         }}
                       >
                         <FilterGlyph />
@@ -381,18 +391,21 @@ export function ResultTable({
           </table>
         </div>
       )}
-      {popup !== null && (
-        <FilterPopup
-          column={popup.column}
+      {panelKey !== null && !isCollapsed && (
+        <FilterPanel
+          columns={filterableColumns}
           rows={allRows}
-          condition={filter[popup.column.key]}
-          x={popup.x}
-          y={popup.y}
-          onApply={(condition) => setCondition(popup.column.key, condition)}
-          onClose={() => setPopup(null)}
+          filter={scopedFilter}
+          initialKey={panelKey}
+          anchor={filterButton}
+          listedCount={findingRows.length}
+          totalCount={totalFindingCount}
+          classColors={classColors}
+          onConditionChange={setCondition}
+          onClear={() => onFilterChange({})}
+          onClose={() => setPanelKey(null)}
         />
       )}
-      {menu.element}
     </div>
   );
 }

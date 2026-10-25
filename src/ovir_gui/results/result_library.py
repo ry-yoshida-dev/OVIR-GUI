@@ -1,9 +1,10 @@
 from collections.abc import Callable, Iterable
+from functools import partial
 
 from ..media import FrameKey
-from ..models import ModelProfile
+from ..models import ClassificationModel, ModelProfile, TemplateCombination, TemplateScorer
 from ..prompting import PromptChange, PromptSignature
-from ..recognition import FrameResult
+from ..recognition import FrameResult, RecognitionTask
 from .result_catalog import ResultCatalog
 
 
@@ -12,11 +13,41 @@ class ResultLibrary:
     One ``ResultCatalog`` per model profile, in the order the profiles were added.
 
     Results of every model and option set are kept side by side, so switching back to a model shows its results
-    without recognizing again, and two models can be compared.
+    without recognizing again, and two models can be compared. Every classification is scored with the template
+    combination of the library from the sentence logits it keeps, so changing the combination needs no recognition.
     """
 
     def __init__(self) -> None:
         self._catalogs: dict[ModelProfile, ResultCatalog] = {}
+        self._template_combination: TemplateCombination = ClassificationModel.DEFAULT_COMBINATION
+
+    @property
+    def template_combination(self) -> TemplateCombination:
+        """
+        Combination the classifications are scored with.
+
+        Returns
+        -------
+        TemplateCombination
+            Combination last applied, ``ClassificationModel.DEFAULT_COMBINATION`` at first.
+        """
+        return self._template_combination
+
+    def apply_template_combination(self, combination: TemplateCombination) -> None:
+        """
+        Score every stored classification again with a combination, and the ones recorded later.
+
+        Classifications stored without sentence logits keep their scores.
+
+        Parameters
+        ----------
+        combination : TemplateCombination
+            How the sentences of a prompt turn into its score.
+        """
+        self._template_combination = combination
+        for profile, catalog in self._catalogs.items():
+            if profile.task is RecognitionTask.CLASSIFICATION:
+                catalog.rescore(partial(self._scored, profile))
 
     def __contains__(self, profile: object) -> bool:
         return profile in self._catalogs
@@ -113,7 +144,7 @@ class ResultLibrary:
         signature : PromptSignature
             What the classes queried, narrowed to the query kinds of the model.
         """
-        self.add(profile).record(frame_key, result, signature)
+        self.add(profile).record(frame_key, self._scored(profile, result), signature)
 
     def prompt_change_of(
         self, profile: ModelProfile, frame_key: FrameKey, current: PromptSignature
@@ -195,3 +226,10 @@ class ResultLibrary:
         Forget every result.
         """
         self._catalogs.clear()
+
+    def _scored(self, profile: ModelProfile, result: FrameResult) -> FrameResult:
+        if result.sentence_logits is None:
+            return result
+        return TemplateScorer(
+            self._template_combination, ClassificationModel.score_activation_of(profile.backend)
+        ).rescored(result)

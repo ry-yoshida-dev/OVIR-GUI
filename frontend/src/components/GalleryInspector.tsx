@@ -1,4 +1,3 @@
-import { useClassScores } from "../hooks/useClassScores";
 import type { GalleryTile } from "../lib/galleryGroups";
 import { clamp } from "../lib/numbers";
 import { frameText } from "../lib/resultTable";
@@ -21,12 +20,6 @@ function verdictOf(tile: GalleryTile): { text: string; tone: string } {
 }
 
 export function GalleryInspector({ tile, imageSource, colorOf, onOpen, onSetAccepted }: GalleryInspectorProps) {
-  const allScores = useClassScores(
-    tile?.pictureKey ?? null,
-    tile?.row.path ?? null,
-    tile?.row.frame ?? null,
-    tile?.row.scores ?? null,
-  );
   if (tile === null || imageSource === null) {
     return (
       <aside className="gallery-inspector empty">
@@ -35,8 +28,7 @@ export function GalleryInspector({ tile, imageSource, colorOf, onOpen, onSetAcce
     );
   }
   const { row, finding, runnerUp, margin } = tile;
-  const scores = allScores ?? tile.scores;
-  const classCount = Math.max(row.classCount, scores.length);
+  const scores = tile.scores;
   const verdict = verdictOf(tile);
   const frame = frameText(row.frame, row.seconds);
   const leaderName = finding?.class_name ?? scores[0]?.class_name ?? null;
@@ -83,7 +75,7 @@ export function GalleryInspector({ tile, imageSource, colorOf, onOpen, onSetAcce
         <div className="gallery-ranking">
           <div className="gallery-ranking-header">
             <span>All classes</span>
-            <span>{classCount}</span>
+            <span>{scores.length}</span>
           </div>
           <ol className="gallery-ranking-list">
             {scores.map((score, rank) => (
@@ -109,7 +101,6 @@ export function GalleryInspector({ tile, imageSource, colorOf, onOpen, onSetAcce
               </li>
             ))}
           </ol>
-          {scores.length < classCount && <div className="gallery-ranking-pending">Loading every class…</div>}
         </div>
       )}
 

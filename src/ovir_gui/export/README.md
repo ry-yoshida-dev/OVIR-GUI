@@ -2,7 +2,7 @@
 
 ## Overview
 
-Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selected by `ExportSelection`, writes them in the chosen `ExportFormat` (CSV/JSON tables, box formats of `object_detection_format`, mask formats of `segmentation_format`, mask images, class folders, cropped objects) and optionally saves annotated images and videos drawn by `OverlayRenderer`. It returns an `ExportReport`; the export jobs are planned and run by `workspace/`.
+Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selected by `ExportSelection`, writes them in the chosen `ExportFormat` (CSV/JSON tables, box formats of `object_detection_format`, mask formats of `segmentation_format`, classification formats of `classification_format`, mask images, class folders, cropped objects) and optionally saves annotated images and videos drawn by `OverlayRenderer`. It returns an `ExportReport`; the export jobs are planned and run by `workspace/`.
 
 ## Components
 
@@ -21,6 +21,7 @@ Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selec
 | [export_purpose.py](./export_purpose.py) | `ExportPurpose` enumerates what an export gives the user (annotations, crops, class folders), the first choice of the export dialog. |
 | [export_report.py](./export_report.py) | `ExportReport` describes what an export wrote. |
 | [export_selection.py](./export_selection.py) | `ExportSelection` holds which stored findings of a picture are exported. |
+| [label_annotation_writer.py](./label_annotation_writer.py) | `LabelAnnotationWriter` writes the classes of exported classifications in a format of `classification_format` (class-column or label-list CSV, Hugging Face imagefolder, Pascal VOC image sets, Open Images), exported classes present and the other scored classes absent. |
 | [label_preview.py](./label_preview.py) | `LabelPreview` holds the text of one label file an export writes, shown before exporting. |
 | [label_previewer.py](./label_previewer.py) | `LabelPreviewer` writes an export into a temporary directory, for the shown picture only with formats writing a file per picture, and reads back its label file. |
 | [listed_findings_writer.py](./listed_findings_writer.py) | `ListedFindingsWriter` writes the findings a result table lists, in display order, as CSV text. |

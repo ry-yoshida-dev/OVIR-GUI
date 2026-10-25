@@ -1,5 +1,7 @@
 from enum import Enum
 
+from classification_format import AnnotationFormat as LabelAnnotationFormat
+from classification_format import CsvLayout
 from object_detection_format import AnnotationFormat as BoxAnnotationFormat
 from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
@@ -35,6 +37,16 @@ class ExportFormat(Enum):
         LabelMe polygons, one JSON file per picture.
     MASK_PNG : str
         Instance and class label maps as PNG images.
+    CLASS_COLUMNS_CSV : str
+        Classification table with a ``1`` or ``0`` column per class.
+    LABEL_LIST_CSV : str
+        Classification table listing the classes of every picture in one column.
+    HUGGING_FACE : str
+        Hugging Face ``imagefolder`` with the pictures and their classes in ``metadata.jsonl``.
+    PASCAL_VOC_IMAGE_SETS : str
+        Pascal VOC classification image sets, a ``1`` or ``-1`` list per class.
+    OPEN_IMAGES : str
+        Open Images image-level labels.
     CLASS_FOLDERS : str
         Pictures copied into the folder of each predicted class.
     CROPPED_OBJECTS : str
@@ -52,6 +64,11 @@ class ExportFormat(Enum):
     YOLO_SEGMENTATION = "yolo_segmentation"
     LABELME_SEGMENTATION = "labelme_segmentation"
     MASK_PNG = "mask_png"
+    CLASS_COLUMNS_CSV = "class_columns_csv"
+    LABEL_LIST_CSV = "label_list_csv"
+    HUGGING_FACE = "hugging_face"
+    PASCAL_VOC_IMAGE_SETS = "pascal_voc_image_sets"
+    OPEN_IMAGES = "open_images"
     CLASS_FOLDERS = "class_folders"
     CROPPED_OBJECTS = "cropped_objects"
 
@@ -88,6 +105,16 @@ class ExportFormat(Enum):
                 return "LabelMe polygons (JSON)"
             case ExportFormat.MASK_PNG:
                 return "Mask images (PNG)"
+            case ExportFormat.CLASS_COLUMNS_CSV:
+                return "Column per class, 1/0 (CSV)"
+            case ExportFormat.LABEL_LIST_CSV:
+                return "Label list (CSV)"
+            case ExportFormat.HUGGING_FACE:
+                return "Hugging Face imagefolder (JSONL)"
+            case ExportFormat.PASCAL_VOC_IMAGE_SETS:
+                return "Pascal VOC image sets (TXT)"
+            case ExportFormat.OPEN_IMAGES:
+                return "Open Images image labels (CSV)"
             case ExportFormat.CLASS_FOLDERS:
                 return "Folder per class"
             case ExportFormat.CROPPED_OBJECTS:
@@ -158,7 +185,14 @@ class ExportFormat(Enum):
                 | ExportFormat.MASK_PNG
             ):
                 return frozenset({RecognitionTask.SEGMENTATION})
-            case ExportFormat.CLASS_FOLDERS:
+            case (
+                ExportFormat.CLASS_COLUMNS_CSV
+                | ExportFormat.LABEL_LIST_CSV
+                | ExportFormat.HUGGING_FACE
+                | ExportFormat.PASCAL_VOC_IMAGE_SETS
+                | ExportFormat.OPEN_IMAGES
+                | ExportFormat.CLASS_FOLDERS
+            ):
                 return frozenset({RecognitionTask.CLASSIFICATION})
 
     @property
@@ -169,7 +203,7 @@ class ExportFormat(Enum):
         Returns
         -------
         bool
-            True for tables, COCO, YOLO and cropped objects.
+            True for tables, COCO, YOLO, Hugging Face, Open Images and cropped objects.
         """
         match self:
             case (
@@ -179,6 +213,8 @@ class ExportFormat(Enum):
                 | ExportFormat.YOLO
                 | ExportFormat.COCO_SEGMENTATION
                 | ExportFormat.YOLO_SEGMENTATION
+                | ExportFormat.HUGGING_FACE
+                | ExportFormat.OPEN_IMAGES
                 | ExportFormat.CROPPED_OBJECTS
             ):
                 return True
@@ -268,6 +304,46 @@ class ExportFormat(Enum):
                 return MaskAnnotationFormat.YOLO
             case ExportFormat.LABELME_SEGMENTATION:
                 return MaskAnnotationFormat.LABELME
+            case _:
+                return None
+
+    @property
+    def label_annotation_format(self) -> LabelAnnotationFormat | None:
+        """
+        Classification format of ``classification_format`` writing this format.
+
+        Returns
+        -------
+        LabelAnnotationFormat | None
+            ``None`` for formats that are not classification formats of ``classification_format``.
+        """
+        match self:
+            case ExportFormat.CLASS_COLUMNS_CSV | ExportFormat.LABEL_LIST_CSV:
+                return LabelAnnotationFormat.CSV
+            case ExportFormat.HUGGING_FACE:
+                return LabelAnnotationFormat.HUGGING_FACE
+            case ExportFormat.PASCAL_VOC_IMAGE_SETS:
+                return LabelAnnotationFormat.PASCAL_VOC
+            case ExportFormat.OPEN_IMAGES:
+                return LabelAnnotationFormat.OPEN_IMAGES
+            case _:
+                return None
+
+    @property
+    def csv_layout(self) -> CsvLayout | None:
+        """
+        Column layout of a classification CSV table.
+
+        Returns
+        -------
+        CsvLayout | None
+            ``None`` for formats that are not classification CSV tables.
+        """
+        match self:
+            case ExportFormat.CLASS_COLUMNS_CSV:
+                return CsvLayout.BINARY
+            case ExportFormat.LABEL_LIST_CSV:
+                return CsvLayout.LABEL_LIST
             case _:
                 return None
 

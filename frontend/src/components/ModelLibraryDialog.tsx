@@ -1,13 +1,19 @@
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../api/client";
 import type {
   BackendEntry,
   ModelBenchmark,
   ModelState,
   PresetEntry,
+  StoredWeights,
 } from "../api/types";
+import type { Call } from "../hooks/useActionRunner";
 import { familyOf } from "../lib/modelFamily";
+import { formattedByteSize } from "../lib/numbers";
 import { promptInputKindsOf, promptInputsAcross } from "../lib/promptInputs";
 import { Dialog } from "./Dialog";
+import { useDialogs } from "./DialogHost";
+import { TrashGlyph } from "./Glyphs";
 import { type BenchmarkPoint, ModelBenchmarkChart } from "./ModelBenchmarkChart";
 
 type SortKey = "catalog" | "lvis_ap" | "gflops";
@@ -29,6 +35,7 @@ interface SortOrder {
 interface ModelLibraryDialogProps {
   model: ModelState;
   backends: BackendEntry[];
+  call: Call;
   onSelectPreset: (backend: string, presetName: string) => void;
   onClose: () => void;
 }
@@ -74,14 +81,34 @@ function formattedAccuracy(benchmark: ModelBenchmark | null): string {
 
 /**
  * Every preset of the current task in one table, grouped by segmentation mode when the task has several, sortable by
- * accuracy and compute within each group; clicking a row selects it.
+ * accuracy and compute within each group; clicking a row selects it. Downloaded weights show their size and can be
+ * deleted from this computer, except those the chosen model loads.
  */
 export function ModelLibraryDialog({
   model,
   backends,
+  call,
   onSelectPreset,
   onClose,
 }: ModelLibraryDialogProps) {
+  const dialogs = useDialogs();
+  const [storedWeights, setStoredWeights] = useState<ReadonlyMap<
+    string,
+    StoredWeights
+  > | null>(null);
+  const loadStoredWeights = useCallback(
+    () =>
+      call(async () => {
+        const payload = await api.storedWeights();
+        setStoredWeights(
+          new Map(payload.stored.map((stored) => [stored.weights_path, stored])),
+        );
+      }),
+    [call],
+  );
+  useEffect(() => {
+    void loadStoredWeights();
+  }, [loadStoredWeights]);
   const [order, setOrder] = useState<SortOrder>({
     key: "catalog",
     isAscending: true,
@@ -105,7 +132,7 @@ export function ModelLibraryDialog({
   const inputs = promptInputsAcross(rows.map((row) => row.preset));
   const isBenchmarked = rows.some((row) => row.preset.benchmark !== null);
   const headerRowSpan = inputs.length > 0 ? 2 : 1;
-  const columnCount = 2 + inputs.length + (isBenchmarked ? 2 : 0);
+  const columnCount = 3 + inputs.length + (isBenchmarked ? 2 : 0);
   const selection = model.selection;
   const currentKey = `${selection.backend}/${selection.preset_name}`;
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -135,6 +162,63 @@ export function ModelLibraryDialog({
     tableWrap.current
       ?.querySelector(`tr[data-key="${CSS.escape(key)}"]`)
       ?.scrollIntoView({ block: "nearest" });
+  };
+
+  const deleteWeights = async (stored: StoredWeights) => {
+    const sharingCount =
+      rows.filter((row) => row.preset.weights_path === stored.weights_path)
+        .length - 1;
+    const isConfirmed = await dialogs.confirm({
+      title: "Delete Model Weights",
+      message:
+        `Delete ${stored.weights_path} (${formattedByteSize(stored.size_bytes)}) from this computer? ` +
+        "Its results are kept, and it is downloaded again when you choose it." +
+        (sharingCount > 0
+          ? `\n${sharingCount} other ${sharingCount === 1 ? "model" : "models"} in this list use the same weights.`
+          : ""),
+      confirmLabel: "Delete",
+      isDanger: true,
+    });
+    if (!isConfirmed) return;
+    await call(() => api.deleteWeights(stored.weights_path));
+    await loadStoredWeights();
+  };
+  const diskCell = (row: ModelRow) => {
+    if (storedWeights === null) return <td />;
+    const stored = storedWeights.get(row.preset.weights_path);
+    if (stored === undefined) return <td className="number muted">—</td>;
+    return (
+      <td>
+        <div
+          className="model-library-disk"
+          title={
+            stored.is_in_use
+              ? "Used by the chosen model; choose another model to delete it"
+              : undefined
+          }
+        >
+          <span className="small muted">
+            {formattedByteSize(stored.size_bytes)}
+          </span>
+          <button
+            className="section-action is-danger"
+            disabled={stored.is_in_use}
+            title={
+              stored.is_in_use
+                ? undefined
+                : "Delete the downloaded weights from this computer"
+            }
+            aria-label={`Delete ${stored.weights_path}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              void deleteWeights(stored);
+            }}
+          >
+            <TrashGlyph />
+          </button>
+        </div>
+      </td>
+    );
   };
 
   const sortBy = (key: SortKey) =>
@@ -172,7 +256,7 @@ export function ModelLibraryDialog({
     <Dialog
       title="Models"
       onClose={onClose}
-      width={isBenchmarked ? 960 : 800}
+      width={isBenchmarked ? 1060 : 900}
       height={isBenchmarked && points.length > 0 ? 860 : 620}
     >
       {points.length > 0 && (
@@ -198,6 +282,7 @@ export function ModelLibraryDialog({
             {isBenchmarked && <col style={{ width: 76 }} />}
             {isBenchmarked && <col style={{ width: 76 }} />}
             <col style={{ width: 340 }} />
+            <col style={{ width: 100 }} />
           </colgroup>
           <thead>
             <tr>
@@ -214,6 +299,13 @@ export function ModelLibraryDialog({
               {isBenchmarked && sortHeader("gflops", "GFLOPs", "number")}
               <th className="static-header" rowSpan={headerRowSpan}>
                 Weights
+              </th>
+              <th
+                className="static-header number"
+                rowSpan={headerRowSpan}
+                title="Disk space of the downloaded weights on this computer"
+              >
+                On disk
               </th>
             </tr>
             {inputs.length > 0 && (
@@ -303,6 +395,7 @@ export function ModelLibraryDialog({
                     <td className="mono small muted" title={row.preset.weights_path}>
                       {row.preset.weights_path}
                     </td>
+                    {diskCell(row)}
                   </tr>
                 </Fragment>
               );

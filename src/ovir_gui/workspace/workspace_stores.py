@@ -12,6 +12,7 @@ from ..storage import (
     PlaybackStore,
     ResultsStore,
     SessionStore,
+    TextTemplateStore,
     UploadStore,
 )
 from ..vocabulary import ClassListStore
@@ -33,6 +34,7 @@ class WorkspaceStores:
     ├── license_consent.json    # licenses of optional modules the user accepted
     ├── picture_prompts.json    # exemplar boxes and object marks drawn on pictures per task
     ├── session.json            # open media, shown picture, task, sampling, model choices
+    ├── text_templates.json     # text templates saved for reuse by classifiers
     ├── uploads/                # files uploaded from a browser
     └── playback/               # browser-playable copies of videos the browser cannot decode
     ```
@@ -59,6 +61,8 @@ class WorkspaceStores:
         Exemplar boxes and object marks drawn on pictures per task.
     session_store : SessionStore
         What was open and chosen.
+    text_template_store : TextTemplateStore
+        Text templates saved for reuse by classifiers.
     upload_store : UploadStore
         Files sent from a browser.
     playback_store : PlaybackStore
@@ -77,6 +81,7 @@ class WorkspaceStores:
     license_consent_store: LicenseConsentStore
     picture_prompt_store: PicturePromptStore
     session_store: SessionStore
+    text_template_store: TextTemplateStore
     upload_store: UploadStore
     playback_store: PlaybackStore
 
@@ -106,6 +111,7 @@ class WorkspaceStores:
             license_consent_store=LicenseConsentStore(root_directory),
             picture_prompt_store=PicturePromptStore(root_directory),
             session_store=SessionStore(root_directory),
+            text_template_store=TextTemplateStore(root_directory),
             upload_store=UploadStore(root_directory),
             playback_store=PlaybackStore(root_directory),
         )

@@ -8,6 +8,7 @@ import type {
 import type { BelowMinimumStyle } from "./displayOptions";
 import type { ColumnDefinition, ColumnKey, ResultScope } from "./resultColumns";
 import { taskViewOf } from "./taskViews";
+import { templateLabelOf } from "./textTemplate";
 import { formatSeconds } from "./videoTime";
 
 export type {
@@ -62,7 +63,6 @@ interface RowBase {
   pictureOrder: number;
   outdated: string | null;
   scores: RankedScore[];
-  classCount: number;
 }
 
 export interface FindingRow extends RowBase {
@@ -83,13 +83,6 @@ export const REJECTED_TEXT = "Rejected";
 
 export function pictureKeyOf(path: string, frame: number | null): string {
   return `${path}@${frame ?? ""}`;
-}
-
-export function runnerUpTextOf(scores: RankedScore[]): string | null {
-  const runnerUp = scores[1];
-  return runnerUp === undefined
-    ? null
-    : `${runnerUp.class_name} ${runnerUp.score.toFixed(2)}`;
 }
 
 export function rowKeyOf(
@@ -116,7 +109,6 @@ export function buildRows(
       pictureOrder,
       outdated: picture.outdated,
       scores: picture.scores,
-      classCount: picture.class_count,
     };
     const listed =
       belowMinimum === "dim"
@@ -153,8 +145,6 @@ export function cellValue(
       return row.mediaName;
     case "frame":
       return row.frame;
-    case "runner_up":
-      return runnerUpTextOf(row.scores);
     default:
       break;
   }
@@ -167,6 +157,8 @@ export function cellValue(
       return finding.class_name;
     case "prompt":
       return finding.matched_prompt;
+    case "template":
+      return finding.matched_template === null ? null : templateLabelOf(finding.matched_template);
     case "confidence":
       return finding.confidence;
     case "area":

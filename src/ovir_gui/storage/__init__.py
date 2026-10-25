@@ -17,6 +17,8 @@ from .results_store import ResultsStore
 from .session import Session
 from .session_media import SessionMedia
 from .session_store import SessionStore
+from .session_task_settings import SessionTaskSettings
+from .text_template_store import TextTemplateStore
 from .upload_store import UploadStore
 
 __all__ = [
@@ -40,5 +42,7 @@ __all__ = [
     "Session",
     "SessionMedia",
     "SessionStore",
+    "SessionTaskSettings",
+    "TextTemplateStore",
     "UploadStore",
 ]

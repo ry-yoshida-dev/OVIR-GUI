@@ -5,7 +5,7 @@ from typing import ClassVar
 from ..media import FrameKey
 from ..models import ModelProfile
 from ..prompting import PromptSignature, QueriedClass, ReferenceBox
-from ..recognition import FrameResult, InstanceMask, RecognizedInstance
+from ..recognition import ClassifierLogits, FrameResult, InstanceMask, RecognizedInstance
 from ..recognition.array_types import UInt8Array
 from ..results import ResultCatalog, ResultLibrary, StoredResult
 from .json_fields import JsonValue
@@ -23,7 +23,7 @@ class ResultsManifestWriter:
     The manifest looks like::
 
         {
-          "format": "ovir-gui-results", "version": 2,
+          "format": "ovir-gui-results", "version": 3,
           "media": [{"path": "/data/a.mp4", "mtime_ns": 1, "size": 2}],
           "signatures": [{"classes": [{"name": "car", "phrases": ["car"], "boxes": [...]}]}],
           "profiles": [{"task": "detection", ..., "frames": [
@@ -32,16 +32,20 @@ class ResultsManifestWriter:
           ]}]
         }
 
-    A classification frame holds ``"scores": [[class, score, logit, matched prompt, similarity], ...]`` instead of
-    instances, ``similarity`` being ``null`` or left out for results stored before it was recorded. Rejected findings
+    A classification frame holds ``"scores": [[class, score, logit, matched prompt, similarity, matched template],
+    ...]`` instead of instances, ``similarity`` and ``matched template`` being ``null`` or left out for results stored
+    before they were recorded; ``matched template`` is also ``null`` for a reference image. Rejected findings
     are indexed by the position of their class score or instance; version 1 indexed the only finding of a
-    classification, its best class, by 0. The last
+    classification, its best class, by 0. A classification frame also holds ``"logits": {"scale": 100.0, "bias": 0.0,
+    "prompts": ["dog"], "sentences": [[class, prompt, template, logit], ...]}``, the logit of every sentence the
+    scores were computed from, since version 3; ``class`` and ``prompt`` index the classes of ``scores`` and
+    ``prompts``. The last
     field of an instance indexes ``mask_bits`` (``-1`` without a mask) and is followed by the crop
     ``[left, top, width, height, area]`` of the mask.
     """
 
     FORMAT_NAME: ClassVar[str] = "ovir-gui-results"
-    FORMAT_VERSION: ClassVar[int] = 2
+    FORMAT_VERSION: ClassVar[int] = 3
 
     def __init__(self) -> None:
         self._media_indices: dict[Path, int] = {}
@@ -110,12 +114,33 @@ class ResultsManifestWriter:
         }
         if result.class_scores:
             entry["scores"] = [
-                [score.class_name, score.score, score.logit, score.matched_prompt, score.similarity]
+                [
+                    score.class_name,
+                    score.score,
+                    score.logit,
+                    score.matched_prompt,
+                    score.similarity,
+                    score.matched_template,
+                ]
                 for score in result.class_scores
             ]
+            if result.sentence_logits is not None:
+                entry["logits"] = self._logits_entry(result.sentence_logits)
         else:
             entry["instances"] = [self._instance_entry(instance) for instance in result.instances]
         return entry
+
+    @staticmethod
+    def _logits_entry(logits: ClassifierLogits) -> JsonValue:
+        return {
+            "scale": logits.logit_scale,
+            "bias": logits.logit_bias,
+            "prompts": list[JsonValue](logits.prompt_labels),
+            "sentences": [
+                [sentence.class_index, sentence.prompt_index, sentence.template, sentence.logit]
+                for sentence in logits.sentences
+            ],
+        }
 
     def _instance_entry(self, instance: RecognizedInstance) -> JsonValue:
         fields: list[JsonValue] = [

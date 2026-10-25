@@ -62,6 +62,16 @@ export interface PresetEntry {
   benchmark: ModelBenchmark | null;
 }
 
+export interface StoredWeights {
+  weights_path: string;
+  size_bytes: number;
+  is_in_use: boolean;
+}
+
+export interface StoredWeightsPayload {
+  stored: StoredWeights[];
+}
+
 export interface BoxDetectorEntry {
   label: string;
   licenses: string[];
@@ -128,8 +138,11 @@ export interface ModelSelection {
   box_detector_label: string | null;
   tiling_grid_size: number | null;
   text_templates: string[] | null;
+  template_combination: TemplateCombinationValue | null;
   batch_size: number | null;
 }
+
+export type TemplateCombinationValue = "none" | "max" | "mean" | "median" | "min";
 
 export interface TaskState {
   value: TaskValue;
@@ -150,6 +163,9 @@ export interface ModelState {
   selection: ModelSelection;
   is_image_prompt_supported: boolean;
   text_templates: string[] | null;
+  saved_templates: string[];
+  template_combination: TemplateCombinationValue | null;
+  template_combinations: { value: TemplateCombinationValue; title: string }[];
   weights_path: string;
   description: string;
   benchmark_phrase_count: number;
@@ -311,6 +327,7 @@ export interface Finding {
   index: number;
   class_name: string;
   matched_prompt: string;
+  matched_template: string | null;
   confidence: number;
   box: Box | null;
   area: number | null;
@@ -355,11 +372,13 @@ export interface ClassScore {
   logit: number;
   similarity: number | null;
   matched_prompt: string;
+  matched_template: string | null;
 }
 
 export interface RankedScore {
   class_name: string;
   score: number;
+  is_reaching_minimum: boolean;
 }
 
 export interface FramePayload {
@@ -391,7 +410,6 @@ export interface ResultPicture {
   seconds: number | null;
   outdated: string | null;
   scores: RankedScore[];
-  class_count: number;
   findings: Finding[];
 }
 

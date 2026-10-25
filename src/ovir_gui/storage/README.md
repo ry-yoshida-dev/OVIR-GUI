@@ -2,7 +2,7 @@
 
 ## Overview
 
-Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the label mode of classifications, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. Every file is replaced atomically through `AtomicFile`; the JSON stores read and write through `JsonFile` (per-task settings through `TaskSettingsFile`), and the ZIP archives read their manifest through `ZipManifest`. The `workspace` package reads these stores at start and writes them after changes.
+Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the label mode of classifications, the text templates saved for classifiers, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread. Every file is replaced atomically through `AtomicFile`; the JSON stores read and write through `JsonFile` (per-task settings through `TaskSettingsFile`), and the ZIP archives read their manifest through `ZipManifest`. The `workspace` package reads these stores at start and writes them after changes.
 
 ## Components
 
@@ -30,8 +30,10 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [results_store.py](./results_store.py) | `ResultsStore` loads and saves the results archive `results.ovirresults` of a data directory. |
 | [session.py](./session.py) | `Session` describes what the user was working on, restored at the next start. |
 | [session_media.py](./session_media.py) | `SessionMedia` holds the open media and shown picture one task had in the session. |
-| [session_store.py](./session_store.py) | `SessionStore` remembers the open media and shown picture of each task, the task, sampling and model choices in `session.json`. |
+| [session_store.py](./session_store.py) | `SessionStore` remembers the open media, shown picture, sampling, inference and model choices of each task and the chosen task in `session.json`. |
+| [session_task_settings.py](./session_task_settings.py) | `SessionTaskSettings` holds the sampling and inference choices one task had in the session. |
 | [stored_reference_image.py](./stored_reference_image.py) | `StoredReferenceImage` is a reference image read back from a class set archive with its pixels. |
 | [task_settings_file.py](./task_settings_file.py) | `TaskSettingsFile` stores one settings object per task in a JSON file, reading every task on its own. |
+| [text_template_store.py](./text_template_store.py) | `TextTemplateStore` remembers the text templates saved for reuse by classifiers in `text_templates.json`. |
 | [upload_store.py](./upload_store.py) | `UploadStore` is the default folder `uploads` receiving images and videos sent from a browser, streamed to disk. |
 | [zip_manifest.py](./zip_manifest.py) | `ZipManifest` reads a ZIP file described by a JSON manifest, reporting every parse failure as `ValueError`. |

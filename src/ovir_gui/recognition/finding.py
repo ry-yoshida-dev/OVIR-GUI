@@ -26,6 +26,9 @@ class Finding:
     similarity : float | None
         Cosine similarity of the image and the matched prompt of a classification; ``None`` for an instance or a
         classification stored before it was recorded.
+    matched_template : str | None
+        Text template of the best sentence of a classification, ``"{}"`` for the phrase as written; ``None`` for an
+        instance, a reference image or a classification stored before it was recorded.
     """
 
     index: int
@@ -35,3 +38,4 @@ class Finding:
     box: PixelBox | None
     area: float | None
     similarity: float | None
+    matched_template: str | None

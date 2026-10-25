@@ -1,7 +1,4 @@
 {
-  "frame_step": 4,
-  "inference_mode": "all",
-  "is_auto_inference": true,
   "media": {
     "detection": {
       "current": "<tmp>/media/a_first.png",
@@ -18,6 +15,7 @@
       "backend": "grounding_dino",
       "batch_size": 4,
       "box_detector": null,
+      "combination": null,
       "confidence": null,
       "device": "auto",
       "nms": null,
@@ -29,5 +27,12 @@
       "tiling": null
     }
   ],
-  "task": "detection"
+  "task": "detection",
+  "task_settings": {
+    "detection": {
+      "frame_step": 4,
+      "inference_mode": "all",
+      "is_auto_inference": true
+    }
+  }
 }

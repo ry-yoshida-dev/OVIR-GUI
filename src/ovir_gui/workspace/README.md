@@ -2,9 +2,9 @@
 
 ## Overview
 
-User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits the classes (via `ClassWorkbench`) and the settings, and exposes its collaborators for everything else. They share the `WorkingState` (open media and shown picture of the current task, the media kept for the other tasks, shown and compared profiles) and the `RecognitionSettings` (task, model choices, sampling, inference mode) owned by the thread behind a `TaskScheduler`, so no part needs locks:
+User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits the classes (via `ClassWorkbench`) and the settings, and exposes its collaborators for everything else. They share the `WorkingState` (open media and shown picture of the current task, the media and compared profiles kept for the other tasks, shown and compared profiles) and the `RecognitionSettings` (task, and the model, sampling and inference mode of each task) owned by the thread behind a `TaskScheduler`, so no part needs locks:
 
-- `ModelChoice` picks the model of every task and the accepted licenses; `SessionMapper` restores and saves the session.
+- `ModelChoice` picks the model of every task and the accepted licenses, and deletes downloaded weights the chosen model does not load; `TextTemplateLibrary` keeps the text templates saved for classifiers; `SessionMapper` restores and saves the session.
 - `ResultReadModel` answers what the stored results say (statuses, freshness, statistics, comparison); `ReviewSettings` holds the label mode of classifications, the minimums and the duplicate suppression; `ResultProfiles` switches the shown and compared profile and records the user's review.
 - `InferenceRunner` starts foreground jobs and background jobs on the `InferenceEngine`, whose single worker thread reports to the `InferenceOutcomeHandler`; `PromptAssembler` builds their prompts and `BackgroundPlanner` chooses what the background recognizes next.
 - `ExportCoordinator` plans and writes exports and `PlaybackPreparer` encodes browser-playable video copies, both off the owning thread.
@@ -35,14 +35,14 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [job_summary.py](./job_summary.py) | `JobSummary` describes how a job ended. |
 | [media_state.py](./media_state.py) | `MediaState` enumerates how far an open image or video is recognized with the shown model. |
 | [media_status.py](./media_status.py) | `MediaStatus` is the recognition state of one open image or video with the shown model. |
-| [model_choice.py](./model_choice.py) | `ModelChoice` holds the model chosen for each task with its overrides and the accepted licenses of optional modules. |
+| [model_choice.py](./model_choice.py) | `ModelChoice` holds the model chosen for each task with its overrides and the accepted licenses of optional modules, and lists and deletes the downloaded weights of the current task's presets. |
 | [notice.py](./notice.py) | `Notice` is a message for the user about something that happened, such as a finished run or a failed save. |
 | [notice_level.py](./notice_level.py) | `NoticeLevel` enumerates how prominently a notice is shown. |
 | [playback_preparer.py](./playback_preparer.py) | `PlaybackPreparer` encodes browser-playable copies of open videos off the owning thread and tells which file to play. |
 | [playback_state.py](./playback_state.py) | `PlaybackState` enumerates whether a video has a browser-playable copy. |
 | [prompt_assembler.py](./prompt_assembler.py) | `PromptAssembler` builds the prompt of a model from the classes, reference images and drawings, asking approval to skip classes it cannot query. |
 | [prompt_preparation.py](./prompt_preparation.py) | `PromptPreparation` holds the prompt built from the classes, or why none could be built. |
-| [recognition_settings.py](./recognition_settings.py) | `RecognitionSettings` holds the task, the model of each task, the video sampling and the inference mode remembered in the session. |
+| [recognition_settings.py](./recognition_settings.py) | `RecognitionSettings` holds the task and, for each task, the model, the video sampling and the inference mode remembered in the session. |
 | [result_profiles.py](./result_profiles.py) | `ResultProfiles` switches the shown and compared result profile, forgets profiles and records which findings the user keeps. |
 | [result_read_model.py](./result_read_model.py) | `ResultReadModel` answers what the stored results say about the open media: statuses, freshness, summaries, statistics and comparison. |
 | [review_settings.py](./review_settings.py) | `ReviewSettings` keeps the label mode of classifications and the class minimums and duplicate suppression of every task, and remembers them. |
@@ -52,8 +52,9 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [status_notifier.py](./status_notifier.py) | `StatusNotifier` tells the observers what changed and keeps the status and activity messages. |
 | [task_classes.py](./task_classes.py) | `TaskClasses` holds the classes, reference images, drawings and class set of one task. |
 | [task_media.py](./task_media.py) | `TaskMedia` holds the open media and shown picture of a task that is not shown. |
+| [text_template_library.py](./text_template_library.py) | `TextTemplateLibrary` keeps the text templates saved for reuse by every classifier, starting from those of the presets. |
 | [task_scheduler.py](./task_scheduler.py) | `TaskScheduler` abstracts the thread owning the workspace state, like the GUI thread of a desktop application. |
-| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media and shown picture of the current task, the media kept for the other tasks, and profiles. |
+| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media and shown picture of the current task, the media and compared profiles kept for the other tasks, and profiles. |
 | [workspace.py](./workspace.py) | `Workspace` is the facade over the open media, classes, settings and the collaborators handling results, jobs and exports. |
 | [workspace_observer.py](./workspace_observer.py) | `WorkspaceObserver` is a view following the workspace, always called on the owning thread. |
 | [workspace_stores.py](./workspace_stores.py) | `WorkspaceStores` is the data directory the workspace reads at start and writes after changes. |

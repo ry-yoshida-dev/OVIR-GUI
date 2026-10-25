@@ -11,6 +11,7 @@ from ...models import (
     ModelSelector,
     RecognitionModel,
     SegmentationMode,
+    TemplateCombination,
     ThresholdControls,
 )
 from ...prompting import QueryKind
@@ -51,8 +52,8 @@ class ModelPanelBuilder:
         -------
         JsonObject
             Backends with their presets, the segmentation modes grouping them, the drawings of the task and whether
-            the chosen model reads each, what the chosen model takes, devices, precisions, box detectors, licenses
-            and the current selection.
+            the chosen model reads each, what the chosen model takes, the text templates in use and saved, devices,
+            precisions, box detectors, licenses and the current selection.
         """
         selector: ModelSelector = workspace.models.model_selector
         selection: ModelSelection = workspace.models.selection
@@ -93,6 +94,7 @@ class ModelPanelBuilder:
         ]
         availability: DeviceAvailability = selector.device_availability
         text_templates: tuple[str, ...] | None = model.text_templates
+        template_combination: TemplateCombination | None = model.template_combination
         return {
             "backends": backends,
             "modes": modes,
@@ -124,6 +126,11 @@ class ModelPanelBuilder:
             "selection": self._selection(selection),
             "is_image_prompt_supported": workspace.models.is_image_prompt_supported(),
             "text_templates": None if text_templates is None else list[JsonValue](text_templates),
+            "saved_templates": list[JsonValue](workspace.text_templates.templates),
+            "template_combination": None if template_combination is None else template_combination.value,
+            "template_combinations": [
+                {"value": combination.value, "title": combination.title} for combination in TemplateCombination
+            ],
             "weights_path": model.weights_path,
             "description": model.usage_description,
             "benchmark_phrase_count": self._benchmarks.phrase_count,
@@ -196,5 +203,8 @@ class ModelPanelBuilder:
             "box_detector_label": selection.box_detector_label,
             "tiling_grid_size": selection.tiling_grid_size,
             "text_templates": None if selection.text_templates is None else list[JsonValue](selection.text_templates),
+            "template_combination": None
+            if selection.template_combination is None
+            else selection.template_combination.value,
             "batch_size": selection.batch_size,
         }

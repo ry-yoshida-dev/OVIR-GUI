@@ -33,6 +33,7 @@ from .scheduled_call import ScheduledCall
 from .session_mapper import SessionMapper
 from .status_notifier import StatusNotifier
 from .task_scheduler import TaskScheduler
+from .text_template_library import TextTemplateLibrary
 from .working_state import WorkingState
 from .workspace import Workspace
 from .workspace_observer import WorkspaceObserver
@@ -75,6 +76,7 @@ __all__ = [
     "SessionMapper",
     "StatusNotifier",
     "TaskScheduler",
+    "TextTemplateLibrary",
     "WorkingState",
     "Workspace",
     "WorkspaceObserver",

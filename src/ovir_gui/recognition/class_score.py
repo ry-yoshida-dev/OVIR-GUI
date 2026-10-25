@@ -19,6 +19,9 @@ class ClassScore:
     similarity : float | None
         Cosine similarity in ``[-1, 1]`` of the image and the best prompt of the class; ``None`` for results stored
         before it was recorded.
+    matched_template : str | None
+        Text template of the best sentence of the matched prompt, ``"{}"`` for the phrase as written; ``None`` for a
+        reference image or results stored before it was recorded.
     """
 
     class_name: str
@@ -26,3 +29,4 @@ class ClassScore:
     logit: float
     matched_prompt: str
     similarity: float | None
+    matched_template: str | None

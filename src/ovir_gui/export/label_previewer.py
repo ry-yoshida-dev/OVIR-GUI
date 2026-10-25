@@ -25,7 +25,7 @@ class LabelPreviewer:
     else the class list; without any text file the written files are listed.
     """
 
-    TEXT_SUFFIXES: ClassVar[frozenset[str]] = frozenset({".json", ".txt", ".csv", ".xml"})
+    TEXT_SUFFIXES: ClassVar[frozenset[str]] = frozenset({".json", ".jsonl", ".txt", ".csv", ".xml"})
     CLASS_LIST_FILE_NAME: ClassVar[str] = "classes.txt"
     MAXIMUM_CHARACTERS: ClassVar[int] = 1_000_000
 

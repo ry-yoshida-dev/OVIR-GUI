@@ -39,7 +39,9 @@ def classification_of(*scores: tuple[str, float]) -> FrameResult:
         task=RecognitionTask.CLASSIFICATION,
         image_size=SIZE,
         class_scores=tuple(
-            ClassScore(class_name=name, score=score, logit=score, matched_prompt=name, similarity=None)
+            ClassScore(
+                class_name=name, score=score, logit=score, matched_prompt=name, similarity=None, matched_template=None
+            )
             for name, score in scores
         ),
     )

@@ -16,10 +16,13 @@ const SCORE_LINES = 5;
 
 export function ScorePanel({ frame, listedIndices, options, classColors, onSelectFinding }: ScorePanelProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
-  const scores = frame.scores;
+  const findingOf = new Map(frame.findings.map((finding) => [finding.class_name, finding] as const));
+  const isRejected = (className: string): boolean => findingOf.get(className)?.is_accepted === false;
+  const scores = options.isRejectedShown
+    ? frame.scores
+    : frame.scores.filter((score) => !isRejected(score.class_name));
   if (scores.length === 0 || !options.isScorePanelShown) return null;
   const hiddenCount = scores.length - SCORE_LINES;
-  const findingOf = new Map(frame.findings.map((finding) => [finding.class_name, finding] as const));
   const isKept = (className: string): boolean => {
     const finding = findingOf.get(className);
     return (
@@ -29,7 +32,6 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
       (listedIndices?.has(finding.index) ?? true)
     );
   };
-  const isRejected = (className: string): boolean => findingOf.get(className)?.is_accepted === false;
   const compared = comparedOf(frame, options);
   const colorOf = (className: string) => classColorOf(classColors, className);
   return (
@@ -49,7 +51,7 @@ export function ScorePanel({ frame, listedIndices, options, classColors, onSelec
           <span className="bar">
             <span style={{ width: `${clamp(score.score, 0, 1) * 100}%`, background: colorOf(score.class_name) }} />
           </span>
-          <span className="value">{score.score.toFixed(3)}</span>
+          {options.isConfidenceShown && <span className="value">{score.score.toFixed(3)}</span>}
         </div>
       ))}
       {hiddenCount > 0 && (

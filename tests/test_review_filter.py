@@ -14,6 +14,7 @@ def finding_of(index: int, class_name: str, matched_prompt: str, confidence: flo
         box=PixelBox(left, 0.0, left + 10.0, 10.0),
         area=100.0,
         similarity=None,
+        matched_template=None,
     )
 
 

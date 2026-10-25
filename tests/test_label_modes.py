@@ -22,7 +22,9 @@ def classification_of(scores: tuple[float, ...], native_label_mode: LabelMode) -
         task=RecognitionTask.CLASSIFICATION,
         image_size=ImageSize(24, 16),
         class_scores=tuple(
-            ClassScore(class_name=name, score=score, logit=0.0, matched_prompt=name, similarity=None)
+            ClassScore(
+                class_name=name, score=score, logit=0.0, matched_prompt=name, similarity=None, matched_template=None
+            )
             for name, score in zip(CLASS_NAMES, scores, strict=True)
         ),
         native_label_mode=native_label_mode,

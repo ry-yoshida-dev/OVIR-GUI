@@ -4,8 +4,8 @@ export type ColumnKey =
   | "frame"
   | "class"
   | "prompt"
+  | "template"
   | "confidence"
-  | "runner_up"
   | "area"
   | "x1"
   | "y1"
@@ -22,6 +22,7 @@ export interface ColumnDefinition {
   kind: ColumnKind;
   maxWidth: number;
   isNumeric: boolean;
+  isFilterable: boolean;
 }
 
 const KEEP: ColumnDefinition = {
@@ -30,6 +31,7 @@ const KEEP: ColumnDefinition = {
   kind: "values",
   maxWidth: 40,
   isNumeric: false,
+  isFilterable: true,
 };
 const MEDIA: ColumnDefinition = {
   key: "media",
@@ -37,6 +39,7 @@ const MEDIA: ColumnDefinition = {
   kind: "values",
   maxWidth: 240,
   isNumeric: false,
+  isFilterable: true,
 };
 const FRAME: ColumnDefinition = {
   key: "frame",
@@ -44,6 +47,7 @@ const FRAME: ColumnDefinition = {
   kind: "range",
   maxWidth: 120,
   isNumeric: false,
+  isFilterable: true,
 };
 const CLASS: ColumnDefinition = {
   key: "class",
@@ -51,13 +55,23 @@ const CLASS: ColumnDefinition = {
   kind: "values",
   maxWidth: 180,
   isNumeric: false,
+  isFilterable: true,
 };
 const QUERY: ColumnDefinition = {
   key: "prompt",
-  label: "Matched prompt",
+  label: "Prompt",
   kind: "values",
   maxWidth: 180,
   isNumeric: false,
+  isFilterable: true,
+};
+const TEMPLATE: ColumnDefinition = {
+  key: "template",
+  label: "Best template",
+  kind: "values",
+  maxWidth: 240,
+  isNumeric: false,
+  isFilterable: true,
 };
 const CONFIDENCE: ColumnDefinition = {
   key: "confidence",
@@ -65,6 +79,7 @@ const CONFIDENCE: ColumnDefinition = {
   kind: "range",
   maxWidth: 100,
   isNumeric: true,
+  isFilterable: true,
 };
 const BOX_COLUMNS: ColumnDefinition[] = [
   {
@@ -73,6 +88,7 @@ const BOX_COLUMNS: ColumnDefinition[] = [
     kind: "range",
     maxWidth: 72,
     isNumeric: true,
+    isFilterable: false,
   },
   {
     key: "y1",
@@ -80,6 +96,7 @@ const BOX_COLUMNS: ColumnDefinition[] = [
     kind: "range",
     maxWidth: 72,
     isNumeric: true,
+    isFilterable: false,
   },
   {
     key: "x2",
@@ -87,6 +104,7 @@ const BOX_COLUMNS: ColumnDefinition[] = [
     kind: "range",
     maxWidth: 72,
     isNumeric: true,
+    isFilterable: false,
   },
   {
     key: "y2",
@@ -94,6 +112,7 @@ const BOX_COLUMNS: ColumnDefinition[] = [
     kind: "range",
     maxWidth: 72,
     isNumeric: true,
+    isFilterable: false,
   },
 ];
 
@@ -103,19 +122,14 @@ export const SCORE_COLUMNS: ColumnDefinition[] = [
   FRAME,
   CLASS,
   QUERY,
+  TEMPLATE,
   {
     key: "confidence",
     label: "Score",
     kind: "range",
-    maxWidth: 90,
+    maxWidth: 480,
     isNumeric: true,
-  },
-  {
-    key: "runner_up",
-    label: "Runner-up",
-    kind: "values",
-    maxWidth: 180,
-    isNumeric: false,
+    isFilterable: true,
   },
 ];
 
@@ -142,6 +156,7 @@ export const MASK_FINDING_COLUMNS: ColumnDefinition[] = [
     kind: "range",
     maxWidth: 90,
     isNumeric: true,
+    isFilterable: false,
   },
   ...BOX_COLUMNS,
 ];

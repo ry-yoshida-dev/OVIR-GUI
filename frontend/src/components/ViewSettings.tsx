@@ -58,6 +58,7 @@ export function ViewSettings({
           <>
             <span>Line width</span>
             <StepperField
+              key={taskView.task}
               initialValue={display.lineWidth}
               minimum={MINIMUM_LINE_WIDTH}
               maximum={MAXIMUM_LINE_WIDTH}

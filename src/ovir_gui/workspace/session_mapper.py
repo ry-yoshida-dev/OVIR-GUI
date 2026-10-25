@@ -3,7 +3,7 @@ from pathlib import Path
 from ..media import FrameKey, VideoSampling
 from ..models import LicenseConsent, ModelSelection, ModelSelector
 from ..recognition import RecognitionTask
-from ..storage import Session, SessionMedia, SessionStore
+from ..storage import Session, SessionMedia, SessionStore, SessionTaskSettings
 from .recognition_settings import RecognitionSettings
 from .status_notifier import StatusNotifier
 from .working_state import WorkingState
@@ -15,9 +15,9 @@ class SessionMapper:
 
     Restoring keeps only what is still valid: model choices of presets that no longer exist, cannot run here or need a
     license the user has not accepted are dropped one by one, as are tasks without presets and non-positive frame
-    steps. The remembered media of each task stay unopened until the task is shown, and are saved again unchanged
-    until then. Saving writes the open media and shown picture of every task and the settings; a failed save is
-    reported, not raised.
+    steps. Sampling and inference choices are restored for each task. The remembered media of each task stay unopened
+    until the task is shown, and are saved again unchanged until then. Saving writes the open media and shown picture
+    of every task and the settings; a failed save is reported, not raised.
     """
 
     def __init__(
@@ -68,12 +68,13 @@ class SessionMapper:
             self._settings.selections[task] = validated
         if session.task is not None and session.task in self._model_selector.tasks:
             self._settings.task = session.task
-        if session.frame_step is not None and session.frame_step > 0:
-            self._settings.sampling = VideoSampling(session.frame_step)
-        if session.inference_mode is not None:
-            self._settings.inference_mode = session.inference_mode
-        if session.is_auto_inference is not None:
-            self._settings.is_auto_inference = session.is_auto_inference
+        for task, task_settings in session.task_settings.items():
+            if task_settings.frame_step is not None and task_settings.frame_step > 0:
+                self._settings.samplings[task] = VideoSampling(task_settings.frame_step)
+            if task_settings.inference_mode is not None:
+                self._settings.inference_modes[task] = task_settings.inference_mode
+            if task_settings.is_auto_inference is not None:
+                self._settings.is_auto_inference_by_task[task] = task_settings.is_auto_inference
 
     def take_unopened_media(self, task: RecognitionTask) -> SessionMedia | None:
         """
@@ -113,9 +114,20 @@ class SessionMapper:
         return Session(
             media=media,
             task=self._settings.task,
-            frame_step=self._settings.sampling.frame_step,
-            inference_mode=self._settings.inference_mode,
-            is_auto_inference=self._settings.is_auto_inference,
+            task_settings={
+                task: SessionTaskSettings(
+                    frame_step=(
+                        None if task not in self._settings.samplings else self._settings.samplings[task].frame_step
+                    ),
+                    inference_mode=self._settings.inference_modes.get(task),
+                    is_auto_inference=self._settings.is_auto_inference_by_task.get(task),
+                )
+                for task in (
+                    self._settings.samplings.keys()
+                    | self._settings.inference_modes.keys()
+                    | self._settings.is_auto_inference_by_task.keys()
+                )
+            },
             selections=dict(self._settings.selections),
         )
 

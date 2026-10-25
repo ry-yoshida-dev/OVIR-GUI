@@ -6,7 +6,15 @@ from fastapi import APIRouter, Response
 
 from ..export import ListedFindingsWriter
 from ..media import FrameKey
-from ..models import ComputeDevice, ComputePrecision, LicensedDependency, ModelProfile, ModelSelection
+from ..models import (
+    ComputeDevice,
+    ComputePrecision,
+    LicensedDependency,
+    ModelProfile,
+    ModelSelection,
+    StoredWeights,
+    TemplateCombination,
+)
 from ..recognition import RecognitionTask
 from ..results import ResultCatalog
 from ..review import ClassThresholds, DuplicateSuppression
@@ -26,15 +34,17 @@ from .schema import (
     SuppressionBody,
     TableBody,
     TaskBody,
+    TextTemplatesBody,
     ThresholdsBody,
+    WeightsBody,
 )
 from .web_context import WebContext
 
 
 class RecognitionRoutes:
     """
-    Requests reading the state, choosing the task and model, accepting the licenses of optional modules, running
-    recognitions, and reviewing and comparing the stored results.
+    Requests reading the state, choosing the task and model, accepting the licenses of optional modules, listing and
+    deleting downloaded weights, running recognitions, and reviewing and comparing the stored results.
     """
 
     CSV_FILE_NAME: ClassVar[str] = "findings.csv"
@@ -105,6 +115,9 @@ class RecognitionRoutes:
                     box_detector_label=body.box_detector_label,
                     tiling_grid_size=body.tiling_grid_size,
                     text_templates=None if body.text_templates is None else tuple(body.text_templates),
+                    template_combination=None
+                    if body.template_combination is None
+                    else TemplateCombination(body.template_combination),
                     batch_size=body.batch_size,
                 )
             )
@@ -113,6 +126,26 @@ class RecognitionRoutes:
         @router.put("/model/preset")
         async def select_preset(body: PresetBody) -> JsonObject:
             context.workspace.models.select_preset(body.backend, body.preset_name)
+            return {}
+
+        @router.get("/model/weights")
+        async def stored_weights() -> JsonObject:
+            workspace: Workspace = context.workspace
+            weights: tuple[StoredWeights, ...] = await asyncio.to_thread(workspace.models.stored_weights)
+            return {
+                "stored": [
+                    {
+                        "weights_path": stored.weights_path,
+                        "size_bytes": stored.size_bytes,
+                        "is_in_use": workspace.models.is_weights_in_use(stored.weights_path),
+                    }
+                    for stored in weights
+                ]
+            }
+
+        @router.post("/model/weights/delete")
+        async def delete_weights(body: WeightsBody) -> JsonObject:
+            context.workspace.models.delete_weights(body.weights_path)
             return {}
 
         @router.post("/licenses/accept")
@@ -177,6 +210,11 @@ class RecognitionRoutes:
             context.workspace.review.set_duplicate_suppression(
                 DuplicateSuppression(body.is_enabled, body.overlap_threshold, body.class_overlap_thresholds)
             )
+            return {}
+
+        @router.put("/text-templates")
+        async def set_text_templates(body: TextTemplatesBody) -> JsonObject:
+            context.workspace.text_templates.replace(tuple(body.templates))
             return {}
 
         @router.put("/label-mode")

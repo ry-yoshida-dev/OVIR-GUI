@@ -55,7 +55,7 @@ const TASK_VIEWS: Record<TaskValue, TaskView> = {
     resultTitle: "Predictions",
     findingNoun: "predictions",
     displayToggles: [
-      ...COMMON_TOGGLES,
+      ...COMMON_TOGGLES.filter((toggle) => toggle.key !== "isLabelShown"),
       { key: "isScorePanelShown", label: "Score panel" },
     ],
     isLineWidthShown: false,

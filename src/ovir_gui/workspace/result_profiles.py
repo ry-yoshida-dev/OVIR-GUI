@@ -139,6 +139,18 @@ class ResultProfiles:
         profile : ModelProfile | None
             Stored profile other than the shown one; ``None`` stops comparing.
         """
+        self.restore_comparison(profile)
+        self._notifier.changed(WorkspaceTopic.STATE)
+
+    def restore_comparison(self, profile: ModelProfile | None) -> None:
+        """
+        Compare with a profile kept from before without telling the views, unless it can no longer be compared.
+
+        Parameters
+        ----------
+        profile : ModelProfile | None
+            Profile compared with before; one forgotten, shown or of another task stops comparing.
+        """
         is_comparable: bool = (
             profile is not None
             and profile in self._library
@@ -146,7 +158,6 @@ class ResultProfiles:
             and profile.task is self._settings.task
         )
         self._working.compared_profile = profile if is_comparable else None
-        self._notifier.changed(WorkspaceTopic.STATE)
 
     def set_accepted(self, findings: Mapping[FrameKey, Iterable[int]], is_accepted: bool) -> None:
         """

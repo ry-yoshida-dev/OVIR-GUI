@@ -28,6 +28,7 @@ dependencies = [
     "python-multipart",
     "dataclass-initializer @ git+https://github.com/ry-yoshida-dev/DataclassInitializer.git@60ed88a29184474aed069ab9253070923b5dcff0",
     "geometry @ git+https://github.com/ry-yoshida-dev/Geometry.git@7a019d2696877c2beff959d8bb4b2e1efc9880c1",
+    "classification-format @ git+https://github.com/ry-yoshida-dev/ClassificationFormat.git@52cbd1a0852a93bafbda921c2e027446dec9ffa5",
     "object-detection-format @ git+https://github.com/ry-yoshida-dev/ObjectDetectionFormat.git@f5edaa53c41c5b9b3db1ed9bbee49af8d14853ce",
     "segmentation-format @ git+https://github.com/ry-yoshida-dev/SegmentationFormat.git@5fa833f0b8c143e9fddb84d1ab932bfa38855c82",
     "video-handler @ git+https://github.com/ry-yoshida-dev/VideoHandler.git@8e9b5c0c133162b610b15b24f6f7e572eb3873bf",

@@ -136,7 +136,7 @@ export function ProfileTable({
           }
         }}
       >
-        <table className="grid">
+        <table className="grid fitted">
           <thead>
             <tr>
               <th>
@@ -159,12 +159,13 @@ export function ProfileTable({
               <th title="How much of the open media this model has recognized">Progress</th>
               <th title="Objects found across the recognized pictures">Findings</th>
               <th />
+              <th className="filler" />
             </tr>
           </thead>
           <tbody>
             {profiles.length === 0 && (
               <tr className="status">
-                <td colSpan={6 + differingDetails.length}>No results yet. Open images or videos to fill this table.</td>
+                <td colSpan={7 + differingDetails.length}>No results yet. Open images or videos to fill this table.</td>
               </tr>
             )}
             {profiles.map((profile) => (
@@ -219,6 +220,7 @@ export function ProfileTable({
                       </span>
                     ))}
                 </td>
+                <td className="filler" />
               </tr>
             ))}
           </tbody>

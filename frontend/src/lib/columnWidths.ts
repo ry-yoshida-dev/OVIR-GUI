@@ -1,10 +1,13 @@
 import type { ColumnDefinition, ColumnKey } from "./resultColumns";
-import { formatNumber, frameText, runnerUpTextOf, type TableRow } from "./resultTable";
+import { scoreBarsWidthOf } from "./scoreBars";
+import { formatNumber, frameText, type TableRow } from "./resultTable";
+import { templateLabelOf } from "./textTemplate";
 
 const CHECKBOX_WIDTH = 16;
 const SWATCH_WIDTH = 16;
 const OUTDATED_MARK_WIDTH = 18;
 const FUNNEL_WIDTH = 16;
+const TEMPLATE_SLOT_WIDTH = 14;
 const ROUNDING_SLACK = 2;
 
 export interface ColumnFonts {
@@ -25,8 +28,6 @@ function cellTextOf(row: TableRow, key: ColumnKey): string {
       return row.mediaName;
     case "frame":
       return frameText(row.frame, row.seconds);
-    case "runner_up":
-      return runnerUpTextOf(row.scores) ?? "";
     default:
       break;
   }
@@ -37,6 +38,8 @@ function cellTextOf(row: TableRow, key: ColumnKey): string {
       return finding.class_name;
     case "prompt":
       return finding.matched_prompt;
+    case "template":
+      return finding.matched_template === null ? "" : templateLabelOf(finding.matched_template);
     case "confidence":
       return formatNumber(finding.confidence, "confidence");
     case "area":
@@ -59,6 +62,10 @@ function decorationWidthOf(row: TableRow, key: ColumnKey): number {
       return row.outdated === null ? 0 : OUTDATED_MARK_WIDTH;
     case "class":
       return row.kind === "finding" ? SWATCH_WIDTH : 0;
+    case "template":
+      return row.kind === "finding" && row.finding.matched_template !== null ? TEMPLATE_SLOT_WIDTH : 0;
+    case "confidence":
+      return row.kind === "finding" && row.scores.length > 0 ? scoreBarsWidthOf(row.scores.length) : 0;
     default:
       return 0;
   }

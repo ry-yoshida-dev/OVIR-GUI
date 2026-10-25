@@ -5,9 +5,27 @@ import cv2
 import numpy as np
 
 from ovir_gui.media import FrameKey, InferenceMode
-from ovir_gui.models import ComputeDevice, ComputePrecision, ModelProfile, ModelSelection, ProfileOption
+from ovir_gui.models import (
+    ComputeDevice,
+    ComputePrecision,
+    ModelProfile,
+    ModelSelection,
+    ProfileOption,
+    TemplateCombination,
+)
 from ovir_gui.prompting import PromptSignature, QueriedClass
-from ovir_gui.recognition import FrameResult, ImageSize, InstanceMask, PixelBox, RecognitionTask, RecognizedInstance
+from ovir_gui.recognition import (
+    ClassifierLogits,
+    ClassScore,
+    FrameResult,
+    ImageSize,
+    InstanceMask,
+    LabelMode,
+    PixelBox,
+    RecognitionTask,
+    RecognizedInstance,
+    SentenceLogit,
+)
 from ovir_gui.results import ResultLibrary
 from ovir_gui.review import ClassThresholds, DuplicateSuppression
 from ovir_gui.storage import (
@@ -18,13 +36,15 @@ from ovir_gui.storage import (
     Session,
     SessionMedia,
     SessionStore,
+    SessionTaskSettings,
+    TextTemplateStore,
 )
 
 
 class TestStoreRoundTrips:
     """
-    Every store reads back what it wrote: the session, the class minimums, the duplicate suppression and the results
-    archive with masks and rejections.
+    Every store reads back what it wrote: the session, the class minimums, the duplicate suppression, the saved text
+    templates and the results archive with masks, rejections and sentence logits.
     """
 
     def test_session_round_trip(self, tmp_path: Path) -> None:
@@ -48,9 +68,12 @@ class TestStoreRoundTrips:
                 ),
             },
             task=RecognitionTask.DETECTION,
-            frame_step=7,
-            inference_mode=InferenceMode.ALL,
-            is_auto_inference=False,
+            task_settings={
+                RecognitionTask.DETECTION: SessionTaskSettings(
+                    frame_step=7, inference_mode=InferenceMode.ALL, is_auto_inference=False
+                ),
+                RecognitionTask.SEGMENTATION: SessionTaskSettings(frame_step=2),
+            },
             selections={RecognitionTask.DETECTION: selection},
         )
         store: SessionStore = SessionStore(tmp_path / "data")
@@ -71,12 +94,27 @@ class TestStoreRoundTrips:
 
     def test_unknown_inference_mode_is_dropped(self, tmp_path: Path) -> None:
         store: SessionStore = SessionStore(tmp_path)
-        store.save(Session(frame_step=3, inference_mode=InferenceMode.SHOWN))
+        store.save(
+            Session(
+                task_settings={
+                    RecognitionTask.DETECTION: SessionTaskSettings(frame_step=3, inference_mode=InferenceMode.SHOWN)
+                }
+            )
+        )
         content: str = store.path.read_text("utf-8").replace('"shown"', '"everything"')
         _ = store.path.write_text(content, "utf-8")
         loaded: Session = store.load()
-        assert loaded.inference_mode is None
-        assert loaded.frame_step == 3
+        assert loaded.task_settings == {RecognitionTask.DETECTION: SessionTaskSettings(frame_step=3)}
+
+    def test_shared_choices_of_earlier_sessions_go_to_every_task(self, tmp_path: Path) -> None:
+        store: SessionStore = SessionStore(tmp_path)
+        content: str = json.dumps({"frame_step": 5, "inference_mode": "all", "is_auto_inference": False})
+        _ = store.path.write_text(content, "utf-8")
+        loaded: Session = store.load()
+        shared: SessionTaskSettings = SessionTaskSettings(
+            frame_step=5, inference_mode=InferenceMode.ALL, is_auto_inference=False
+        )
+        assert loaded.task_settings == dict.fromkeys(RecognitionTask, shared)
 
     def test_class_thresholds_round_trip(self, tmp_path: Path) -> None:
         thresholds: dict[RecognitionTask, ClassThresholds] = {
@@ -94,6 +132,13 @@ class TestStoreRoundTrips:
         DuplicateSuppressionStore(tmp_path).save(suppressions)
         loaded: dict[RecognitionTask, DuplicateSuppression] = DuplicateSuppressionStore(tmp_path).load()
         assert {task: loaded[task] for task in suppressions} == suppressions
+
+    def test_text_templates_round_trip(self, tmp_path: Path) -> None:
+        store: TextTemplateStore = TextTemplateStore(tmp_path / "data")
+        assert store.load() is None
+        templates: tuple[str, ...] = ("a photo of a {}.", "a {} on the street.")
+        store.save(templates)
+        assert store.load() == templates
 
     def test_results_archive_round_trip(self, tmp_path: Path) -> None:
         image_path: Path = tmp_path / "picture.png"
@@ -134,3 +179,55 @@ class TestStoreRoundTrips:
         for read_bits, written_bits in zip(read_back.mask_bits, written.mask_bits, strict=True):
             assert np.array_equal(read_bits, written_bits)
         assert not store.path.with_name(f".{store.path.name}.partial").exists()
+
+    def test_classifications_are_scored_again_from_their_stored_logits(self, tmp_path: Path) -> None:
+        image_path: Path = tmp_path / "picture.png"
+        _ = cv2.imwrite(str(image_path), np.zeros((16, 24, 3), dtype=np.uint8))
+        profile: ModelProfile = ModelProfile(
+            task=RecognitionTask.CLASSIFICATION,
+            backend="clip",
+            model_name="ViT-B-32",
+            weights_path="weights",
+            device="cpu",
+            precision="fp32",
+            options=(ProfileOption("Pooling", "cls"),),
+        )
+        logits: ClassifierLogits = ClassifierLogits(
+            class_names=("dog", "cat"),
+            prompt_labels=("dog", "cat"),
+            sentences=(
+                SentenceLogit(0, 0, "{}", 0.0),
+                SentenceLogit(0, 0, "a photo of a {}.", 4.0),
+                SentenceLogit(1, 1, "{}", 3.0),
+                SentenceLogit(1, 1, "a photo of a {}.", 3.0),
+            ),
+            logit_scale=100.0,
+            logit_bias=0.0,
+        )
+        result: FrameResult = FrameResult(
+            task=RecognitionTask.CLASSIFICATION,
+            image_size=ImageSize(24, 16),
+            class_scores=(ClassScore("dog", 0.5, 0.0, "dog", 0.0, "{}"), ClassScore("cat", 0.5, 0.0, "cat", 0.0, "{}")),
+            native_label_mode=LabelMode.SINGLE_LABEL,
+            sentence_logits=logits,
+        )
+        signature: PromptSignature = PromptSignature(
+            (
+                QueriedClass(name="dog", phrases=frozenset({"dog"}), reference_boxes=frozenset()),
+                QueriedClass(name="cat", phrases=frozenset({"cat"}), reference_boxes=frozenset()),
+            )
+        )
+        library: ResultLibrary = ResultLibrary()
+        library.apply_template_combination(TemplateCombination.MAX)
+        library.record(profile, FrameKey(image_path), result, signature)
+        library.catalog_of(profile).set_accepted(FrameKey(image_path), [1], False)
+        store: ResultsStore = ResultsStore(tmp_path / "data")
+        store.write(ResultsStore.snapshot(library))
+        read_back: ResultLibrary = store.load()
+        read_back.apply_template_combination(TemplateCombination.MIN)
+        stored = read_back.catalog_of(profile).stored_of(FrameKey(image_path))
+        assert stored is not None
+        assert stored.rejected_indices == frozenset({1})
+        dog, cat = stored.result.class_scores
+        assert (dog.logit, dog.matched_template, cat.logit) == (0.0, "a photo of a {}.", 3.0)
+        assert cat.score > dog.score

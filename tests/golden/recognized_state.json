@@ -857,6 +857,9 @@
     ],
     "modes": [],
     "precisions": "<volatile>",
+    "saved_templates": [
+      "a photo of a {}."
+    ],
     "selection": {
       "backend": "grounding_dino",
       "batch_size": 4,
@@ -867,9 +870,33 @@
       "nms_iou_threshold": null,
       "precision": "float32",
       "preset_name": "original_tiny",
+      "template_combination": null,
       "text_templates": null,
       "tiling_grid_size": null
     },
+    "template_combination": null,
+    "template_combinations": [
+      {
+        "title": "None",
+        "value": "none"
+      },
+      {
+        "title": "Max",
+        "value": "max"
+      },
+      {
+        "title": "Mean",
+        "value": "mean"
+      },
+      {
+        "title": "Median",
+        "value": "median"
+      },
+      {
+        "title": "Min",
+        "value": "min"
+      }
+    ],
     "text_templates": null,
     "tuning": {
       "confidence_label": null,

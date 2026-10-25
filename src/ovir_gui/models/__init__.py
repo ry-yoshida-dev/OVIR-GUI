@@ -26,8 +26,12 @@ from .recognizer import Recognizer
 from .recognizer_session import RecognizerSession
 from .segmentation_mode import SegmentationMode
 from .segmentation_model import SegmentationModel
+from .stored_weights import StoredWeights
 from .stream_position import StreamPosition
+from .template_combination import TemplateCombination
+from .template_scorer import TemplateScorer
 from .threshold_controls import ThresholdControls
+from .weights_storage import WeightsStorage
 
 __all__ = [
     "BackendTraits",
@@ -58,6 +62,10 @@ __all__ = [
     "RecognizerSession",
     "SegmentationMode",
     "SegmentationModel",
+    "StoredWeights",
     "StreamPosition",
+    "TemplateCombination",
+    "TemplateScorer",
     "ThresholdControls",
+    "WeightsStorage",
 ]

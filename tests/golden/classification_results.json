@@ -1,7 +1,6 @@
 {
   "pictures": [
     {
-      "class_count": 3,
       "findings": [
         {
           "area": null,
@@ -12,6 +11,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "person",
+          "matched_template": "{}",
           "similarity": 0.3
         },
         {
@@ -23,6 +23,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "car",
+          "matched_template": "{}",
           "similarity": 0.25
         },
         {
@@ -34,6 +35,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "dog",
+          "matched_template": "{}",
           "similarity": 0.2
         }
       ],
@@ -44,21 +46,23 @@
       "scores": [
         {
           "class_name": "person",
+          "is_reaching_minimum": true,
           "score": 0.9
         },
         {
           "class_name": "car",
+          "is_reaching_minimum": true,
           "score": 0.7
         },
         {
           "class_name": "dog",
+          "is_reaching_minimum": true,
           "score": 0.5
         }
       ],
       "seconds": null
     },
     {
-      "class_count": 3,
       "findings": [
         {
           "area": null,
@@ -69,6 +73,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "person",
+          "matched_template": "{}",
           "similarity": 0.3
         },
         {
@@ -80,6 +85,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "car",
+          "matched_template": "{}",
           "similarity": 0.25
         },
         {
@@ -91,6 +97,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "dog",
+          "matched_template": "{}",
           "similarity": 0.2
         }
       ],
@@ -101,21 +108,23 @@
       "scores": [
         {
           "class_name": "person",
+          "is_reaching_minimum": true,
           "score": 0.9
         },
         {
           "class_name": "car",
+          "is_reaching_minimum": true,
           "score": 0.7
         },
         {
           "class_name": "dog",
+          "is_reaching_minimum": true,
           "score": 0.5
         }
       ],
       "seconds": null
     },
     {
-      "class_count": 3,
       "findings": [
         {
           "area": null,
@@ -126,6 +135,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "person",
+          "matched_template": "{}",
           "similarity": 0.3
         },
         {
@@ -137,6 +147,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "car",
+          "matched_template": "{}",
           "similarity": 0.25
         },
         {
@@ -148,6 +159,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "dog",
+          "matched_template": "{}",
           "similarity": 0.2
         }
       ],
@@ -158,21 +170,23 @@
       "scores": [
         {
           "class_name": "person",
+          "is_reaching_minimum": true,
           "score": 0.9
         },
         {
           "class_name": "car",
+          "is_reaching_minimum": true,
           "score": 0.7
         },
         {
           "class_name": "dog",
+          "is_reaching_minimum": true,
           "score": 0.5
         }
       ],
       "seconds": 0.0
     },
     {
-      "class_count": 3,
       "findings": [
         {
           "area": null,
@@ -183,6 +197,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "person",
+          "matched_template": "{}",
           "similarity": 0.3
         },
         {
@@ -194,6 +209,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "car",
+          "matched_template": "{}",
           "similarity": 0.25
         },
         {
@@ -205,6 +221,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "dog",
+          "matched_template": "{}",
           "similarity": 0.2
         }
       ],
@@ -215,21 +232,23 @@
       "scores": [
         {
           "class_name": "person",
+          "is_reaching_minimum": true,
           "score": 0.86
         },
         {
           "class_name": "car",
+          "is_reaching_minimum": true,
           "score": 0.66
         },
         {
           "class_name": "dog",
+          "is_reaching_minimum": true,
           "score": 0.46
         }
       ],
       "seconds": 0.4
     },
     {
-      "class_count": 3,
       "findings": [
         {
           "area": null,
@@ -240,6 +259,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "person",
+          "matched_template": "{}",
           "similarity": 0.3
         },
         {
@@ -251,6 +271,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "car",
+          "matched_template": "{}",
           "similarity": 0.25
         },
         {
@@ -262,6 +283,7 @@
           "is_accepted": true,
           "is_passing": true,
           "matched_prompt": "dog",
+          "matched_template": "{}",
           "similarity": 0.2
         }
       ],
@@ -272,20 +294,23 @@
       "scores": [
         {
           "class_name": "person",
+          "is_reaching_minimum": true,
           "score": 0.82
         },
         {
           "class_name": "car",
+          "is_reaching_minimum": true,
           "score": 0.62
         },
         {
           "class_name": "dog",
+          "is_reaching_minimum": true,
           "score": 0.42
         }
       ],
       "seconds": 0.8
     }
   ],
-  "profile_key": "94b8200713d237a5",
+  "profile_key": "768e81c58235d400",
   "task": "classification"
 }

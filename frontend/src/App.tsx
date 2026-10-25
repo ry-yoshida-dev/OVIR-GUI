@@ -31,12 +31,9 @@ import { useReviewDraft } from "./hooks/useReviewDraft";
 import { useShownResults } from "./hooks/useShownResults";
 import { useStatusMessage } from "./hooks/useStatusMessage";
 import { useStoredState } from "./hooks/useStoredState";
+import { useTaskDisplayOptions } from "./hooks/useTaskDisplayOptions";
 import { useVideoPlayerFallback } from "./hooks/useVideoPlayerFallback";
 import { useWorkspace } from "./hooks/useWorkspace";
-import {
-  DEFAULT_DISPLAY_OPTIONS,
-  type DisplayOptions,
-} from "./lib/displayOptions";
 import {
   groupFindings,
   rowKeyOf,
@@ -57,10 +54,6 @@ export function App() {
   const menu = useMenu();
   const layoutState = useLayoutState();
   const { layout, resize } = layoutState;
-  const [display, setDisplay] = useStoredState<DisplayOptions>(
-    "ovir-gui.display",
-    DEFAULT_DISPLAY_OPTIONS,
-  );
   const [centerLayout, setCenterLayout] = useStoredState<CenterLayout>(
     "ovir-gui.center",
     DEFAULT_CENTER_LAYOUT,
@@ -101,6 +94,7 @@ export function App() {
   const { chartedVideo, isChartedVideoCurrent, resultPictureKey } = shown;
 
   const task: TaskValue = state?.task.value ?? "detection";
+  const [display, setDisplay] = useTaskDisplayOptions(task);
   const hasImages =
     state?.media.some((entry) => entry.kind === "image") ?? false;
   const hasVideos =

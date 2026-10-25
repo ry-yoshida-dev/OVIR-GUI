@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from classification_format import AnnotationFormat as LabelAnnotationFormat
 from object_detection_format import AnnotationFormat as BoxAnnotationFormat
 from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
@@ -15,6 +16,7 @@ from .export_format import ExportFormat
 from .export_item import ExportItem
 from .export_options import ExportOptions
 from .export_report import ExportReport
+from .label_annotation_writer import LabelAnnotationWriter
 from .mask_annotation_writer import MaskAnnotationWriter
 from .mask_image_writer import MaskImageWriter
 from .overlay_renderer import OverlayRenderer
@@ -143,6 +145,19 @@ class ResultExporter:
                 return MaskAnnotationWriter(mask_format, is_confidence_included).write(
                     items, pictures, class_names, directory
                 )
+            case (
+                ExportFormat.CLASS_COLUMNS_CSV
+                | ExportFormat.LABEL_LIST_CSV
+                | ExportFormat.HUGGING_FACE
+                | ExportFormat.PASCAL_VOC_IMAGE_SETS
+                | ExportFormat.OPEN_IMAGES
+            ):
+                label_format: LabelAnnotationFormat | None = options.export_format.label_annotation_format
+                if label_format is None:
+                    raise ValueError(f"{options.export_format.label} has no classification writer.")
+                return LabelAnnotationWriter(
+                    label_format, options.export_format.csv_layout, is_confidence_included
+                ).write(items, pictures, class_names, directory)
             case ExportFormat.MASK_PNG:
                 return MaskImageWriter().write(items, pictures, class_names, directory)
             case ExportFormat.CLASS_FOLDERS:

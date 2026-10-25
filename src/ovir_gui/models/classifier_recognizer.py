@@ -1,14 +1,16 @@
 from collections.abc import Sequence
 
-from open_vocabulary_classification import ClassificationResult, OpenVocabularyClassifier, Prompt
+from open_vocabulary_classification import ClassificationResult, OpenVocabularyClassifier
 from PIL import Image
 
 from ..media import KeyedPicture
 from ..prompting import LabeledPrompt
-from ..recognition import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
+from ..recognition import ClassifierLogits, FrameResult, ImageSize, LabelMode, RecognitionTask
 from .classification_model import ClassificationModel
 from .classifier_prompt_builder import ClassifierPromptBuilder
+from .classifier_query_layout import ClassifierQueryLayout
 from .recognizer import Recognizer
+from .template_scorer import TemplateScorer
 
 
 class ClassifierRecognizer(Recognizer[ClassificationModel]):
@@ -35,34 +37,23 @@ class ClassifierRecognizer(Recognizer[ClassificationModel]):
 
     def recognize(self, pictures: Sequence[KeyedPicture], prompt: LabeledPrompt) -> list[FrameResult]:
         images: list[Image.Image] = [picture.image for picture in pictures]
-        library_prompt: Prompt = self._prompts.build(prompt)
-        prompt_labels: tuple[str, ...] = prompt.prompt_labels
+        layout: ClassifierQueryLayout = self._prompts.build(prompt, self._model.text_templates)
         results: list[ClassificationResult] = self._classifier.classify_images(
-            images, library_prompt, self._model.tiling
+            images, layout.prompt, self._model.tiling
         )
-        return [
-            self._convert(result, prompt_labels, ImageSize(width=image.width, height=image.height))
-            for image, result in zip(images, results, strict=True)
-        ]
-
-    def _convert(
-        self, result: ClassificationResult, prompt_labels: tuple[str, ...], image_size: ImageSize
-    ) -> FrameResult:
-        matched_query_ids: list[int] = [int(query_id) for query_id in result.matched_query_ids.tolist()]
-        logit_scale: float = self._classifier.logit_scale
-        logit_bias: float = self._classifier.logit_bias
-        return FrameResult(
-            task=RecognitionTask.CLASSIFICATION,
-            image_size=image_size,
-            class_scores=tuple(
-                ClassScore(
-                    class_name=class_name,
-                    score=float(result.scores[class_id]),
-                    logit=float(result.class_logits[class_id]),
-                    matched_prompt=prompt_labels[matched_query_ids[class_id]],
-                    similarity=(float(result.class_logits[class_id]) - logit_bias) / logit_scale,
+        scorer: TemplateScorer = TemplateScorer(self._model.template_combination, self._classifier.score_activation)
+        frame_results: list[FrameResult] = []
+        for image, result in zip(images, results, strict=True):
+            logits: ClassifierLogits = layout.logits_of(
+                result.query_logits, prompt.prompt_labels, self._classifier.logit_scale, self._classifier.logit_bias
+            )
+            frame_results.append(
+                FrameResult(
+                    task=RecognitionTask.CLASSIFICATION,
+                    image_size=ImageSize(width=image.width, height=image.height),
+                    class_scores=scorer.class_scores(logits),
+                    native_label_mode=self._native_label_mode,
+                    sentence_logits=logits,
                 )
-                for class_id, class_name in enumerate(result.class_names)
-            ),
-            native_label_mode=self._native_label_mode,
-        )
+            )
+        return frame_results

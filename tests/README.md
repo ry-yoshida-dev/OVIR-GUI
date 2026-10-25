@@ -26,12 +26,14 @@ API is exercised through FastAPI's `TestClient` on generated media, with `FakeRe
 | [test_picture_prompts.py](./test_picture_prompts.py) | `TestPicturePromptBoard`, `TestDrawnSignature`, `TestStreamPosition`, `TestDrawingPersistence`: drawings follow their class, outdate exactly the pictures depending on them and survive a restart. |
 | [test_playback_store.py](./test_playback_store.py) | `TestPlaybackStore`: playable copies are keyed by the source path, size and modification time. |
 | [test_result_statistics.py](./test_result_statistics.py) | `TestThresholdCurve`, `TestConfidenceSummary`, `TestSizeBand`, `TestResultStatistics`, `TestProfileComparison`: threshold curves, quantiles, size bands, class relations, picture rankings and the comparison of kept findings. |
+| [test_label_annotation_export.py](./test_label_annotation_export.py) | `TestLabelAnnotationExport`: classifications are written as class-column and label-list CSV, Hugging Face imagefolder, Pascal VOC image sets and Open Images labels, with or without scores. |
 | [test_label_modes.py](./test_label_modes.py) | `TestLabelModes`: single-label keeps the best class, multi-label every class reaching its minimum, an unchosen mode follows the model, and version 1 rejections move to the best class. |
 | [test_review_filter.py](./test_review_filter.py) | `TestReviewFilter`, `TestReviewStores`: phrase minimums replace class ones, the suppression keeps the best box of each class, and both survive a restart. |
 | [test_review_routes.py](./test_review_routes.py) | `TestReviewRoutes`: phrase minimums and the suppression are set through the API and reported in the state. |
 | [test_segmenter_exemplars.py](./test_segmenter_exemplars.py) | `TestSegmenterExemplars`: SAM 3 reads the exemplar boxes of each picture, and exemplar-only classes are segmented only where they have a positive box. |
 | [test_store_round_trips.py](./test_store_round_trips.py) | `TestStoreRoundTrips`: the session, class minimums, duplicate suppression and results archive read back what they wrote. |
 | [test_upload_store.py](./test_upload_store.py) | `TestUploadStore`: uploads are streamed to disk, identical content reuses its copy and other content is numbered. |
+| [test_weights_storage.py](./test_weights_storage.py) | `TestWeightsStorage`: downloaded weights are found in the Hugging Face hub cache and Ultralytics directories, sized, listed once in order, and deleted. |
 | [test_workspace_flow.py](./test_workspace_flow.py) | `TestWorkspaceFlow`: characterization of the state, result, frame, timeline, statistics, comparison, export and restart payloads against `golden/`. |
 
 ## Examples

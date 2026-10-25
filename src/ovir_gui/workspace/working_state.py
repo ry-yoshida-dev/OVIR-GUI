@@ -10,8 +10,8 @@ from .task_media import TaskMedia
 class WorkingState:
     """
     What the user works on right now, shared by the parts of the workspace: the open media and shown picture of the
-    current task, the media left open in the other tasks, the shown and compared result profiles, and the latest run
-    of the shown picture.
+    current task, the media and compared profiles left in the other tasks, the shown and compared result profiles, and
+    the latest run of the shown picture.
 
     The state is owned by the thread of the workspace and changed only by its parts; it holds no rules of its own.
     """
@@ -26,6 +26,7 @@ class WorkingState:
         self.summary: str = ""
         self.progress: RunProgress | None = None
         self.parked_media: dict[RecognitionTask, TaskMedia] = {}
+        self.parked_compared_profiles: dict[RecognitionTask, ModelProfile] = {}
 
     @property
     def current_item(self) -> MediaItem | None:
@@ -97,6 +98,29 @@ class WorkingState:
         self.show_key(None if entered is None else entered.current_key)
         self.requested_key = None
         return entered is not None
+
+    def switch_comparison(self, leaving: RecognitionTask, entering: RecognitionTask) -> ModelProfile | None:
+        """
+        Keep the compared profile of the task left aside and stop comparing.
+
+        Parameters
+        ----------
+        leaving : RecognitionTask
+            Task whose compared profile is kept aside.
+        entering : RecognitionTask
+            Task whose kept compared profile is handed back.
+
+        Returns
+        -------
+        ModelProfile | None
+            Profile the task entered compared with when it was left; ``None`` when it compared with none.
+        """
+        if self.compared_profile is None:
+            self.parked_compared_profiles.pop(leaving, None)
+        else:
+            self.parked_compared_profiles[leaving] = self.compared_profile
+        self.compared_profile = None
+        return self.parked_compared_profiles.pop(entering, None)
 
     def next_remaining_path(self, closed: frozenset[Path]) -> Path | None:
         """

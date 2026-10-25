@@ -109,6 +109,9 @@ export function SetupPane({
           <ModelPanel
             model={state.model}
             isDisabled={state.is_busy}
+            examplePrompt={state.classes[0]?.phrases[0] ?? state.classes[0]?.name ?? "dog"}
+            call={call}
+            onReport={onReport}
             onSelectPreset={(backend, preset) =>
               void modelSelector.selectPreset(backend, preset)
             }

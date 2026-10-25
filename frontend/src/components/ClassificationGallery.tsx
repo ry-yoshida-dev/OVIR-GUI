@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { MediaEntry } from "../api/types";
+import type { DisplayOptions } from "../lib/displayOptions";
 import { type ClassColors, classColorOf } from "../lib/frameView";
 import {
   buildGalleryGroups,
@@ -15,12 +16,15 @@ import "./ClassificationGallery.css";
 import { GalleryInspector } from "./GalleryInspector";
 import { ScoreSpectrum } from "./ScoreSpectrum";
 
+const LISTED_SCORE_COUNT = 5;
+
 export interface ClassificationGalleryProps {
   rows: TableRow[];
   media: MediaEntry[];
   currentPictureKey: string | null;
   selectedKey: string | null;
   classColors: ClassColors;
+  options: DisplayOptions;
   onSelectRow: (row: TableRow) => void;
   onOpenPicture: (path: string, frame: number | null) => void;
   onSetAccepted: (rows: TableRow[], isAccepted: boolean) => void;
@@ -59,10 +63,10 @@ function titleOf(tile: GalleryTile): string {
     lines.push(tile.row.text);
   }
   if (tile.margin !== null) lines.push(`Lead: ${tile.margin.toFixed(3)}`);
-  for (const [rank, score] of tile.scores.entries()) {
+  for (const [rank, score] of tile.scores.slice(0, LISTED_SCORE_COUNT).entries()) {
     lines.push(`${rank + 1}. ${score.class_name} ${score.score.toFixed(3)}`);
   }
-  const unlistedCount = tile.row.classCount - tile.scores.length;
+  const unlistedCount = tile.scores.length - LISTED_SCORE_COUNT;
   if (unlistedCount > 0) lines.push(`+${unlistedCount} more classes`);
   if (tile.row.outdated !== null) lines.push(`Inferred with other classes: ${tile.row.outdated}`);
   return lines.join("\n");
@@ -85,6 +89,7 @@ interface GalleryTileViewProps {
   imageSource: string;
   isSelected: boolean;
   isCurrent: boolean;
+  isConfidenceShown: boolean;
   colorOf: (className: string) => string;
   onSelect: (row: TableRow) => void;
   onOpen: (path: string, frame: number | null) => void;
@@ -97,6 +102,7 @@ function GalleryTileView({
   imageSource,
   isSelected,
   isCurrent,
+  isConfidenceShown,
   colorOf,
   onSelect,
   onOpen,
@@ -139,10 +145,10 @@ function GalleryTileView({
         {finding !== null && (
           <span className="gallery-tile-score">
             <span className="gallery-dot small" style={{ background: color ?? colorOf(finding.class_name) }} />
-            {finding.confidence.toFixed(3)}
+            {isConfidenceShown && finding.confidence.toFixed(3)}
           </span>
         )}
-        <ScoreSpectrum scores={tile.scores} colorOf={colorOf} />
+        <ScoreSpectrum scores={tile.scores.slice(0, LISTED_SCORE_COUNT)} colorOf={colorOf} />
       </div>
     </div>
   );
@@ -154,6 +160,7 @@ export function ClassificationGallery({
   currentPictureKey,
   selectedKey,
   classColors,
+  options,
   onSelectRow,
   onOpenPicture,
   onSetAccepted,
@@ -161,7 +168,14 @@ export function ClassificationGallery({
   const [sort, setSort] = useState<GallerySortValue>("uncertain");
   const tileElements = useRef<Map<string, HTMLDivElement>>(new Map());
   const gridElements = useRef<Map<string, HTMLDivElement>>(new Map());
-  const groups: GalleryGroup[] = useMemo(() => buildGalleryGroups(rows, classColors, sort), [rows, classColors, sort]);
+  const shownRows: TableRow[] = useMemo(
+    () => (options.isRejectedShown ? rows : rows.filter((row) => row.kind !== "finding" || row.finding.is_accepted)),
+    [rows, options.isRejectedShown],
+  );
+  const groups: GalleryGroup[] = useMemo(
+    () => buildGalleryGroups(shownRows, classColors, sort),
+    [shownRows, classColors, sort],
+  );
   const videoPaths: Set<string> = useMemo(
     () => new Set(media.filter((entry) => entry.kind === "video").map((entry) => entry.path)),
     [media],
@@ -245,7 +259,7 @@ export function ClassificationGallery({
                   {group.color !== null && <span className="gallery-dot" style={{ background: group.color }} />}
                   <span className="gallery-group-title">{group.title}</span>
                   <span className="gallery-group-count">{group.tiles.length}</span>
-                  {average !== null && <span className="gallery-group-average">avg {average.toFixed(3)}</span>}
+                  {options.isConfidenceShown && average !== null && <span className="gallery-group-average">avg {average.toFixed(3)}</span>}
                 </header>
                 <div
                   className="gallery-grid"
@@ -262,6 +276,7 @@ export function ClassificationGallery({
                       imageSource={sourceOf(tile)}
                       isSelected={tile.row.key === selectedTileKey}
                       isCurrent={tile.pictureKey === currentPictureKey}
+                      isConfidenceShown={options.isConfidenceShown}
                       colorOf={colorOf}
                       onSelect={onSelectRow}
                       onOpen={onOpenPicture}

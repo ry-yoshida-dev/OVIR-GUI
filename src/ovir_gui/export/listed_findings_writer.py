@@ -13,8 +13,8 @@ class ListedFindingsWriter:
     """
     Writes the findings a result table lists, in display order, as CSV text.
 
-    Columns are media, frame, seconds, class, matched prompt, confidence, box corners, area and whether the finding is
-    kept.
+    Columns are media, frame, seconds, class, matched prompt, best template of a classification, confidence, box
+    corners, area and whether the finding is kept.
     """
 
     HEADER: ClassVar[tuple[str, ...]] = (
@@ -23,6 +23,7 @@ class ListedFindingsWriter:
         "seconds",
         "class",
         "matched_prompt",
+        "best_template",
         "confidence",
         "x_min",
         "y_min",
@@ -91,6 +92,7 @@ class ListedFindingsWriter:
                     seconds,
                     finding.class_name,
                     finding.matched_prompt,
+                    finding.matched_template or "",
                     f"{finding.confidence:.6f}",
                     *corners,
                     "" if finding.area is None else f"{finding.area:.0f}",

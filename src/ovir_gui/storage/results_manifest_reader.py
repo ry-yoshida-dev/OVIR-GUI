@@ -9,6 +9,7 @@ from ..media import FrameKey
 from ..models import ClassificationModel, ModelProfile, ProfileOption
 from ..prompting import PromptSignature, QueriedClass, QueryKind, ReferenceBox, ReferenceImage
 from ..recognition import (
+    ClassifierLogits,
     ClassScore,
     FrameResult,
     ImageSize,
@@ -17,6 +18,7 @@ from ..recognition import (
     PixelBox,
     RecognitionTask,
     RecognizedInstance,
+    SentenceLogit,
 )
 from ..recognition.array_types import UInt8Array
 from ..results import ResultLibrary, StoredResult
@@ -31,7 +33,8 @@ class ResultsManifestReader:
 
     Results of media files that no longer exist or changed since (other modification time or size) are dropped.
     Rejections of classifications in a version 1 manifest, which indexed the best class by 0, are moved to the
-    position of that class.
+    position of that class. Classifications of a manifest before version 3 have no sentence logits, so they keep the
+    scores they were stored with.
     """
 
     CLASS_INDEXED_VERSION: ClassVar[int] = 2
@@ -216,9 +219,10 @@ class ResultsManifestReader:
             scores: list[ClassScore] = []
             for score_value in JsonFields.list_of(entry.get("scores"), "scores"):
                 fields: list[JsonValue] = JsonFields.list_of(score_value, "score")
-                if len(fields) not in (4, 5):
-                    raise ValueError(f"a score needs 4 or 5 fields. got {fields}")
-                similarity: JsonValue = fields[4] if len(fields) == 5 else None
+                if len(fields) not in (4, 5, 6):
+                    raise ValueError(f"a score needs 4 to 6 fields. got {fields}")
+                similarity: JsonValue = fields[4] if len(fields) >= 5 else None
+                template: JsonValue = fields[5] if len(fields) == 6 else None
                 scores.append(
                     ClassScore(
                         class_name=JsonFields.string_of(fields[0], "class"),
@@ -226,13 +230,20 @@ class ResultsManifestReader:
                         logit=JsonFields.number_of(fields[2], "logit"),
                         matched_prompt=JsonFields.string_of(fields[3], "matched prompt"),
                         similarity=None if similarity is None else JsonFields.number_of(similarity, "similarity"),
+                        matched_template=None if template is None else JsonFields.string_of(template, "template"),
                     )
                 )
+            logits_value: JsonValue = entry.get("logits")
             return FrameResult(
                 task=task,
                 image_size=image_size,
                 class_scores=tuple(scores),
                 native_label_mode=ClassificationModel.native_label_mode_of(profile.backend),
+                sentence_logits=None
+                if logits_value is None
+                else self._logits_of(
+                    JsonFields.object_of(logits_value, "logits"), tuple(score.class_name for score in scores)
+                ),
             )
         return FrameResult(
             task=task,
@@ -241,6 +252,31 @@ class ResultsManifestReader:
                 self._instance_of(JsonFields.list_of(value, "instance"))
                 for value in JsonFields.list_of(entry.get("instances"), "instances")
             ),
+        )
+
+    @staticmethod
+    def _logits_of(entry: dict[str, JsonValue], class_names: tuple[str, ...]) -> ClassifierLogits:
+        sentences: list[SentenceLogit] = []
+        for sentence_value in JsonFields.list_of(entry.get("sentences"), "sentences"):
+            fields: list[JsonValue] = JsonFields.list_of(sentence_value, "sentence")
+            if len(fields) != 4:
+                raise ValueError(f"a sentence needs 4 fields. got {fields}")
+            sentences.append(
+                SentenceLogit(
+                    class_index=JsonFields.integer_of(fields[0], "sentence class"),
+                    prompt_index=JsonFields.integer_of(fields[1], "sentence prompt"),
+                    template=None if fields[2] is None else JsonFields.string_of(fields[2], "template"),
+                    logit=JsonFields.number_of(fields[3], "logit"),
+                )
+            )
+        return ClassifierLogits(
+            class_names=class_names,
+            prompt_labels=tuple(
+                JsonFields.string_of(label, "prompt") for label in JsonFields.list_of(entry.get("prompts"), "prompts")
+            ),
+            sentences=tuple(sentences),
+            logit_scale=JsonFields.number_of(entry.get("scale"), "scale"),
+            logit_bias=JsonFields.number_of(entry.get("bias"), "bias"),
         )
 
     def _instance_of(self, fields: list[JsonValue]) -> RecognizedInstance:

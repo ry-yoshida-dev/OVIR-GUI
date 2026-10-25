@@ -1,12 +1,18 @@
 import { useState } from "react";
+import { api } from "../api/client";
 import type { ModelSelection, ModelState } from "../api/types";
+import type { Call } from "../hooks/useActionRunner";
 import { familyOf } from "../lib/modelFamily";
 import { ModelLibraryDialog } from "./ModelLibraryDialog";
 import { TemplateField } from "./TemplateField";
+import type { TemplateChoice } from "./TemplatePanel";
 
 interface ModelPanelProps {
   model: ModelState;
   isDisabled: boolean;
+  examplePrompt: string;
+  call: Call;
+  onReport: (text: string) => void;
   onSelectPreset: (backend: string, presetName: string) => void;
   onSelectionChange: (selection: ModelSelection) => void;
 }
@@ -14,11 +20,21 @@ interface ModelPanelProps {
 export function ModelPanel({
   model,
   isDisabled,
+  examplePrompt,
+  call,
+  onReport,
   onSelectPreset,
   onSelectionChange,
 }: ModelPanelProps) {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const selection = model.selection;
+  const changeTemplates = async ({ saved, inUse }: TemplateChoice) => {
+    if (saved.join("\n") !== model.saved_templates.join("\n")) {
+      if (!(await call(() => api.setTextTemplates(saved)))) return;
+    }
+    if (inUse.join("\n") !== (model.text_templates ?? []).join("\n"))
+      onSelectionChange({ ...selection, text_templates: inUse });
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div className="form-grid">
@@ -37,15 +53,20 @@ export function ModelPanel({
             ›
           </span>
         </button>
-        {model.text_templates !== null && (
+        {model.text_templates !== null && model.template_combination !== null && (
           <>
-            <span className="form-grid-top">Template</span>
+            <span>Templates</span>
             <TemplateField
               templates={model.text_templates}
+              savedTemplates={model.saved_templates}
+              combination={{ value: model.template_combination, options: model.template_combinations }}
+              examplePrompt={examplePrompt}
               isDisabled={isDisabled}
-              onCommit={(templates) =>
-                onSelectionChange({ ...selection, text_templates: templates })
+              onChange={(choice) => void changeTemplates(choice)}
+              onCombinationChange={(combination) =>
+                onSelectionChange({ ...selection, template_combination: combination })
               }
+              onReport={onReport}
             />
           </>
         )}
@@ -54,6 +75,7 @@ export function ModelPanel({
         <ModelLibraryDialog
           model={model}
           backends={model.backends}
+          call={call}
           onSelectPreset={onSelectPreset}
           onClose={() => setIsLibraryOpen(false)}
         />

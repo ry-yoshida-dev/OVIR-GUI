@@ -8,6 +8,7 @@ import type {
   ExportPurposeValue,
   LabelPreview,
   MediaKindValue,
+  TaskValue,
 } from "../api/types";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { useStoredState } from "../hooks/useStoredState";
@@ -31,14 +32,18 @@ interface ExportDialogProps {
   onClose: () => void;
 }
 
-interface StoredExportOptions {
-  purposes: Record<string, ExportPurposeValue>;
-  formats: Record<string, string>;
+interface TaskExportOptions {
   is_confidence_included: boolean;
   is_annotated_image_saved: boolean;
   is_annotated_video_saved: boolean;
   crop_image_format: CropImageFormatValue;
   crop_margin_percent: number;
+}
+
+interface StoredExportOptions {
+  purposes: Record<string, ExportPurposeValue>;
+  formats: Record<string, string>;
+  tasks: Partial<Record<TaskValue, Partial<TaskExportOptions>>>;
   output_directory: string;
 }
 
@@ -46,6 +51,14 @@ interface FormatGroup {
   label: string;
   formats: ExportFormat[];
 }
+
+const DEFAULT_TASK_EXPORT_OPTIONS: TaskExportOptions = {
+  is_confidence_included: true,
+  is_annotated_image_saved: false,
+  is_annotated_video_saved: false,
+  crop_image_format: "jpeg",
+  crop_margin_percent: 0,
+};
 
 const EXPORT_PLAN_KEY = "export-plan";
 const EXPORT_PREVIEW_KEY = "export-preview";
@@ -79,11 +92,7 @@ export function ExportDialog({
   const [stored, setStored] = useStoredState<StoredExportOptions>("ovir-gui.export", {
     purposes: {},
     formats: {},
-    is_confidence_included: true,
-    is_annotated_image_saved: false,
-    is_annotated_video_saved: false,
-    crop_image_format: "jpeg",
-    crop_margin_percent: 0,
+    tasks: {},
     output_directory: "",
   });
   const [outputDirectory, setOutputDirectory] = useState("");
@@ -92,6 +101,10 @@ export function ExportDialog({
     onError: (caught) => setError(errorMessage(caught)),
   });
 
+  const taskOptions: TaskExportOptions = {
+    ...DEFAULT_TASK_EXPORT_OPTIONS,
+    ...(plan === null ? undefined : stored.tasks[plan.task]),
+  };
   const purpose =
     plan?.purposes.find((entry) => entry.value === stored.purposes[plan.task]) ?? plan?.purposes[0];
   const formatKey = plan !== null && purpose !== undefined ? `${plan.task}/${purpose.value}` : "";
@@ -103,9 +116,9 @@ export function ExportDialog({
       : {
           export_format: format.value,
           is_confidence_included:
-            format.is_confidence_supported && (format.purpose !== "annotations" || stored.is_confidence_included),
-          crop_image_format: stored.crop_image_format,
-          crop_margin_percent: stored.crop_margin_percent,
+            format.is_confidence_supported && (format.purpose !== "annotations" || taskOptions.is_confidence_included),
+          crop_image_format: taskOptions.crop_image_format,
+          crop_margin_percent: taskOptions.crop_margin_percent,
         };
   const preview = useAsyncResource(
     plan === null || previewChoice === undefined
@@ -115,6 +128,14 @@ export function ExportDialog({
     { isStaleShown: false, onError: (caught) => setError(errorMessage(caught)) },
   );
   const change = (update: Partial<StoredExportOptions>) => setStored((current) => ({ ...current, ...update }));
+  const changeTaskOptions = (update: Partial<TaskExportOptions>) => {
+    if (plan === null) return;
+    const task = plan.task;
+    setStored((current) => ({
+      ...current,
+      tasks: { ...current.tasks, [task]: { ...current.tasks[task], ...update } },
+    }));
+  };
 
   const submit = async () => {
     if (previewChoice === undefined) return;
@@ -122,8 +143,8 @@ export function ExportDialog({
     const isDone = await onExport({
       ...previewChoice,
       output_directory: outputDirectory,
-      is_annotated_image_saved: stored.is_annotated_image_saved,
-      is_annotated_video_saved: media === "video" && stored.is_annotated_video_saved,
+      is_annotated_image_saved: taskOptions.is_annotated_image_saved,
+      is_annotated_video_saved: media === "video" && taskOptions.is_annotated_video_saved,
     });
     setIsSubmitting(false);
     if (isDone) {
@@ -230,9 +251,9 @@ export function ExportDialog({
                   <label title={format.is_confidence_supported ? "" : "This format cannot store confidences"}>
                     <input
                       type="checkbox"
-                      checked={stored.is_confidence_included && format.is_confidence_supported}
+                      checked={taskOptions.is_confidence_included && format.is_confidence_supported}
                       disabled={!format.is_confidence_supported}
-                      onChange={(event) => change({ is_confidence_included: event.target.checked })}
+                      onChange={(event) => changeTaskOptions({ is_confidence_included: event.target.checked })}
                     />
                     Write confidences
                   </label>
@@ -248,9 +269,9 @@ export function ExportDialog({
                           key={entry.value}
                           type="button"
                           role="radio"
-                          aria-checked={entry.value === stored.crop_image_format}
-                          className={entry.value === stored.crop_image_format ? "active" : ""}
-                          onClick={() => change({ crop_image_format: entry.value })}
+                          aria-checked={entry.value === taskOptions.crop_image_format}
+                          className={entry.value === taskOptions.crop_image_format ? "active" : ""}
+                          onClick={() => changeTaskOptions({ crop_image_format: entry.value })}
                         >
                           {entry.label}
                         </button>
@@ -259,8 +280,8 @@ export function ExportDialog({
                     <span>Margin</span>
                     <div className="row">
                       <NumberField
-                        value={stored.crop_margin_percent}
-                        onCommit={(value) => change({ crop_margin_percent: value })}
+                        value={taskOptions.crop_margin_percent}
+                        onCommit={(value) => changeTaskOptions({ crop_margin_percent: value })}
                         maximum={100}
                         step={5}
                         width={64}
@@ -269,7 +290,7 @@ export function ExportDialog({
                       <span className="muted">%</span>
                     </div>
                   </div>
-                  <CropMarginFigure marginPercent={stored.crop_margin_percent} />
+                  <CropMarginFigure marginPercent={taskOptions.crop_margin_percent} />
                 </div>
               )}
               {purpose.value === "class_folders" && (
@@ -318,8 +339,8 @@ export function ExportDialog({
                 >
                   <input
                     type="checkbox"
-                    checked={stored.is_annotated_image_saved}
-                    onChange={(event) => change({ is_annotated_image_saved: event.target.checked })}
+                    checked={taskOptions.is_annotated_image_saved}
+                    onChange={(event) => changeTaskOptions({ is_annotated_image_saved: event.target.checked })}
                   />
                   {media === "image" ? "Annotated images" : "Annotated frames"}
                 </label>
@@ -327,8 +348,8 @@ export function ExportDialog({
                   <label title="Every video with findings drawn on every frame, under annotated/">
                     <input
                       type="checkbox"
-                      checked={stored.is_annotated_video_saved}
-                      onChange={(event) => change({ is_annotated_video_saved: event.target.checked })}
+                      checked={taskOptions.is_annotated_video_saved}
+                      onChange={(event) => changeTaskOptions({ is_annotated_video_saved: event.target.checked })}
                     />
                     Annotated videos
                   </label>

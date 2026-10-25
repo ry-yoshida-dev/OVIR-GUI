@@ -16,6 +16,7 @@
       "is_accepted": true,
       "is_passing": true,
       "matched_prompt": "person",
+      "matched_template": null,
       "polygons": []
     },
     {
@@ -33,6 +34,7 @@
       "is_accepted": true,
       "is_passing": true,
       "matched_prompt": "car",
+      "matched_template": null,
       "polygons": []
     },
     {
@@ -50,6 +52,7 @@
       "is_accepted": true,
       "is_passing": true,
       "matched_prompt": "dog",
+      "matched_template": null,
       "polygons": []
     },
     {
@@ -67,6 +70,7 @@
       "is_accepted": true,
       "is_passing": true,
       "matched_prompt": "person",
+      "matched_template": null,
       "polygons": []
     }
   ],

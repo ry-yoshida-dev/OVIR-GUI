@@ -103,6 +103,7 @@ class FakeRecognizerSession(RecognizerSession):
                         logit=float(position),
                         matched_prompt=name,
                         similarity=round(0.3 - 0.05 * position, 4),
+                        matched_template="{}",
                     )
                     for position, name in enumerate(names)
                 ),

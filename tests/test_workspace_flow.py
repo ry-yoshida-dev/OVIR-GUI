@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from golden_snapshot import GoldenSnapshot
 from PIL import Image
 
+from ovir_gui.media import VideoSampling
 from ovir_gui.models import DeviceAvailability, ModelSelector, PresetCatalog
 from ovir_gui.web import EmbeddingPolicy, WebApplication
 from ovir_gui.workspace import WorkspaceStores
@@ -197,6 +198,8 @@ class TestWorkspaceFlow:
 
     def test_classification(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:
         assert client.put("/api/task", json={"task": "classification"}).is_success
+        assert client.put("/api/sampling", json={"frame_step": FRAME_STEP}).is_success
+        assert client.put("/api/inference", json={"mode": "all", "is_auto": True}).is_success
         assert client.post("/api/media/open", json={"paths": [str(media_directory)]}).is_success
         self._wait_idle(client)
         golden.assert_matches("classification_results", client.get("/api/results").json())
@@ -239,6 +242,32 @@ class TestWorkspaceFlow:
             assert self._class_names(restarted) == ["person", "cat"]
             assert restarted.put("/api/task", json={"task": "classification"}).is_success
             assert self._class_names(restarted) == ["indoor", "outdoor"]
+
+    def test_sampling_and_inference_are_kept_per_task(self, tmp_path: Path, client: TestClient) -> None:
+        assert client.put("/api/task", json={"task": "classification"}).is_success
+        assert self._state(client)["sampling"] == {"frame_step": VideoSampling().frame_step}
+        assert client.put("/api/sampling", json={"frame_step": 2}).is_success
+        assert client.put("/api/inference", json={"mode": "shown", "is_auto": False}).is_success
+        assert client.put("/api/task", json={"task": "detection"}).is_success
+        assert self._state(client)["sampling"] == {"frame_step": FRAME_STEP}
+        assert self._inference_choice(client) == ("all", True)
+        self._wait_idle(client)
+        with self._client_of(tmp_path, []) as restarted:
+            _ = restarted.get(f"/?token={ACCESS_TOKEN}")
+            assert self._state(restarted)["sampling"] == {"frame_step": FRAME_STEP}
+            assert restarted.put("/api/task", json={"task": "classification"}).is_success
+            assert self._state(restarted)["sampling"] == {"frame_step": 2}
+            assert self._inference_choice(restarted) == ("shown", False)
+
+    def test_comparison_is_kept_per_task(self, client: TestClient) -> None:
+        first_key: object = self._state(client)["shown_profile_key"]
+        assert client.put("/api/model/preset", json={"backend": "owl_vit", "preset_name": "v2_base_patch16"}).is_success
+        self._wait_idle(client)
+        assert client.put("/api/comparison", json={"key": first_key}).is_success
+        assert client.put("/api/task", json={"task": "classification"}).is_success
+        assert self._state(client)["compared_profile_key"] is None
+        assert client.put("/api/task", json={"task": "detection"}).is_success
+        assert self._state(client)["compared_profile_key"] == first_key
 
     def test_closing_media(self, client: TestClient, media_directory: Path, golden: GoldenSnapshot) -> None:
         assert client.post("/api/media/close", json={"paths": [str(media_directory / "a_first.png")]}).is_success
@@ -340,6 +369,11 @@ class TestWorkspaceFlow:
         media: object = self._state(client)["media"]
         assert isinstance(media, list)
         return [entry["path"] for entry in media if isinstance(entry, dict)]
+
+    def _inference_choice(self, client: TestClient) -> tuple[object, object]:
+        inference: object = self._state(client)["inference"]
+        assert isinstance(inference, dict)
+        return inference["mode"], inference["is_auto"]
 
     def _current_frame(self, client: TestClient) -> tuple[object, object]:
         current: object = self._state(client)["current"]

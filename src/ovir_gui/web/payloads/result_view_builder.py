@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import ClassVar
 
 from ...media import ClassColors, FrameKey, MediaItem, VideoInfo
 from ...models import MaskGenerationModel, ModelProfile
 from ...prompting import PromptChange
 from ...recognition import Finding, FrameResult, RecognizedInstance
 from ...results import ProfileSummary, ResultCatalog, StoredResult
-from ...review import ReviewFilter
+from ...review import ClassThresholds, ReviewFilter
 from ...workspace import Workspace
 from ..json_value import JsonObject, JsonValue
 from .frame_view_context import FrameViewContext
@@ -20,8 +19,6 @@ class ResultViewBuilder:
     Pictures are named by ``path`` and ``frame`` (``null`` for an image). Boxes and mask outlines are in pixels of the
     full upright picture.
     """
-
-    LISTED_SCORE_COUNT: ClassVar[int] = 5
 
     def frame(self, workspace: Workspace, path: Path, frame_index: int | None) -> JsonObject:
         """
@@ -108,14 +105,15 @@ class ResultViewBuilder:
         Returns
         -------
         JsonObject
-            Profile key, task and pictures in media and frame order. A classified picture carries its best class
-            scores from best to worst and the count of every scored class.
+            Profile key, task and pictures in media and frame order. A classified picture carries every class score
+            from best to worst, each telling whether it reaches the minimum of its class.
         """
         catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
         if catalog is None or profile is None:
             return {"profile_key": None, "task": workspace.task.value, "pictures": []}
         review_filter: ReviewFilter = workspace.review.review_filter
+        thresholds: ClassThresholds = review_filter.thresholds
         recognized: tuple[FrameKey, ...] = workspace.read_model.recognized_keys(catalog)
         outdated: dict[FrameKey, PromptChange] = workspace.read_model.outdated_keys(profile, recognized)
         pictures: list[JsonValue] = []
@@ -133,10 +131,15 @@ class ResultViewBuilder:
                     "seconds": item.seconds_at(frame_key),
                     "outdated": None if change is None else change.description,
                     "scores": [
-                        {"class_name": score.class_name, "score": score.score}
-                        for score in stored.result.ranked_scores[: self.LISTED_SCORE_COUNT]
+                        {
+                            "class_name": score.class_name,
+                            "score": score.score,
+                            "is_reaching_minimum": thresholds.is_reaching_minimum(
+                                score.class_name, score.matched_prompt, score.score
+                            ),
+                        }
+                        for score in stored.result.ranked_scores
                     ],
-                    "class_count": len(stored.result.class_scores),
                     "findings": self._finding_entries(stored, review_filter),
                 }
             )
@@ -278,6 +281,7 @@ class ResultViewBuilder:
                     "logit": score.logit,
                     "similarity": score.similarity,
                     "matched_prompt": score.matched_prompt,
+                    "matched_template": score.matched_template,
                 }
                 for score in stored.result.ranked_scores
             ],
@@ -318,6 +322,7 @@ class ResultViewBuilder:
             "index": index,
             "class_name": instance.class_name,
             "matched_prompt": instance.matched_prompt,
+            "matched_template": None,
             "confidence": instance.confidence,
             "box": list[JsonValue](instance.box.xyxy),
             "area": instance.area,
@@ -342,6 +347,7 @@ class ResultViewBuilder:
             "index": finding.index,
             "class_name": finding.class_name,
             "matched_prompt": finding.matched_prompt,
+            "matched_template": finding.matched_template,
             "confidence": finding.confidence,
             "box": None if finding.box is None else list[JsonValue](finding.box.xyxy),
             "area": finding.area,

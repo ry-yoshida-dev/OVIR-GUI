@@ -138,6 +138,7 @@ class TableExportWriter:
                             "logit": score.logit,
                             "similarity": score.similarity,
                             "matched_prompt": score.matched_prompt,
+                            "best_template": score.matched_template,
                         }
                         for score in item.result.class_scores
                     }

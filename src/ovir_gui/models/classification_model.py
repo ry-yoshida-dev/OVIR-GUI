@@ -21,6 +21,7 @@ from .model_preset import ModelPreset
 from .model_selection import ModelSelection
 from .profile_option import ProfileOption
 from .recognition_model import RecognitionModel
+from .template_combination import TemplateCombination
 from .threshold_controls import ThresholdControls
 
 if TYPE_CHECKING:
@@ -33,13 +34,24 @@ class ClassificationModel(RecognitionModel):
     Open-vocabulary image classifier of ``open_vocabulary_classification`` (CLIP, SigLIP and their variants).
 
     Classifiers take phrases and reference images; the image pooling can be chosen among those the backend offers,
-    and large pictures can be classified on a grid of overlapping tiles so that small objects count.
+    and large pictures can be classified on a grid of overlapping tiles so that small objects count. Every phrase is
+    filled into every text template outside the library, and the sentences of a phrase are scored by the
+    ``TemplateCombination``. The combination is not an option of the profile: results keep the logit of every
+    sentence and are scored again when it changes.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.CLASSIFICATION
     SECTION_KEY: ClassVar[str] = "classifier"
+    PLAIN_TEMPLATE: ClassVar[str] = "{}"
+    DEFAULT_COMBINATION: ClassVar[TemplateCombination] = TemplateCombination.NONE
 
-    def __init__(self, preset: ModelPreset, settings: ClassifierSettings, tiling: ImageTiling | None = None) -> None:
+    def __init__(
+        self,
+        preset: ModelPreset,
+        settings: ClassifierSettings,
+        tiling: ImageTiling | None = None,
+        template_combination: TemplateCombination = DEFAULT_COMBINATION,
+    ) -> None:
         """
         Parameters
         ----------
@@ -50,10 +62,13 @@ class ClassificationModel(RecognitionModel):
         tiling : ImageTiling | None, optional
             Grid of tiles each picture is classified on besides the whole picture; ``None`` classifies the whole
             picture only.
+        template_combination : TemplateCombination, optional
+            How the sentences of a phrase, one per text template, turn into its score.
         """
         super().__init__(preset)
         self._settings: ClassifierSettings = settings
         self._tiling: ImageTiling | None = tiling
+        self._template_combination: TemplateCombination = template_combination
 
     @classmethod
     def from_preset(cls, preset: ModelPreset) -> "ClassificationModel":
@@ -107,6 +122,28 @@ class ClassificationModel(RecognitionModel):
         return tuple(sorted(pooling.value for pooling in ClassifierBackend(backend).supported_image_poolings))
 
     @staticmethod
+    def score_activation_of(backend: str) -> ScoreActivation:
+        """
+        Activation turning the logits of a classifier family into scores.
+
+        Parameters
+        ----------
+        backend : str
+            Classifier family.
+
+        Returns
+        -------
+        ScoreActivation
+            Softmax over the classes (CLIP) or sigmoid of every class (SigLIP).
+
+        Raises
+        ------
+        ValueError
+            If the family is unknown.
+        """
+        return ClassifierBackend(backend).score_activation
+
+    @staticmethod
     def native_label_mode_of(backend: str) -> LabelMode:
         """
         Label mode the scores of a classifier family are made for.
@@ -126,7 +163,7 @@ class ClassificationModel(RecognitionModel):
         ValueError
             If the family is unknown.
         """
-        match ClassifierBackend(backend).score_activation:
+        match ClassificationModel.score_activation_of(backend):
             case ScoreActivation.SOFTMAX:
                 return LabelMode.SINGLE_LABEL
             case ScoreActivation.SIGMOID:
@@ -140,9 +177,10 @@ class ClassificationModel(RecognitionModel):
         Returns
         -------
         ClassifierSettings
-            Settings with overrides applied.
+            Settings with overrides applied and the plain template only, since the phrases arrive filled into the
+            text templates already.
         """
-        return self._settings
+        return replace(self._settings, text_templates=(self.PLAIN_TEMPLATE,))
 
     @property
     def weights_path(self) -> str:
@@ -184,7 +222,7 @@ class ClassificationModel(RecognitionModel):
     def options(self) -> tuple[ProfileOption, ...]:
         return (
             ProfileOption("Pooling", self._settings.image_pooling.value),
-            ProfileOption("Templates", str(len(self._settings.text_templates))),
+            ProfileOption("Templates", " | ".join(self._settings.text_templates)),
             ProfileOption(
                 "Tiling", "off" if self._tiling is None else f"{self._tiling.grid_size}x{self._tiling.grid_size}"
             ),
@@ -214,13 +252,24 @@ class ClassificationModel(RecognitionModel):
         """
         return self._settings.text_templates
 
+    @property
+    def template_combination(self) -> TemplateCombination:
+        """
+        How the sentences of a phrase, one per text template, turn into its score.
+
+        Returns
+        -------
+        TemplateCombination
+            Combination of the selection, ``NONE`` unless chosen.
+        """
+        return self._template_combination
+
     def loading_signature(self) -> tuple[str, ...]:
         return (
             self.TASK.value,
             self._settings.backend.value,
             self._settings.weights_path,
             self._settings.image_pooling.value,
-            "|".join(self._settings.text_templates),
             self._settings.device.value,
             self._settings.precision.value,
         )
@@ -235,6 +284,7 @@ class ClassificationModel(RecognitionModel):
             image_pooling=self._settings.image_pooling.value,
             tiling_grid_size=None if self._tiling is None else self._tiling.grid_size,
             text_templates=self._settings.text_templates,
+            template_combination=self._template_combination,
             batch_size=self._settings.batch_size,
         )
 
@@ -253,7 +303,7 @@ class ClassificationModel(RecognitionModel):
         Parameters
         ----------
         selection : ModelSelection
-            Device, precision, pooling, tiling, text templates and batch size to use.
+            Device, precision, pooling, tiling, text templates, their combination and batch size to use.
         box_detector_of : Callable[[str], DetectionModel]
             Not read; the model has no box detector.
 
@@ -283,6 +333,7 @@ class ClassificationModel(RecognitionModel):
                 batch_size=self._settings.batch_size if selection.batch_size is None else selection.batch_size,
             ),
             None if selection.tiling_grid_size is None else ImageTiling(grid_size=selection.tiling_grid_size),
+            self._template_combination if selection.template_combination is None else selection.template_combination,
         )
 
     def build_recognizer(self) -> "Recognizer[ClassificationModel]":

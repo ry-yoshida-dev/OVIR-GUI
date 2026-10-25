@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ResultsPayload, TaskValue } from "../api/types";
 import type { BelowMinimumStyle } from "../lib/displayOptions";
 import {
@@ -62,25 +62,34 @@ function useScopedRows(
   return { inScope, listed };
 }
 
+const NO_FILTER: TableFilter = {};
+
 /**
- * Builds the rows of the result tables with their filters, order and selection; the filters and the order start
- * over whenever the task changes.
+ * Builds the rows of the result tables with their filters, order and selection; every task keeps its own filters and
+ * order while the app is open.
  */
 export function useResultRows({
   results,
   belowMinimum,
   task,
 }: ResultRowsOptions): ResultRows {
-  const [filter, setFilter] = useState<TableFilter>({});
-  const [order, setOrder] = useState<SortOrder | null>(null);
-  const [filteredTask, setFilteredTask] = useState(task);
+  const [filters, setFilters] = useState<Partial<Record<TaskValue, TableFilter>>>({});
+  const [orders, setOrders] = useState<Partial<Record<TaskValue, SortOrder>>>({});
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
-
-  if (filteredTask !== task) {
-    setFilteredTask(task);
-    setFilter({});
-    setOrder(null);
-  }
+  const filter = filters[task] ?? NO_FILTER;
+  const order = orders[task] ?? null;
+  const setFilter = useCallback(
+    (next: TableFilter) => setFilters((current) => ({ ...current, [task]: next })),
+    [task],
+  );
+  const setOrder = useCallback(
+    (next: SortOrder | null) =>
+      setOrders((current) => {
+        const { [task]: _left, ...others } = current;
+        return next === null ? others : { ...others, [task]: next };
+      }),
+    [task],
+  );
 
   const allRows = useMemo(
     () => buildRows(results, belowMinimum),

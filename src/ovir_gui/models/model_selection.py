@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from ..recognition import RecognitionTask
 from .compute_device import ComputeDevice
 from .compute_precision import ComputePrecision
+from .template_combination import TemplateCombination
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,9 @@ class ModelSelection:
     text_templates : tuple[str, ...] | None
         Sentences with one ``{}`` every phrase of a classifier is filled into; ``("{}",)`` uses the phrase as it is
         and ``None`` keeps the templates of the preset.
+    template_combination : TemplateCombination | None
+        How the sentences of a classifier phrase, one per text template, turn into its score; ``None`` keeps the
+        model's.
     batch_size : int | None
         Pictures per forward pass, a power of two; ``None`` keeps the preset's, and models running one picture at a
         time ignore it.
@@ -61,6 +65,7 @@ class ModelSelection:
     box_detector_label: str | None = None
     tiling_grid_size: int | None = None
     text_templates: tuple[str, ...] | None = None
+    template_combination: TemplateCombination | None = None
     batch_size: int | None = None
 
     def __post_init__(self) -> None:
