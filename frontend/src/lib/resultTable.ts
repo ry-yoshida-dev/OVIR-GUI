@@ -61,6 +61,8 @@ interface RowBase {
   seconds: number | null;
   mediaName: string;
   pictureOrder: number;
+  pictureWidth: number;
+  pictureHeight: number;
   outdated: string | null;
   scores: RankedScore[];
 }
@@ -107,6 +109,8 @@ export function buildRows(
       seconds: picture.seconds,
       mediaName: picture.name,
       pictureOrder,
+      pictureWidth: picture.width,
+      pictureHeight: picture.height,
       outdated: picture.outdated,
       scores: picture.scores,
     };

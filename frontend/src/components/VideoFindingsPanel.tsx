@@ -127,7 +127,7 @@ export function VideoFindingsPanel({
           {summary.events.length} events · {summary.recognizedCount} sampled frames
         </span>
         <button
-          className="small export-button"
+          className="export-button"
           disabled={isExportDisabled}
           onClick={onExport}
           title="Export the kept findings of every video (Ctrl+E when no images are open)"

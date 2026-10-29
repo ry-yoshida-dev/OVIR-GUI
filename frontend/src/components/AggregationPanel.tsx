@@ -32,6 +32,9 @@ interface AggregationPanelProps {
 const PANEL_MARGINS = { near: 8, far: 8 };
 const PANE_GAP = 10;
 const HEADER_OFFSET = 40;
+const MAX_PANEL_WIDTH = 1548;
+const MIN_PANEL_WIDTH = 640;
+const MIN_BESIDE_WIDTH = 1000;
 const TIMINGS: { value: RowTiming; title: string }[] = [
   { value: "none", title: "None" },
   { value: "embedding", title: "① Text vectors" },
@@ -44,7 +47,8 @@ interface Preview {
 }
 
 /**
- * Panel beside the setup pane choosing how the prompts and templates of a class become its score, above the overview
+ * Panel beside the setup pane, or over it when the window is too narrow, shrinking its overview to fit the window,
+ * choosing how the prompts and templates of a class become its score, above the overview
  * of the process for example classes, which follows the choice. Templates and Prompts each run at no timing, on text
  * vectors or on similarities, with a method; dragging a row by its handle runs it before the other at the same timing,
  * and both rows at the same timing can be aggregated together. Pointing at a row highlights its step in the overview,
@@ -62,7 +66,7 @@ export function AggregationPanel({
   onClose,
 }: AggregationPanelProps) {
   const panel = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: 0, top: 0 });
+  const [position, setPosition] = useState({ left: 0, top: 0, width: MAX_PANEL_WIDTH });
   const [highlightedStep, setHighlightedStep] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -78,19 +82,32 @@ export function AggregationPanel({
   }, []);
 
   useLayoutEffect(() => {
-    const field = anchor.current;
-    if (field === null || panel.current === null) return;
-    const pane = field.closest(".pane") ?? field;
-    setPosition(
-      placeInViewport(
-        {
-          left: pane.getBoundingClientRect().right + PANE_GAP,
-          top: field.getBoundingClientRect().top - HEADER_OFFSET,
-        },
-        panel.current.getBoundingClientRect(),
-        PANEL_MARGINS,
-      ),
-    );
+    const place = () => {
+      const field = anchor.current;
+      const diagram = panel.current?.querySelector(".aggregation-diagram svg");
+      if (field === null || panel.current === null || diagram === null || diagram === undefined) return;
+      const pane = field.closest(".pane") ?? field;
+      const panelBox = panel.current.getBoundingClientRect();
+      const diagramBox = diagram.getBoundingClientRect();
+      const left = pane.getBoundingClientRect().right + PANE_GAP;
+      const margins = PANEL_MARGINS.near + PANEL_MARGINS.far;
+      const besideWidth = window.innerWidth - left - PANEL_MARGINS.far;
+      const fittingWidth = besideWidth >= MIN_BESIDE_WIDTH ? besideWidth : window.innerWidth - margins;
+      const otherWidth = panelBox.width - diagramBox.width;
+      const contentHeight = panel.current.scrollHeight + panel.current.offsetHeight - panel.current.clientHeight;
+      const otherHeight = contentHeight - diagramBox.height;
+      const heightFittingWidth =
+        ((window.innerHeight - margins - otherHeight) * diagramBox.width) / diagramBox.height + otherWidth;
+      const width = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, fittingWidth, heightFittingWidth));
+      const height = otherHeight + ((width - otherWidth) * diagramBox.height) / diagramBox.width;
+      setPosition({
+        ...placeInViewport({ left, top: field.getBoundingClientRect().top - HEADER_OFFSET }, { width, height }, PANEL_MARGINS),
+        width,
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
   }, [anchor]);
 
   const steps: AggregationStep[] = stepsOf(aggregation);

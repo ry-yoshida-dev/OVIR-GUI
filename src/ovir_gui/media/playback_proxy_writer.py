@@ -3,6 +3,7 @@ from typing import ClassVar
 
 import numpy as np
 import torch
+import torchcodec
 from PIL import Image
 from torch_modules import Device
 from video_handler import (
@@ -13,6 +14,7 @@ from video_handler import (
     VideoWriteParameters,
 )
 
+from ..ffmpeg import OperatingSystem
 from .media_item import MediaItem
 from .video_frame_reader import VideoFrameReader
 
@@ -50,7 +52,12 @@ class PlaybackProxyWriter:
         ------
         ValueError
             If the item is not a video or holds no decodable frame.
+        RuntimeError
+            If torchcodec found no FFmpeg when imported.
         """
+        ffmpeg_major_version: object = vars(torchcodec).get("ffmpeg_major_version")
+        if not isinstance(ffmpeg_major_version, int):
+            raise RuntimeError(f"FFmpeg was not found. {OperatingSystem.current().ffmpeg_install_hint}")
         video = item.video_info
         partial: Path = target.with_name(f".{target.name}.partial.mp4")
         try:

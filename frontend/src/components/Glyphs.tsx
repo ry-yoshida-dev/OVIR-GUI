@@ -85,6 +85,36 @@ export function CropGlyph() {
   );
 }
 
+export function CopyGlyph() {
+  return (
+    <Glyph>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </Glyph>
+  );
+}
+
+export function CheckGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M3 8.5l3.2 3L13 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Glyph>
+  );
+}
+
 export function ExpandGlyph() {
   return (
     <Glyph>

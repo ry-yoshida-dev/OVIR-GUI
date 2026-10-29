@@ -105,8 +105,9 @@ class ResultViewBuilder:
         Returns
         -------
         JsonObject
-            Profile key, task and pictures in media and frame order. A classified picture carries every class score
-            from best to worst, each telling whether it reaches the minimum of its class.
+            Profile key, task and pictures in media and frame order, each with its full upright size. A classified
+            picture carries every class score from best to worst, each telling whether it reaches the minimum of its
+            class.
         """
         catalog: ResultCatalog | None = workspace.read_model.shown_catalog()
         profile: ModelProfile | None = workspace.shown_profile
@@ -129,6 +130,8 @@ class ResultViewBuilder:
                     "name": frame_key.path.name,
                     "frame": frame_key.frame_index,
                     "seconds": item.seconds_at(frame_key),
+                    "width": stored.result.image_size.width,
+                    "height": stored.result.image_size.height,
                     "outdated": None if change is None else change.description,
                     "scores": [
                         {

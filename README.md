@@ -61,6 +61,13 @@ that you alone are responsible for it, before the `ultralytics` module is import
 `license_consent.json` of the data directory; delete that file to withdraw it. OVIR-GUI grants no license to
 Ultralytics or its weights, and its authors accept no responsibility for how they are used.
 
+Videos the browser cannot play (such as ProRes) are re-encoded for playback with FFmpeg, through torchcodec. On
+macOS and Linux, install FFmpeg yourself (`brew install ffmpeg`, `sudo apt install ffmpeg`). On Windows, when FFmpeg
+is missing, `ovir-gui` offers at start to download a GPL-3.0 build from
+[gyan.dev](https://github.com/GyanD/codexffmpeg) into `%LOCALAPPDATA%\ovir-gui\ffmpeg`; a declined download is not
+offered again, and `ovir-gui --download-ffmpeg` downloads it later. Without FFmpeg such videos are shown as frames
+decoded by the server, and inference works either way.
+
 ## Usage
 
 ```bash

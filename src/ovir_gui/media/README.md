@@ -2,7 +2,7 @@
 
 ## Overview
 
-Media files opened in the GUI and the pixels read from them. `MediaCollection` finds image and video files in user-given paths, `MediaItem` describes an open file, and `FrameKey` identifies one recognizable picture: an image or one video frame chosen by `VideoSampling`. `PictureLoader` reads pixels for recognition and export, streaming each video once through `VideoFrameReader`; in the browser, videos are played with the VideoPlayerUI player instead, and `PlaybackProxyWriter` re-encodes those the browser cannot decode into H.264. `ClassColors` gives stable class colors shared by the views and `export/`.
+Media files opened in the GUI and the pixels read from them. `MediaCollection` finds image and video files in user-given paths, `MediaItem` describes an open file, and `FrameKey` identifies one recognizable picture: an image or one video frame chosen by `VideoSampling`. `PictureLoader` reads pixels for recognition and export, streaming each video once through `VideoFrameReader`; in the browser, videos are played with the VideoPlayerUI player instead, and `PlaybackProxyWriter` re-encodes those the browser cannot decode into H.264 with the FFmpeg torchcodec found at start (`ffmpeg/`). `ClassColors` gives stable class colors shared by the views and `export/`.
 
 ## Components
 

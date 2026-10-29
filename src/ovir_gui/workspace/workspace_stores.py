@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar
 
 from ..storage import (
     ClassSetStore,
@@ -68,8 +67,6 @@ class WorkspaceStores:
     playback_store : PlaybackStore
         Browser-playable copies of videos.
     """
-
-    DEFAULT_DIRECTORY_NAME: ClassVar[str] = "ovir_gui_data"
 
     root_directory: Path
     class_list_store: ClassListStore

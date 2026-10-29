@@ -40,6 +40,7 @@
         }
       ],
       "frame": null,
+      "height": 48,
       "name": "a_first.png",
       "outdated": null,
       "path": "<tmp>/media/a_first.png",
@@ -60,7 +61,8 @@
           "score": 0.5
         }
       ],
-      "seconds": null
+      "seconds": null,
+      "width": 64
     },
     {
       "findings": [
@@ -102,6 +104,7 @@
         }
       ],
       "frame": null,
+      "height": 40,
       "name": "b_second.png",
       "outdated": null,
       "path": "<tmp>/media/b_second.png",
@@ -122,7 +125,8 @@
           "score": 0.5
         }
       ],
-      "seconds": null
+      "seconds": null,
+      "width": 80
     },
     {
       "findings": [
@@ -164,6 +168,7 @@
         }
       ],
       "frame": 0,
+      "height": 48,
       "name": "c_clip.mp4",
       "outdated": null,
       "path": "<tmp>/media/c_clip.mp4",
@@ -184,7 +189,8 @@
           "score": 0.5
         }
       ],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "width": 64
     },
     {
       "findings": [
@@ -226,6 +232,7 @@
         }
       ],
       "frame": 4,
+      "height": 48,
       "name": "c_clip.mp4",
       "outdated": null,
       "path": "<tmp>/media/c_clip.mp4",
@@ -246,7 +253,8 @@
           "score": 0.46
         }
       ],
-      "seconds": 0.4
+      "seconds": 0.4,
+      "width": 64
     },
     {
       "findings": [
@@ -288,6 +296,7 @@
         }
       ],
       "frame": 8,
+      "height": 48,
       "name": "c_clip.mp4",
       "outdated": null,
       "path": "<tmp>/media/c_clip.mp4",
@@ -308,7 +317,8 @@
           "score": 0.42
         }
       ],
-      "seconds": 0.8
+      "seconds": 0.8,
+      "width": 64
     }
   ],
   "profile_key": "4b4e845f8b0c836e",

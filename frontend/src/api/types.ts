@@ -419,6 +419,8 @@ export interface ResultPicture {
   name: string;
   frame: number | null;
   seconds: number | null;
+  width: number;
+  height: number;
   outdated: string | null;
   scores: RankedScore[];
   findings: Finding[];

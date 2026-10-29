@@ -1,9 +1,11 @@
+import { useRef } from "react";
 import type {
   CurrentPicture,
   FramePayload,
   TimelinePayload,
   WorkspaceState,
 } from "../api/types";
+import type { ShownPicture } from "../lib/annotatedSnapshot";
 import type { PicturePromptEditor } from "../hooks/usePicturePromptEditor";
 import type { DisplayOptions } from "../lib/displayOptions";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
@@ -12,8 +14,10 @@ import type { TableRow } from "../lib/resultTable";
 import type { TaskView } from "../lib/taskViews";
 import { type CenterMode, CenterModeToggle } from "./CenterModeToggle";
 import { ClassificationGallery } from "./ClassificationGallery";
+import { CopyPictureButton } from "./CopyPictureButton";
 import { SlidersGlyph } from "./Glyphs";
 import { PaneHeader } from "./PaneHeader";
+import { PictureGallery } from "./PictureGallery";
 import { PopoverButton } from "./PopoverButton";
 import { PromptToolbar } from "./PromptToolbar";
 import { ResultViewer } from "./ResultViewer";
@@ -96,6 +100,7 @@ export function CanvasPane({
 }: CanvasPaneProps) {
   const isGalleryShown =
     taskView.isGalleryAvailable && centerMode === "gallery";
+  const shownPicture = useRef<ShownPicture | null>(null);
   return (
     <div className="pane pane-canvas">
       <PaneHeader
@@ -119,6 +124,15 @@ export function CanvasPane({
               }
         }
       >
+        {!isGalleryShown && (
+          <CopyPictureButton
+            shownPicture={shownPicture}
+            isDisabled={
+              current === null ||
+              (current.kind === "video" && isVideoPlayerUsed)
+            }
+          />
+        )}
         <PopoverButton
           className="sheet-button"
           label="View settings"
@@ -139,8 +153,21 @@ export function CanvasPane({
         </PopoverButton>
       </PaneHeader>
       <div className="center">
-        {isGalleryShown ? (
+        {isGalleryShown && taskView.task === "classification" ? (
           <ClassificationGallery
+            rows={rows}
+            options={display}
+            media={state.media}
+            currentPictureKey={resultPictureKey}
+            selectedKey={selectedRowKey}
+            classColors={classColors}
+            onSelectRow={onSelectRow}
+            onSetAccepted={onSetAccepted}
+            onOpenPicture={onOpenPicture}
+          />
+        ) : isGalleryShown ? (
+          <PictureGallery
+            taskView={taskView}
             rows={rows}
             options={display}
             media={state.media}
@@ -170,6 +197,7 @@ export function CanvasPane({
               isMediaEmpty={state.media.length === 0}
               isVideoPlayerUsed={isVideoPlayerUsed}
               drawing={promptEditor.drawing}
+              shownPicture={shownPicture}
               onSelectFinding={onSelectFinding}
               onClearSelection={onClearSelection}
               onNavigate={onNavigate}

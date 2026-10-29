@@ -6,6 +6,10 @@ import {
 
 export type GalleryDirection = "left" | "right" | "up" | "down";
 
+export interface TiledGroup {
+  tiles: readonly unknown[];
+}
+
 export interface GalleryPosition {
   groupIndex: number;
   tileIndex: number;
@@ -38,13 +42,13 @@ export function positionOf(
   );
 }
 
-export function firstPosition(groups: GalleryGroup[]): GalleryPosition | null {
+export function firstPosition(groups: readonly TiledGroup[]): GalleryPosition | null {
   const groupIndex = groups.findIndex((group) => group.tiles.length > 0);
   return groupIndex < 0 ? null : { groupIndex, tileIndex: 0 };
 }
 
 function stepHorizontally(
-  groups: GalleryGroup[],
+  groups: readonly TiledGroup[],
   position: GalleryPosition,
   step: number,
 ): GalleryPosition {
@@ -65,7 +69,7 @@ function stepHorizontally(
 }
 
 function stepVertically(
-  groups: GalleryGroup[],
+  groups: readonly TiledGroup[],
   columnCounts: number[],
   position: GalleryPosition,
   isDownward: boolean,
@@ -109,7 +113,7 @@ function stepVertically(
 }
 
 export function moveInGallery(
-  groups: GalleryGroup[],
+  groups: readonly TiledGroup[],
   columnCounts: number[],
   position: GalleryPosition,
   direction: GalleryDirection,

@@ -1,5 +1,15 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Box } from "../api/types";
+import type { ShownPicture } from "../lib/annotatedSnapshot";
 import { clamp } from "../lib/numbers";
 
 interface View {
@@ -21,6 +31,7 @@ interface ZoomableImageProps {
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onBackgroundClick?: () => void;
   hud?: ReactNode;
+  shownPicture?: RefObject<ShownPicture | null>;
 }
 
 const MIN_DRAWN_SIDE = 3;
@@ -39,8 +50,10 @@ export function ZoomableImage({
   onKeyDown,
   onBackgroundClick,
   hud,
+  shownPicture,
 }: ZoomableImageProps) {
   const container = useRef<HTMLDivElement>(null);
+  const overlay = useRef<SVGGElement>(null);
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [draft, setDraft] = useState<Box | null>(null);
@@ -97,6 +110,20 @@ export function ZoomableImage({
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
   }, []);
+
+  useEffect(() => {
+    if (shownPicture === undefined) return;
+    const element = overlay.current;
+    shownPicture.current =
+      isLoaded && element !== null ? { src, overlay: element, width, height, scale: view.scale } : null;
+  });
+
+  useEffect(() => {
+    if (shownPicture === undefined) return;
+    return () => {
+      shownPicture.current = null;
+    };
+  }, [shownPicture]);
 
   const toImage = (clientX: number, clientY: number): [number, number] => {
     const bounds = container.current?.getBoundingClientRect();
@@ -188,7 +215,7 @@ export function ZoomableImage({
             onLoad={() => setLoadedViewKey(viewKey)}
             style={{ imageRendering: view.scale > 3 ? "pixelated" : "auto" }}
           />
-          {isLoaded && children?.(view.scale)}
+          <g ref={overlay}>{isLoaded && children?.(view.scale)}</g>
           {draft !== null && (
             <rect
               x={Math.min(draft[0], draft[2])}

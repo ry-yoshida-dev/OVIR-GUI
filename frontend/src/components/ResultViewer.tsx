@@ -1,5 +1,7 @@
+import type { RefObject } from "react";
 import { api } from "../api/client";
 import type { CurrentPicture, FrameInstance, FramePayload } from "../api/types";
+import type { ShownPicture } from "../lib/annotatedSnapshot";
 import { usePreloadedSource } from "../hooks/usePreloadedSource";
 import { BELOW_MINIMUM_OPACITY, type DisplayOptions } from "../lib/displayOptions";
 import type { FrameResultIndex } from "../lib/frameResultIndex";
@@ -27,6 +29,7 @@ interface ResultViewerProps {
   isMediaEmpty: boolean;
   isVideoPlayerUsed: boolean;
   drawing?: ViewerDrawing | null;
+  shownPicture?: RefObject<ShownPicture | null>;
   onSelectFinding: (resultFrame: number | null, index: number) => void;
   onClearSelection: () => void;
   onNavigate: (step: number) => void;
@@ -56,6 +59,7 @@ export function ResultViewer({
   isMediaEmpty,
   isVideoPlayerUsed,
   drawing = null,
+  shownPicture,
   onSelectFinding,
   onClearSelection,
   onNavigate,
@@ -181,6 +185,7 @@ export function ResultViewer({
         onDrawn={drawing?.onBox}
         onPointClicked={drawing?.onPoint ?? undefined}
         onBackgroundClick={onClearSelection}
+        shownPicture={shownPicture}
         onKeyDown={(event) => {
           const isVideo = current.kind === "video";
           if (event.key === "PageUp" || (!isVideo && event.key === "ArrowLeft")) {

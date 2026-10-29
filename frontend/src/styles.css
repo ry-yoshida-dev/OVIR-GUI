@@ -919,7 +919,8 @@ label {
 }
 
 .popover.aggregation-panel {
-  width: min(1548px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow: auto;
   padding: 0;
   gap: 0;
 }
@@ -2298,6 +2299,8 @@ table.grid tr.status td {
   gap: 8px;
   z-index: var(--layer-notice);
   max-width: 420px;
+  max-height: calc(100vh - 68px);
+  overflow-y: auto;
 }
 
 .notice {
@@ -2308,11 +2311,16 @@ table.grid tr.status td {
   box-shadow: var(--shadow);
   padding: 10px 12px;
   display: flex;
+  align-items: flex-start;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .notice .body {
   flex: 1;
+  min-width: 0;
+  max-height: 240px;
+  overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -3309,21 +3317,23 @@ td.ellipsis {
   align-items: center;
   gap: 6px;
   padding: 0 8px 4px 12px;
-  min-height: 28px;
+  min-height: 36px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
   user-select: none;
 }
 
 .results-heading .media-kind-glyph {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex: none;
   color: var(--text-muted);
 }
 
 .results-heading-title {
-  font-weight: 600;
-  font-size: var(--font-size-small);
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .results-heading-name {
@@ -3340,9 +3350,20 @@ td.ellipsis {
 .results-heading .export-button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-large);
+  background: var(--action-fill);
+  color: var(--accent-text);
+  font-weight: 600;
   white-space: nowrap;
+}
+
+.results-heading .export-button:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 .results-heading .filter-button {
@@ -3565,8 +3586,8 @@ td.ellipsis {
 }
 
 .results-heading .export-button .panel-glyph {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 
 

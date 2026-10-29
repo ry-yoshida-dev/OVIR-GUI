@@ -1,0 +1,123 @@
+.finding-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+}
+
+.gallery-tile:hover .finding-overlay {
+  transform: scale(1.04);
+}
+
+.gallery-tile.rejected .finding-overlay,
+.gallery-tile.status .finding-overlay {
+  opacity: 0.6;
+}
+
+.picture-tile-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.picture-tile-counts {
+  flex: none;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.picture-tile-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid var(--tile-glass-line);
+  border-radius: 999px;
+  background: var(--tile-glass);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+.picture-inspector-thumb {
+  position: relative;
+}
+
+.picture-finding-list {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -6px 0 0;
+  padding: 0 6px 0 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.picture-finding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.picture-finding:hover {
+  background: var(--row-hover);
+}
+
+.picture-finding.selected {
+  background: var(--row-selected);
+}
+
+.picture-finding-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.picture-finding-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.picture-finding.rejected .picture-finding-name,
+.picture-finding.rejected .picture-finding-value {
+  color: var(--canvas-text-muted);
+  text-decoration: line-through;
+}
+
+.picture-finding.below-minimum .picture-finding-name,
+.picture-finding.below-minimum .picture-finding-value {
+  color: var(--canvas-text-muted);
+  font-style: italic;
+}
+
+.picture-finding-action {
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finding-overlay {
+    transition: none;
+  }
+
+  .gallery-tile:hover .finding-overlay {
+    transform: none;
+  }
+}

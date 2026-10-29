@@ -10,6 +10,7 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 | --- | --- |
 | [analysis/](./analysis/README.md) | Class, picture and class-relation statistics of results and model-to-model comparison. |
 | [cli/](./cli/README.md) | `CommandLine` parsing of the `ovir-gui` arguments into `LaunchOptions`. |
+| [ffmpeg/](./ffmpeg/README.md) | `FFmpegStartupCheck` making FFmpeg available at start, downloading it on Windows. |
 | [export/](./export/README.md) | `ResultExporter` and the writers saving results as tables, box/segmentation labels, masks, class folders and annotated media. |
 | [media/](./media/README.md) | Image and video files, frame keys, frame sampling and pixel loading. |
 | [models/](./models/README.md) | Model presets, settings and loaded recognizers of the classification, detection and segmentation libraries. |
@@ -22,4 +23,4 @@ Browser GUI for open-vocabulary image recognition: classification, detection and
 | [wording/](./wording/README.md) | `CountedNoun` writing counts with singular or plural nouns in user-facing messages. |
 | [web/](./web/README.md) | FastAPI application, routes and launcher serving the React frontend. |
 | [workspace/](./workspace/README.md) | `Workspace` state of the open media, classes, inference jobs and exports shared by the web routes. |
-| [\_\_main\_\_.py](./__main__.py) | `main` entry point of the `ovir-gui` command: parses the command line and starts the web server. |
+| [\_\_main\_\_.py](./__main__.py) | `main` entry point of the `ovir-gui` command: parses the command line, makes FFmpeg available and starts the web server. |

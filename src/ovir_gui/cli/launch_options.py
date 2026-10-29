@@ -23,6 +23,8 @@ class LaunchOptions:
         Origins of the pages allowed to show the interface in a frame.
     access_token : str | None
         Secret of the printed address given by the environment; ``None`` creates one for the run.
+    is_ffmpeg_download_requested : bool
+        Whether FFmpeg is downloaded at start without a question.
     """
 
     paths: tuple[Path, ...]
@@ -32,3 +34,4 @@ class LaunchOptions:
     data_directory: Path
     embed_origins: tuple[str, ...] = ()
     access_token: str | None = None
+    is_ffmpeg_download_requested: bool = False

@@ -4,7 +4,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import ClassVar
 
-from ..workspace import WorkspaceStores
 from .launch_options import LaunchOptions
 
 
@@ -18,6 +17,7 @@ class CommandLine:
     """
 
     DEFAULT_HOST: ClassVar[str] = "127.0.0.1"
+    DEFAULT_DATA_DIRECTORY_NAME: ClassVar[str] = "ovir_gui_data"
     DEFAULT_PORT: ClassVar[int] = 8000
     TOKEN_VARIABLE: ClassVar[str] = "OVIR_GUI_TOKEN"
     MINIMUM_TOKEN_LENGTH: ClassVar[int] = 16
@@ -58,7 +58,12 @@ class CommandLine:
             "--data-dir",
             type=Path,
             default=None,
-            help=f"directory keeping classes, results and uploads (default ./{WorkspaceStores.DEFAULT_DIRECTORY_NAME})",
+            help=f"directory keeping classes, results and uploads (default ./{self.DEFAULT_DATA_DIRECTORY_NAME})",
+        )
+        self._parser.add_argument(
+            "--download-ffmpeg",
+            action="store_true",
+            help="download the FFmpeg shared libraries playing videos the browser cannot decode (Windows only)",
         )
 
     def parse(self, arguments: Sequence[str], environment: Mapping[str, str] | None = None) -> LaunchOptions:
@@ -88,16 +93,18 @@ class CommandLine:
         port: int = namespace.port
         is_browser_disabled: bool = namespace.no_browser
         data_directory: Path | None = namespace.data_dir
+        is_ffmpeg_download_requested: bool = namespace.download_ffmpeg
         return LaunchOptions(
             paths=tuple(paths),
             host=host,
             port=port,
             is_browser_opened=not is_browser_disabled,
             data_directory=(
-                Path.cwd() / WorkspaceStores.DEFAULT_DIRECTORY_NAME
+                Path.cwd() / self.DEFAULT_DATA_DIRECTORY_NAME
                 if data_directory is None
                 else data_directory.expanduser().resolve()
             ),
             embed_origins=tuple(embed_origins),
             access_token=access_token,
+            is_ffmpeg_download_requested=is_ffmpeg_download_requested,
         )

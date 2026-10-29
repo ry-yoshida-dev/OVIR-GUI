@@ -270,7 +270,7 @@ export function ResultTable({
         </span>
         <span className="grow" />
         <button
-          className="small export-button"
+          className="export-button"
           disabled={isExportDisabled}
           onClick={onExport}
           title="Export the listed pictures with their kept findings (Ctrl+E)"
