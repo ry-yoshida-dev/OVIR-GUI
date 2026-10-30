@@ -1,3 +1,4 @@
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from ..media import MediaItem, PlaybackProxyWriter
@@ -14,6 +15,8 @@ class PlaybackPreparer:
     file to play.
 
     A copy is made once per video and cached in the data directory; a failed encoding is reported and can be retried.
+    Copies are encoded one at a time on a thread of their own, so a long encoding never holds up the threads serving
+    previews and saves.
     """
 
     def __init__(
@@ -36,6 +39,7 @@ class PlaybackPreparer:
         self._working: WorkingState = working
         self._notifier: StatusNotifier = notifier
         self._writer: PlaybackProxyWriter = PlaybackProxyWriter()
+        self._encoder: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="playback-copy")
         self._preparing_paths: set[Path] = set()
         self._failed_paths: set[Path] = set()
 
@@ -112,11 +116,28 @@ class PlaybackPreparer:
         self._failed_paths.discard(path)
         self._preparing_paths.add(path)
         self._notifier.inform(f"The browser cannot play {path.name}; preparing a playable copy ...")
-        self._scheduler.run_blocking(
-            lambda: self._writer.write(item, self._store.path_of(item.path)),
-            lambda _: self._on_prepared(path),
-            lambda error: self._on_failed(path, error),
-        )
+        encoding: Future[Path] = self._encoder.submit(self._writer.write, item, self._store.path_of(item.path))
+        encoding.add_done_callback(lambda finished: self._scheduler.dispatch(lambda: self._on_finished(path, finished)))
+
+    def stop(self) -> None:
+        """
+        Abort the encoding in progress and drop the queued ones, without waiting, e.g. when the server quits.
+        """
+        self._writer.stop()
+        self._encoder.shutdown(wait=False, cancel_futures=True)
+
+    def _on_finished(self, path: Path, finished: Future[Path]) -> None:
+        if finished.cancelled():
+            self._preparing_paths.discard(path)
+            return
+        error: BaseException | None = finished.exception()
+        match error:
+            case None:
+                self._on_prepared(path)
+            case Exception():
+                self._on_failed(path, error)
+            case _:
+                raise error
 
     def _on_prepared(self, path: Path) -> None:
         self._preparing_paths.discard(path)

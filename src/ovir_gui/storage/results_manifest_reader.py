@@ -1,4 +1,3 @@
-import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import ClassVar
@@ -23,7 +22,9 @@ from ..recognition import (
 from ..recognition.array_types import UInt8Array
 from ..results import ResultLibrary, StoredResult
 from .json_fields import JsonFields, JsonValue
+from .media_stamp import MediaStamp
 from .picture_prompt_codec import PicturePromptCodec
+from .restored_results import RestoredResults
 from .results_manifest_writer import ResultsManifestWriter
 
 
@@ -31,7 +32,8 @@ class ResultsManifestReader:
     """
     Rebuilds a ``ResultLibrary`` from a manifest written by ``ResultsManifestWriter`` and its mask bits.
 
-    Results of media files that no longer exist or changed since (other modification time or size) are dropped.
+    Results of media files that changed since (other modification time or size) are dropped; results of media files
+    that cannot be reached now, such as ones on a disconnected drive, are kept with their stored stamp.
     Rejections of classifications in a version 1 manifest, which indexed the best class by 0, are moved to the
     position of that class. Classifications of a manifest before version 3 have no logits, so they keep the scores
     they were stored with; version 3 named the logits of the sentences ``"sentences"``.
@@ -49,7 +51,7 @@ class ResultsManifestReader:
         """
         self._mask_bits: Sequence[UInt8Array] = mask_bits
 
-    def read(self, manifest: dict[str, JsonValue]) -> ResultLibrary:
+    def read(self, manifest: dict[str, JsonValue]) -> RestoredResults:
         """
         Rebuild the stored results.
 
@@ -60,8 +62,9 @@ class ResultsManifestReader:
 
         Returns
         -------
-        ResultLibrary
-            Results of every profile for the unchanged media files.
+        RestoredResults
+            Results of every profile for the unchanged and unreachable media files, with the stamps of the
+            unreachable ones.
 
         Raises
         ------
@@ -75,8 +78,9 @@ class ResultsManifestReader:
         version: JsonValue = manifest.get("version")
         if not isinstance(version, int) or version > ResultsManifestWriter.FORMAT_VERSION:
             raise ValueError(f"unsupported results archive version {version!r}.")
+        unreachable_media: dict[Path, MediaStamp] = {}
         media_paths: list[Path | None] = [
-            self._valid_media_path(JsonFields.object_of(entry, "media"))
+            self._valid_media_path(JsonFields.object_of(entry, "media"), unreachable_media)
             for entry in JsonFields.list_of(manifest.get("media"), "media")
         ]
         signatures: list[PromptSignature] = [
@@ -115,19 +119,20 @@ class ResultsManifestReader:
                     frame_key,
                     StoredResult(result=result, signature=signatures[signature_index], rejected_indices=rejected),
                 )
-        return library
+        return RestoredResults(library=library, unreachable_media=unreachable_media)
 
     @staticmethod
-    def _valid_media_path(entry: dict[str, JsonValue]) -> Path | None:
+    def _valid_media_path(entry: dict[str, JsonValue], unreachable_media: dict[Path, MediaStamp]) -> Path | None:
         path: Path = Path(JsonFields.string_of(entry.get("path"), "media path"))
-        try:
-            status: os.stat_result = path.stat()
-        except OSError:
-            return None
-        is_unchanged: bool = status.st_mtime_ns == JsonFields.integer_of(
-            entry.get("mtime_ns"), "mtime_ns"
-        ) and status.st_size == JsonFields.integer_of(entry.get("size"), "size")
-        return path if is_unchanged else None
+        stored: MediaStamp = MediaStamp(
+            mtime_ns=JsonFields.integer_of(entry.get("mtime_ns"), "mtime_ns"),
+            size=JsonFields.integer_of(entry.get("size"), "size"),
+        )
+        current: MediaStamp | None = MediaStamp.of(path)
+        if current is None:
+            unreachable_media[path] = stored
+            return path
+        return path if current == stored else None
 
     @staticmethod
     def _profile_of(entry: dict[str, JsonValue]) -> ModelProfile:

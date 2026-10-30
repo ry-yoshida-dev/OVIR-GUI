@@ -1,4 +1,6 @@
+import logging
 import os
+import shutil
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -6,9 +8,11 @@ from typing import ClassVar
 
 from huggingface_hub import CachedRepoInfo, HFCacheInfo, scan_cache_dir
 from huggingface_hub.constants import HF_HUB_CACHE
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from .stored_weights import StoredWeights
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class WeightsStorage:
@@ -79,8 +83,8 @@ class WeightsStorage:
 
     def delete(self, weights_path: str) -> None:
         """
-        Delete the downloaded weights of a checkpoint from this computer; files the Hugging Face cache shares with
-        other repositories are kept for them.
+        Delete the downloaded weights of a checkpoint from this computer; only the cache folder of its own Hugging
+        Face repository is removed, so other repositories are never touched.
 
         Parameters
         ----------
@@ -98,11 +102,10 @@ class WeightsStorage:
                 raise FileNotFoundError(f"{weights_path} is not downloaded.")
             weights_file.unlink()
             return
-        cache_info: HFCacheInfo | None = self._hub_cache_info()
-        repository: CachedRepoInfo | None = self._hub_repositories(cache_info).get(weights_path)
-        if cache_info is None or repository is None:
+        repository: CachedRepoInfo | None = self._hub_repositories(self._hub_cache_info()).get(weights_path)
+        if repository is None:
             raise FileNotFoundError(f"{weights_path} is not downloaded.")
-        cache_info.delete_revisions(*(revision.commit_hash for revision in repository.revisions)).execute()
+        shutil.rmtree(repository.repo_path)
 
     def _stored_size_of(self, weights_path: str, hub_repositories: dict[str, CachedRepoInfo]) -> int | None:
         if weights_path.endswith(self.ULTRALYTICS_SUFFIX):
@@ -141,9 +144,17 @@ class WeightsStorage:
         settings_file: Path = cls._ultralytics_config_directory() / cls.ULTRALYTICS_SETTINGS_NAME
         if not settings_file.is_file():
             return None
-        settings: dict[str, object] = TypeAdapter(dict[str, object]).validate_json(
-            settings_file.read_text(encoding="utf-8")
-        )
+        try:
+            settings: dict[str, object] = TypeAdapter(dict[str, object]).validate_json(
+                settings_file.read_text(encoding="utf-8")
+            )
+        except (OSError, UnicodeDecodeError, ValidationError) as error:
+            LOGGER.warning(
+                "Ultralytics settings %s are unreadable, so its weights folder is not searched: %s",
+                settings_file,
+                error,
+            )
+            return None
         weights_directory: object = settings.get(cls.ULTRALYTICS_WEIGHTS_KEY)
         return Path(weights_directory) if isinstance(weights_directory, str) else None
 

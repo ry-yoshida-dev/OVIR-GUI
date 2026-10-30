@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
 
+from .atomic_file import AtomicFile
 from .class_set import ClassSet
 from .class_set_archive import ClassSetArchive
 from .class_set_entry import ClassSetEntry
@@ -233,8 +234,8 @@ class ClassSetStore:
         """
         target_path: Path = self.path_of(name)
         ClassSetArchive(source_path).read()
-        self.class_set_directory.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source_path, target_path)
+        with AtomicFile(target_path).replacing() as partial_path:
+            shutil.copyfile(source_path, partial_path)
 
     def _entry_of(self, name: str) -> ClassSetEntry:
         archive: ClassSetArchive = self._archive_of(name)

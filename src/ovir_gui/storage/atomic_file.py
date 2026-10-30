@@ -1,3 +1,4 @@
+import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -6,7 +7,8 @@ from pathlib import Path
 class AtomicFile:
     """
     File replaced in one step: new content is written to a hidden partial file next to it, ``.<name>.partial``, which
-    then replaces the file, so a failed write leaves the previous content intact.
+    is flushed to disk and then replaces the file, so a failed write or a power loss leaves the previous content
+    intact.
     """
 
     def __init__(self, path: Path) -> None:
@@ -80,6 +82,8 @@ class AtomicFile:
         """
         with self.staged() as partial_path:
             yield partial_path
+            with partial_path.open("rb") as written:
+                os.fsync(written.fileno())
             partial_path.replace(self._path)
 
     def write_text(self, text: str) -> None:

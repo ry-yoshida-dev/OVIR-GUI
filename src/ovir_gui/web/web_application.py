@@ -148,6 +148,7 @@ class WebApplication:
             yield
         finally:
             self._context.detach()
+            workspace.playback.stop()
             workspace.jobs.stop()
             await asyncio.to_thread(workspace.jobs.join)
             await scheduler.settle(self.SHUTDOWN_WAIT_SECONDS)

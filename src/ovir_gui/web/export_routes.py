@@ -59,6 +59,16 @@ class ExportRoutes:
                 workspace.exports.plan(MediaKind(media)), ExportCoordinator.default_directory(context.working_directory)
             )
 
+        @router.get("/export/folder")
+        async def export_folder(path: str) -> JsonObject:
+            directory: Path = Path(path.strip()).expanduser().resolve()
+            if directory.exists() and not directory.is_dir():
+                raise NotADirectoryError(f"{directory} is a file, not a folder.")
+            entry_count: int = (
+                await asyncio.to_thread(lambda: sum(1 for _ in directory.iterdir())) if directory.is_dir() else 0
+            )
+            return {"entry_count": entry_count}
+
         @router.post("/export/preview")
         async def export_preview(body: ExportPreviewBody) -> JsonObject:
             media_kind: MediaKind = MediaKind(body.media)

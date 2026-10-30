@@ -112,7 +112,8 @@ export function ResultViewer({
       </div>
     );
   }
-  const isFrameOfCurrent = frame !== null && frame.path === current.path;
+  const isSourceOfCurrent = current.kind === "video" || source === sourceOf(current, isVideoPlayerUsed);
+  const isFrameOfCurrent = isSourceOfCurrent && frame !== null && frame.path === current.path;
   const listedIndices =
     listed === null || !isFrameOfCurrent
       ? null

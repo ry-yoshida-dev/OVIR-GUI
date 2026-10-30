@@ -15,6 +15,7 @@ import { useStoredState } from "../hooks/useStoredState";
 import type { TableRow } from "../lib/resultTable";
 import { CropMarginFigure } from "./CropMarginFigure";
 import { Dialog } from "./Dialog";
+import { useDialogs } from "./DialogHost";
 import { ExportPurposeCards } from "./ExportPurposeCards";
 import { InfoTip } from "./InfoTip";
 import { LabelSnippet } from "./LabelSnippet";
@@ -86,6 +87,7 @@ export function ExportDialog({
   onDownloadCsv,
   onClose,
 }: ExportDialogProps) {
+  const dialogs = useDialogs();
   const [error, setError] = useState("");
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,6 +142,11 @@ export function ExportDialog({
   const submit = async () => {
     if (previewChoice === undefined) return;
     setIsSubmitting(true);
+    const isFolderAccepted = await confirmFolder();
+    if (!isFolderAccepted) {
+      setIsSubmitting(false);
+      return;
+    }
     const isDone = await onExport({
       ...previewChoice,
       output_directory: outputDirectory,
@@ -151,6 +158,23 @@ export function ExportDialog({
       setStored((current) => ({ ...current, output_directory: outputDirectory }));
       onClose();
     }
+  };
+
+  const confirmFolder = async () => {
+    let entryCount: number;
+    try {
+      entryCount = (await api.exportFolderEntryCount(outputDirectory)).entry_count;
+    } catch (caught) {
+      setError(errorMessage(caught));
+      return false;
+    }
+    if (entryCount === 0) return true;
+    return dialogs.confirm({
+      title: "Export into a Non-Empty Folder",
+      message: `${outputDirectory} already holds ${entryCount} ${entryCount === 1 ? "item" : "items"}. Exported files with the same names replace them.`,
+      confirmLabel: "Export and Replace",
+      isDanger: true,
+    });
   };
 
   return (

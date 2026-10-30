@@ -294,6 +294,8 @@ export const api = {
     get<ExportPlan>(`/api/export/plan?media=${media}`),
   exportPreview: (body: ExportPreviewRequest) =>
     post<LabelPreview>("/api/export/preview", body),
+  exportFolderEntryCount: (path: string) =>
+    get<{ entry_count: number }>(`/api/export/folder?path=${encodeURIComponent(path)}`),
   exportResults: (body: ExportRequest) =>
     post<ActionReply>("/api/export", body),
   exportDownloadUrl: "/api/export/download",

@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterable
 from pathlib import Path
 from typing import ClassVar
@@ -61,7 +62,8 @@ class ClassListFile:
 
     def write(self, definitions: Iterable[ClassDefinition]) -> None:
         """
-        Write the classes, replacing the file.
+        Write the classes, replacing the file in one step through a hidden partial file next to it, so a failed
+        write leaves the previous classes intact.
 
         Parameters
         ----------
@@ -73,4 +75,12 @@ class ClassListFile:
         OSError
             If the file cannot be written.
         """
-        self._path.write_text("".join(f"{definition.text}\n" for definition in definitions), encoding=self.ENCODING)
+        partial_path: Path = self._path.with_name(f".{self._path.name}.partial")
+        try:
+            with partial_path.open("w", encoding=self.ENCODING) as partial:
+                partial.write("".join(f"{definition.text}\n" for definition in definitions))
+                partial.flush()
+                os.fsync(partial.fileno())
+            partial_path.replace(self._path)
+        finally:
+            partial_path.unlink(missing_ok=True)

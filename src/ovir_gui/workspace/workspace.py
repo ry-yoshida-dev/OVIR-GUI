@@ -786,7 +786,16 @@ class Workspace:
         try:
             return self._stores.results_store.load()
         except (OSError, ValueError) as error:
-            self._notifier.replace_status(f"Could not restore the saved results: {error}")
+            try:
+                kept_path: Path = self._stores.results_store.set_aside()
+            except OSError as rename_error:
+                raise RuntimeError(
+                    f"The saved results {self._stores.results_store.path} cannot be read ({error}) "
+                    + f"nor set aside ({rename_error}); move the file away and start again."
+                ) from error
+            self._notifier.replace_status(
+                f"Could not restore the saved results: {error}. The file was kept as {kept_path.name}."
+            )
             return ResultLibrary()
 
     def _aggregation(self) -> PromptAggregation:

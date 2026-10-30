@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 from typing import ClassVar
 
@@ -24,13 +25,23 @@ class PlaybackProxyWriter:
     Re-encodes a video the browser cannot decode, such as ProRes or uncompressed footage, into H.264 for playback.
 
     Every frame is read with the same decoder as recognition and written in order at the source frame rate and size,
-    so frame ``i`` of the copy shows frame ``i`` of the source and findings line up with it.
+    so frame ``i`` of the copy shows frame ``i`` of the source and findings line up with it. ``stop`` aborts the
+    encoding in progress and every later one, e.g. when the server quits.
     """
 
     CODEC: ClassVar[str] = "libx264"
     PIXEL_FORMAT: ClassVar[str] = "yuv420p"
     CONSTANT_RATE_FACTOR: ClassVar[float] = 23.0
     PRESET: ClassVar[str] = "veryfast"
+
+    def __init__(self) -> None:
+        self._stop_requested: threading.Event = threading.Event()
+
+    def stop(self) -> None:
+        """
+        Abort the encoding in progress after its current frame, and refuse later ones; safe to call from any thread.
+        """
+        self._stop_requested.set()
 
     def write(self, item: MediaItem, target: Path) -> Path:
         """
@@ -54,6 +65,8 @@ class PlaybackProxyWriter:
             If the item is not a video or holds no decodable frame.
         RuntimeError
             If torchcodec found no FFmpeg when imported.
+        InterruptedError
+            If ``stop`` was called.
         """
         ffmpeg_major_version: object = vars(torchcodec).get("ffmpeg_major_version")
         if not isinstance(ffmpeg_major_version, int):
@@ -74,6 +87,8 @@ class PlaybackProxyWriter:
             ) as writer:
                 reader: VideoFrameReader = VideoFrameReader(item.path, video)
                 for _, picture in reader.read(range(video.frame_count)):
+                    if self._stop_requested.is_set():
+                        raise InterruptedError(f"Encoding the playback copy of {item.path.name} was stopped.")
                     writer.write(self._tensor_of(picture))
                 if writer.written_frame_count == 0:
                     raise ValueError(f"{item.path.name} holds no decodable frame.")

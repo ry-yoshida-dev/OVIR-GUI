@@ -195,14 +195,67 @@ class TestStoreRoundTrips:
         library.record(profile, FrameKey(image_path), result, signature)
         library.catalog_of(profile).set_accepted(FrameKey(image_path), [1], False)
         store: ResultsStore = ResultsStore(tmp_path / "data")
-        written: ResultsSnapshot = ResultsStore.snapshot(library)
+        written: ResultsSnapshot = store.snapshot(library)
         store.write(written)
-        read_back: ResultsSnapshot = ResultsStore.snapshot(store.load())
+        read_back: ResultsSnapshot = store.snapshot(store.load())
         assert read_back.manifest == written.manifest
         assert len(read_back.mask_bits) == len(written.mask_bits)
         for read_bits, written_bits in zip(read_back.mask_bits, written.mask_bits, strict=True):
             assert np.array_equal(read_bits, written_bits)
         assert not store.path.with_name(f".{store.path.name}.partial").exists()
+
+    def test_results_of_unreachable_media_survive_a_save(self, tmp_path: Path) -> None:
+        image_path: Path = tmp_path / "drive" / "picture.png"
+        image_path.parent.mkdir()
+        _ = cv2.imwrite(str(image_path), np.zeros((16, 24, 3), dtype=np.uint8))
+        profile: ModelProfile = self._detection_profile()
+        library: ResultLibrary = ResultLibrary()
+        library.record(profile, FrameKey(image_path), self._detection_result(), PromptSignature(()))
+        ResultsStore(tmp_path / "data").write(ResultsStore(tmp_path / "data").snapshot(library))
+        image_path.parent.rename(tmp_path / "unplugged")
+        disconnected: ResultsStore = ResultsStore(tmp_path / "data")
+        disconnected.write(disconnected.snapshot(disconnected.load()))
+        (tmp_path / "unplugged").rename(image_path.parent)
+        assert ResultsStore(tmp_path / "data").load().catalog_of(profile).stored_of(FrameKey(image_path)) is not None
+
+    def test_results_of_changed_media_are_dropped(self, tmp_path: Path) -> None:
+        image_path: Path = tmp_path / "picture.png"
+        _ = cv2.imwrite(str(image_path), np.zeros((16, 24, 3), dtype=np.uint8))
+        profile: ModelProfile = self._detection_profile()
+        library: ResultLibrary = ResultLibrary()
+        library.record(profile, FrameKey(image_path), self._detection_result(), PromptSignature(()))
+        store: ResultsStore = ResultsStore(tmp_path / "data")
+        store.write(store.snapshot(library))
+        _ = cv2.imwrite(str(image_path), np.zeros((32, 48, 3), dtype=np.uint8))
+        assert ResultsStore(tmp_path / "data").load().catalog_of(profile).stored_of(FrameKey(image_path)) is None
+
+    def test_unreadable_results_archive_is_set_aside(self, tmp_path: Path) -> None:
+        store: ResultsStore = ResultsStore(tmp_path / "data")
+        store.path.parent.mkdir()
+        store.path.write_bytes(b"not a zip file")
+        kept_path: Path = store.set_aside()
+        assert not store.path.exists()
+        assert kept_path.read_bytes() == b"not a zip file"
+
+    @staticmethod
+    def _detection_profile() -> ModelProfile:
+        return ModelProfile(
+            task=RecognitionTask.DETECTION,
+            backend="owlv2",
+            model_name="base",
+            weights_path="weights",
+            device="cpu",
+            precision="fp32",
+            options=(),
+        )
+
+    @staticmethod
+    def _detection_result() -> FrameResult:
+        return FrameResult(
+            task=RecognitionTask.DETECTION,
+            image_size=ImageSize(24, 16),
+            instances=(RecognizedInstance("car", "car", 0.8, PixelBox(3.0, 2.0, 9.0, 8.0), None),),
+        )
 
     def test_classifications_are_scored_again_from_their_stored_logits(self, tmp_path: Path) -> None:
         image_path: Path = tmp_path / "picture.png"
@@ -245,7 +298,7 @@ class TestStoreRoundTrips:
         library.record(profile, FrameKey(image_path), result, signature)
         library.catalog_of(profile).set_accepted(FrameKey(image_path), [1], False)
         store: ResultsStore = ResultsStore(tmp_path / "data")
-        store.write(ResultsStore.snapshot(library))
+        store.write(store.snapshot(library))
         read_back: ResultLibrary = store.load()
         read_back.apply_aggregation(self._similarity_aggregation(AggregationMethod.MIN))
         stored = read_back.catalog_of(profile).stored_of(FrameKey(image_path))

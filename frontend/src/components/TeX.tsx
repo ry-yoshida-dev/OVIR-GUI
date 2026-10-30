@@ -12,7 +12,7 @@ export function TeX({ expression }: TeXProps) {
   return (
     <span
       className="tex"
-      dangerouslySetInnerHTML={{ __html: katex.renderToString(expression, { throwOnError: true, output: "html" }) }}
+      dangerouslySetInnerHTML={{ __html: katex.renderToString(expression, { throwOnError: false, output: "html" }) }}
     />
   );
 }

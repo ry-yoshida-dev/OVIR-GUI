@@ -71,6 +71,21 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
     }
   };
 
+  const importFile = async (file: File) => {
+    const name = file.name.replace(/\.ovirset$/i, "").trim();
+    const isExisting = entries.some((entry) => entry.name.toLowerCase() === name.toLowerCase());
+    if (isExisting) {
+      const isConfirmed = await dialogs.confirm({
+        title: "Replace Class Set",
+        message: `A class set named '${name}' exists. Replace it with ${file.name}?`,
+        confirmLabel: "Replace",
+        isDanger: true,
+      });
+      if (!isConfirmed) return;
+    }
+    if (await run(() => api.importClassSet(file), `Imported ${file.name}.`)) setSelectedName(name);
+  };
+
   const remove = async () => {
     if (selected === null) return;
     const isConfirmed = await dialogs.confirm({
@@ -183,7 +198,7 @@ export function ClassSetDialog({ classSet, version, onReport, onClose }: ClassSe
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
-          if (file !== undefined) void run(() => api.importClassSet(file), `Imported ${file.name}.`);
+          if (file !== undefined) void importFile(file);
         }}
       />
     </Dialog>

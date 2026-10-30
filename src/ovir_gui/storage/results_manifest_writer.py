@@ -1,4 +1,4 @@
-import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import ClassVar
 
@@ -9,6 +9,7 @@ from ..recognition import ClassifierLogits, FrameResult, InstanceMask, Recognize
 from ..recognition.array_types import UInt8Array
 from ..results import ResultCatalog, ResultLibrary, StoredResult
 from .json_fields import JsonValue
+from .media_stamp import MediaStamp
 from .picture_prompt_codec import PicturePromptCodec
 from .results_snapshot import ResultsSnapshot
 
@@ -48,7 +49,15 @@ class ResultsManifestWriter:
     FORMAT_NAME: ClassVar[str] = "ovir-gui-results"
     FORMAT_VERSION: ClassVar[int] = 4
 
-    def __init__(self) -> None:
+    def __init__(self, unreachable_media: Mapping[Path, MediaStamp] | None = None) -> None:
+        """
+        Parameters
+        ----------
+        unreachable_media : Mapping[Path, MediaStamp] | None
+            Stored stamps of media files that could not be reached when the results were read; their results are
+            written with these stamps instead of being left out.
+        """
+        self._unreachable_media: Mapping[Path, MediaStamp] = {} if unreachable_media is None else unreachable_media
         self._media_indices: dict[Path, int] = {}
         self._media_entries: list[JsonValue] = []
         self._signature_indices: dict[PromptSignature, int] = {}
@@ -67,7 +76,8 @@ class ResultsManifestWriter:
         Returns
         -------
         ResultsSnapshot
-            Manifest and mask bits; results of files that no longer exist are left out.
+            Manifest and mask bits; results of files that cannot be reached now are left out, unless their stamp was
+            given at construction.
         """
         profiles: list[JsonValue] = [
             self._profile_entry(profile, library.catalog_of(profile)) for profile in library.profiles
@@ -162,12 +172,13 @@ class ResultsManifestWriter:
     def _media_index_of(self, path: Path) -> int | None:
         if path in self._media_indices:
             return self._media_indices[path]
-        try:
-            status: os.stat_result = path.stat()
-        except OSError:
+        stamp: MediaStamp | None = (
+            self._unreachable_media[path] if path in self._unreachable_media else MediaStamp.of(path)
+        )
+        if stamp is None:
             return None
         self._media_indices[path] = len(self._media_entries)
-        self._media_entries.append({"path": str(path), "mtime_ns": status.st_mtime_ns, "size": status.st_size})
+        self._media_entries.append({"path": str(path), "mtime_ns": stamp.mtime_ns, "size": stamp.size})
         return self._media_indices[path]
 
     def _signature_index_of(self, signature: PromptSignature) -> int:

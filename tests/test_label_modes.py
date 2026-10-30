@@ -104,7 +104,7 @@ class TestLabelModes:
                 PromptSignature((QueriedClass(name="cat", phrases=frozenset({"cat"}), reference_boxes=frozenset()),)),
             )
         store: ResultsStore = ResultsStore(tmp_path / "data")
-        store.write(ResultsStore.snapshot(library))
+        store.write(store.snapshot(library))
         read_back: ResultLibrary = store.load()
         for backend, native_label_mode in (("clip", LabelMode.SINGLE_LABEL), ("siglip", LabelMode.MULTI_LABEL)):
             stored: StoredResult | None = read_back.catalog_of(classification_profile(backend)).stored_of(
@@ -124,7 +124,7 @@ class TestLabelModes:
             classification_of((0.2, 0.9, 0.6), LabelMode.MULTI_LABEL),
             PromptSignature(()),
         )
-        snapshot: ResultsSnapshot = ResultsStore.snapshot(library)
+        snapshot: ResultsSnapshot = ResultsStore(tmp_path / "data").snapshot(library)
         manifest: dict[str, JsonValue] = json.loads(json.dumps(snapshot.manifest))
         manifest["version"] = 1
         profiles: JsonValue = manifest["profiles"]
@@ -136,7 +136,7 @@ class TestLabelModes:
         frame_entry: JsonValue = frames[0]
         assert isinstance(frame_entry, dict)
         frame_entry["rejected"] = [0]
-        read_back: ResultLibrary = ResultsManifestReader(snapshot.mask_bits).read(manifest)
+        read_back: ResultLibrary = ResultsManifestReader(snapshot.mask_bits).read(manifest).library
         stored: StoredResult | None = read_back.catalog_of(profile).stored_of(FrameKey(image_path))
         assert stored is not None
         assert stored.rejected_indices == frozenset({1})

@@ -1,7 +1,10 @@
+from datetime import datetime
 from pathlib import Path
 from typing import ClassVar
 
 from ..results import ResultLibrary
+from .media_stamp import MediaStamp
+from .restored_results import RestoredResults
 from .results_archive import ResultsArchive
 from .results_manifest_writer import ResultsManifestWriter
 from .results_snapshot import ResultsSnapshot
@@ -10,9 +13,13 @@ from .results_snapshot import ResultsSnapshot
 class ResultsStore:
     """
     Results archive of a data directory, ``results.ovirresults``.
+
+    Results of media files that cannot be reached when the archive is loaded, such as ones on a disconnected drive,
+    are written back with their stored stamp, so saving never drops them.
     """
 
     FILE_NAME: ClassVar[str] = "results.ovirresults"
+    UNREADABLE_TIME_FORMAT: ClassVar[str] = "%Y%m%d-%H%M%S"
 
     def __init__(self, root_directory: Path) -> None:
         """
@@ -22,6 +29,7 @@ class ResultsStore:
             Data directory holding the archive.
         """
         self._archive: ResultsArchive = ResultsArchive(root_directory / self.FILE_NAME)
+        self._unreachable_media: dict[Path, MediaStamp] = {}
 
     @property
     def path(self) -> Path:
@@ -53,10 +61,30 @@ class ResultsStore:
         """
         if not self._archive.path.is_file():
             return ResultLibrary()
-        return self._archive.read()
+        restored: RestoredResults = self._archive.read()
+        self._unreachable_media = restored.unreachable_media
+        return restored.library
 
-    @staticmethod
-    def snapshot(library: ResultLibrary) -> ResultsSnapshot:
+    def set_aside(self) -> Path:
+        """
+        Rename an archive that could not be loaded, so the next save does not overwrite it.
+
+        Returns
+        -------
+        Path
+            New name of the archive, ``results.ovirresults.unreadable-<time>``.
+
+        Raises
+        ------
+        OSError
+            If the archive cannot be renamed.
+        """
+        kept_path: Path = self._archive.path.with_name(
+            f"{self.FILE_NAME}.unreadable-{datetime.now().strftime(self.UNREADABLE_TIME_FORMAT)}"
+        )
+        return self._archive.path.rename(kept_path)
+
+    def snapshot(self, library: ResultLibrary) -> ResultsSnapshot:
         """
         Convert the results for writing; call on the thread owning them.
 
@@ -70,7 +98,7 @@ class ResultsStore:
         ResultsSnapshot
             Detached copy ready for ``write``.
         """
-        return ResultsManifestWriter().snapshot(library)
+        return ResultsManifestWriter(self._unreachable_media).snapshot(library)
 
     def write(self, snapshot: ResultsSnapshot) -> None:
         """

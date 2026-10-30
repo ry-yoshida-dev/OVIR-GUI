@@ -8,9 +8,9 @@ from typing import ClassVar
 import numpy as np
 
 from ..recognition.array_types import UInt8Array
-from ..results import ResultLibrary
 from .atomic_file import AtomicFile
 from .json_fields import JsonValue
+from .restored_results import RestoredResults
 from .results_manifest_reader import ResultsManifestReader
 from .results_snapshot import ResultsSnapshot
 from .zip_manifest import ZipManifest
@@ -49,14 +49,14 @@ class ResultsArchive:
         """
         return self._path
 
-    def read(self) -> ResultLibrary:
+    def read(self) -> RestoredResults:
         """
         Read every stored result.
 
         Returns
         -------
-        ResultLibrary
-            Results of unchanged media files.
+        RestoredResults
+            Results of unchanged and unreachable media files.
 
         Raises
         ------
@@ -67,7 +67,7 @@ class ResultsArchive:
         """
         return ZipManifest(self._path, self.MANIFEST_NAME, "results archive").read_with(self._library_from)
 
-    def _library_from(self, archive: zipfile.ZipFile, manifest: dict[str, JsonValue]) -> ResultLibrary:
+    def _library_from(self, archive: zipfile.ZipFile, manifest: dict[str, JsonValue]) -> RestoredResults:
         mask_bits: list[UInt8Array] = (
             self._read_masks(archive.read(self.MASKS_NAME)) if self.MASKS_NAME in archive.namelist() else []
         )
