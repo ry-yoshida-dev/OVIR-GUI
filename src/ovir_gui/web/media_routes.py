@@ -49,6 +49,7 @@ class MediaRoutes:
             workspace: Workspace = context.workspace
             paths: list[Path] = [Path(path).expanduser() for path in body.paths]
             workspace.open_paths(paths)
+            await context.media_opened()
             return {}
 
         @router.post("/media/close")
@@ -88,6 +89,7 @@ class MediaRoutes:
                 for upload_file in files
             ]
             workspace.open_paths(saved_paths, is_first_shown)
+            await context.media_opened()
             return {}
 
         @router.get("/media/image")

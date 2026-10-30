@@ -177,9 +177,20 @@ class InferenceEngine:
         self.cancel()
         self._inbox.put(None)
 
-    def join(self) -> None:
+    def join(self, timeout_seconds: float) -> bool:
         """
         Wait until the worker has quit; safe to call from any thread once ``stop`` was called.
+
+        Parameters
+        ----------
+        timeout_seconds : float
+            Longest wait; a worker still busy afterwards, e.g. downloading weights, is left behind, as it never keeps
+            the process from exiting.
+
+        Returns
+        -------
+        bool
+            Whether the worker has quit.
 
         Raises
         ------
@@ -188,7 +199,8 @@ class InferenceEngine:
         """
         if not self._is_stopped:
             raise RuntimeError("stop must be called before join.")
-        self._thread.join()
+        self._thread.join(timeout_seconds)
+        return not self._thread.is_alive()
 
     def _send(self, job: InferenceJob) -> None:
         self._running_job = job

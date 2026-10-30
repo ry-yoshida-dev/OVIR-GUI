@@ -4,7 +4,7 @@ from pathlib import Path
 from ..analysis import ProfileComparison, ResultStatistics
 from ..media import FrameKey, MediaItem
 from ..models import ModelProfile
-from ..prompting import PicturePrompts, PromptChange, PromptSignature, QueryKind
+from ..prompting import FramePrompt, PicturePrompts, PromptChange, PromptSignature, QueryKind
 from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
 from ..review import ReviewFilter
 from .background_planner import BackgroundPlanner
@@ -107,8 +107,15 @@ class ResultReadModel:
         class_signature: PromptSignature = self._workbench.reference_board.signature_of(self._workbench.classes)
         prompts: PicturePrompts = self._workbench.picture_board.prompts
 
+        signatures: dict[FramePrompt, PromptSignature] = {}
+
         def current_of(frame_key: FrameKey) -> PromptSignature:
-            return class_signature.with_drawings(prompts.relevant_to(frame_key, profile.is_sequential))
+            drawings: FramePrompt = prompts.relevant_to(frame_key, profile.is_sequential)
+            signature: PromptSignature | None = signatures.get(drawings)
+            if signature is None:
+                signature = class_signature.with_drawings(drawings)
+                signatures[drawings] = signature
+            return signature
 
         return current_of
 
@@ -325,13 +332,24 @@ class ResultReadModel:
         catalog: ResultCatalog = self._library.catalog_of(profile)
         current_of: Callable[[FrameKey], PromptSignature] = self.signature_for(profile)
 
+        narrowed_signatures: dict[PromptSignature, PromptSignature] = {}
+        unchanged_pairs: dict[tuple[PromptSignature, PromptSignature], bool] = {}
+
         def is_up_to_date(frame_key: FrameKey) -> bool:
-            if frame_key not in catalog:
+            stored: StoredResult | None = catalog.stored_of(frame_key)
+            if stored is None:
                 return False
-            change: PromptChange | None = catalog.prompt_change_of(
-                frame_key, current_of(frame_key).for_query_kinds(profile.query_kinds)
-            )
-            return change is not None and change.is_unchanged
+            current: PromptSignature = current_of(frame_key)
+            narrowed: PromptSignature | None = narrowed_signatures.get(current)
+            if narrowed is None:
+                narrowed = current.for_query_kinds(profile.query_kinds)
+                narrowed_signatures[current] = narrowed
+            pair: tuple[PromptSignature, PromptSignature] = (stored.signature, narrowed)
+            is_unchanged: bool | None = unchanged_pairs.get(pair)
+            if is_unchanged is None:
+                is_unchanged = PromptChange.between(stored.signature, narrowed).is_unchanged
+                unchanged_pairs[pair] = is_unchanged
+            return is_unchanged
 
         return is_up_to_date
 

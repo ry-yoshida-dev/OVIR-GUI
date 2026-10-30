@@ -407,11 +407,21 @@ class InferenceRunner:
         """
         self._engine.stop()
 
-    def join(self) -> None:
+    def join(self, timeout_seconds: float) -> bool:
         """
         Wait until the worker has quit; the only method safe to call from a thread other than the owner.
+
+        Parameters
+        ----------
+        timeout_seconds : float
+            Longest wait; a worker still busy afterwards is left behind.
+
+        Returns
+        -------
+        bool
+            Whether the worker has quit.
         """
-        self._engine.join()
+        return self._engine.join(timeout_seconds)
 
     def _running_background_job(self) -> InferenceJob | None:
         job: InferenceJob | None = self._engine.running_job

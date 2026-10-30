@@ -84,6 +84,30 @@ class TestBackgroundPlanner:
         )
         assert keys == (video.key_at(2), video.key_at(4))
 
+    def test_all_mode_gathers_pending_images_up_to_a_video(
+        self, profile: ModelProfile, video: MediaItem, images: tuple[MediaItem, MediaItem], tmp_path: Path
+    ) -> None:
+        first, second = images
+        third: MediaItem = MediaItem.image(tmp_path / "third.png")
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile,
+            InferenceMode.ALL,
+            first.key_at(None),
+            [first, second, video, third],
+            every_second_frame,
+            lambda _: False,
+        )
+        assert keys == (first.key_at(None), second.key_at(None))
+
+    def test_all_mode_gathers_a_limited_number_of_images(self, profile: ModelProfile, tmp_path: Path) -> None:
+        many: list[MediaItem] = [
+            MediaItem.image(tmp_path / f"{index}.png") for index in range(BackgroundPlanner.GATHERED_IMAGE_COUNT + 5)
+        ]
+        keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
+            profile, InferenceMode.ALL, many[0].key_at(None), many, every_second_frame, lambda _: False
+        )
+        assert keys == tuple(item.key_at(None) for item in many[: BackgroundPlanner.GATHERED_IMAGE_COUNT])
+
     def test_playing_video_takes_frames_ahead_of_shown_frame(self, profile: ModelProfile, video: MediaItem) -> None:
         keys: tuple[FrameKey, ...] = BackgroundPlanner().next_keys(
             profile, InferenceMode.SHOWN, video.key_at(3), [video], every_second_frame, lambda _: False, True

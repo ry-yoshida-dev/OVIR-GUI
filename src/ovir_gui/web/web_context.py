@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from ..models import BenchmarkCatalog
@@ -82,6 +83,14 @@ class WebContext:
                 "Uploads": workspace.stores.upload_store.directory,
             },
         )
+
+    async def media_opened(self) -> None:
+        """
+        Wait until every file being opened has been added to the workspace.
+        """
+        opened: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self.workspace.when_media_opened(lambda: None if opened.done() else opened.set_result(None))
+        await opened
 
     def detach(self) -> None:
         """

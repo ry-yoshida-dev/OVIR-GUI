@@ -38,7 +38,8 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 | [model_choice.py](./model_choice.py) | `ModelChoice` holds the model chosen for each task with its overrides and the accepted licenses of optional modules, and lists and deletes the downloaded weights of the current task's presets. |
 | [notice.py](./notice.py) | `Notice` is a message for the user about something that happened, such as a finished run or a failed save. |
 | [notice_level.py](./notice_level.py) | `NoticeLevel` enumerates how prominently a notice is shown. |
-| [playback_preparer.py](./playback_preparer.py) | `PlaybackPreparer` encodes browser-playable copies of open videos off the owning thread and tells which file to play. |
+| [opened_media.py](./opened_media.py) | `OpenedMedia` holds the image and video files found and read off the owning thread, before they are added to the open media. |
+| [playback_preparer.py](./playback_preparer.py) | `PlaybackPreparer` encodes browser-playable copies of open videos one at a time on a thread of its own, stopped on quit, and tells which file to play. |
 | [playback_state.py](./playback_state.py) | `PlaybackState` enumerates whether a video has a browser-playable copy. |
 | [prompt_assembler.py](./prompt_assembler.py) | `PromptAssembler` builds the prompt of a model from the classes, reference images and drawings, asking approval to skip classes it cannot query. |
 | [prompt_preparation.py](./prompt_preparation.py) | `PromptPreparation` holds the prompt built from the classes, or why none could be built. |

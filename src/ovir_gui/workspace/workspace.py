@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import ClassVar
 
@@ -28,6 +28,7 @@ from .inference_engine import InferenceEngine
 from .inference_outcome_handler import InferenceOutcomeHandler
 from .inference_runner import InferenceRunner
 from .model_choice import ModelChoice
+from .opened_media import OpenedMedia
 from .playback_preparer import PlaybackPreparer
 from .prompt_assembler import PromptAssembler
 from .recognition_settings import RecognitionSettings
@@ -98,6 +99,9 @@ class Workspace:
         self._settings: RecognitionSettings = RecognitionSettings(
             task=self.DEFAULT_TASK if self.DEFAULT_TASK in model_selector.tasks else model_selector.tasks[0]
         )
+        self._scheduler: TaskScheduler = scheduler
+        self._opening_count: int = 0
+        self._opening_waiters: list[Callable[[], None]] = []
         self._library: ResultLibrary = self._load_results()
         self._results_save: DeferredSave[ResultsSnapshot] = DeferredSave(
             scheduler,
@@ -523,6 +527,9 @@ class Workspace:
         """
         Add image and video files, or every one inside directories, to the open media.
 
+        The files are found and read off the owning thread, so a large or slow folder never holds up the other
+        requests; ``when_media_opened`` tells when they are added.
+
         Parameters
         ----------
         paths : Iterable[Path]
@@ -530,35 +537,21 @@ class Workspace:
         is_first_shown : bool, optional
             Whether the first added file is shown; otherwise only when nothing was shown.
         """
-        collection: MediaCollection = MediaCollection.gather(paths, self._working.media)
-        if collection.is_empty:
-            self._notifier.inform(collection.describe("No new images or videos found"))
+        self._open_in_background(tuple(paths), lambda opened: self._add_opened(opened, is_first_shown))
+
+    def when_media_opened(self, callback: Callable[[], None]) -> None:
+        """
+        Run a callback on the owning thread once every file being opened has been added; at once when none is.
+
+        Parameters
+        ----------
+        callback : Callable[[], None]
+            Work to run.
+        """
+        if self._opening_count == 0:
+            callback()
             return
-        added: list[MediaItem] = []
-        unreadable: list[str] = []
-        for path in collection.media_paths:
-            try:
-                added.append(MediaItem.open(path))
-            except (OSError, ValueError) as error:
-                unreadable.append(f"{path.name} ({error})")
-        for item in added:
-            self._working.media[item.path] = item
-        if added and (is_first_shown or self._working.current_key is None):
-            self._working.show_key(added[0].key_at(0))
-        video_count: int = sum(1 for item in added if item.is_video)
-        image_count: int = len(added) - video_count
-        parts: list[str] = []
-        if image_count:
-            parts.append(CountedNoun("image").of(image_count))
-        if video_count:
-            parts.append(CountedNoun("video").of(video_count))
-        headline: str = f"Added {' and '.join(parts)}" if parts else "Added nothing"
-        if unreadable:
-            headline = f"{headline}; could not open {', '.join(unreadable)}"
-        self._notifier.inform(collection.describe(headline))
-        self._session.save()
-        self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
-        self._jobs.resume_background()
+        self._opening_waiters.append(callback)
 
     def restore_session(self) -> None:
         """
@@ -770,17 +763,71 @@ class Workspace:
         remembered: SessionMedia | None = self._session.take_unopened_media(self._settings.task)
         if remembered is None:
             return
-        existing: list[Path] = [path for path in remembered.paths if path.is_file()]
-        missing_count: int = len(remembered.paths) - len(existing)
-        if not existing:
-            if missing_count:
-                self._notifier.inform(f"None of the {missing_count} files of the last session exist any more.")
+        self._open_in_background(remembered.paths, lambda opened: self._add_remembered(remembered, opened))
+
+    def _add_remembered(self, remembered: SessionMedia, opened: OpenedMedia) -> None:
+        existing_count: int = len(remembered.paths) - opened.missing_count
+        if existing_count == 0:
+            self._notifier.inform(f"None of the {opened.missing_count} files of the last session exist any more.")
             return
-        self.open_paths(existing)
+        self._add_opened(opened, True)
         if remembered.current_path is not None and remembered.current_path in self._working.media:
             self.show(remembered.current_path, remembered.current_frame_index)
-        missing_note: str = f" ({missing_count} missing skipped)" if missing_count else ""
-        self._notifier.inform(f"Restored {CountedNoun('file').of(len(existing))} of the last session{missing_note}.")
+        missing_note: str = f" ({opened.missing_count} missing skipped)" if opened.missing_count else ""
+        self._notifier.inform(f"Restored {CountedNoun('file').of(existing_count)} of the last session{missing_note}.")
+
+    def _open_in_background(self, paths: Sequence[Path], add: Callable[[OpenedMedia], None]) -> None:
+        task: RecognitionTask = self._settings.task
+        known_paths: frozenset[Path] = frozenset(self._working.media)
+        self._opening_count += 1
+        self._scheduler.run_blocking(
+            lambda: OpenedMedia.read(paths, known_paths),
+            lambda opened: self._finish_opening(lambda: self._add_if_task_kept(task, opened, add)),
+            lambda error: self._finish_opening(lambda: self._notifier.inform(f"Could not open the files: {error}")),
+        )
+
+    def _add_if_task_kept(self, task: RecognitionTask, opened: OpenedMedia, add: Callable[[OpenedMedia], None]) -> None:
+        if task is not self._settings.task:
+            self._notifier.inform(f"Files opened for {task.value} were not added, as the task changed meanwhile.")
+            return
+        add(opened)
+
+    def _finish_opening(self, apply: Callable[[], None]) -> None:
+        try:
+            apply()
+        finally:
+            self._opening_count -= 1
+            if self._opening_count == 0:
+                waiters: list[Callable[[], None]] = self._opening_waiters
+                self._opening_waiters = []
+                for waiter in waiters:
+                    waiter()
+
+    def _add_opened(self, opened: OpenedMedia, is_first_shown: bool) -> None:
+        collection: MediaCollection = opened.collection
+        missing_note: str = f" ({opened.missing_count} not found)" if opened.missing_count else ""
+        added: list[MediaItem] = [item for item in opened.items if item.path not in self._working.media]
+        if not added and not opened.unreadable:
+            self._notifier.inform(collection.describe(f"No new images or videos found{missing_note}"))
+            return
+        for item in added:
+            self._working.media[item.path] = item
+        if added and (is_first_shown or self._working.current_key is None):
+            self._working.show_key(added[0].key_at(0))
+        video_count: int = sum(1 for item in added if item.is_video)
+        image_count: int = len(added) - video_count
+        parts: list[str] = []
+        if image_count:
+            parts.append(CountedNoun("image").of(image_count))
+        if video_count:
+            parts.append(CountedNoun("video").of(video_count))
+        headline: str = f"Added {' and '.join(parts)}" if parts else "Added nothing"
+        if opened.unreadable:
+            headline = f"{headline}; could not open {', '.join(opened.unreadable)}"
+        self._notifier.inform(collection.describe(f"{headline}{missing_note}"))
+        self._session.save()
+        self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
+        self._jobs.resume_background()
 
     def _load_results(self) -> ResultLibrary:
         try:

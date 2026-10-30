@@ -20,6 +20,7 @@ from .media_status import MediaStatus
 from .model_choice import ModelChoice
 from .notice import Notice
 from .notice_level import NoticeLevel
+from .opened_media import OpenedMedia
 from .playback_preparer import PlaybackPreparer
 from .playback_state import PlaybackState
 from .prompt_assembler import PromptAssembler
@@ -63,6 +64,7 @@ __all__ = [
     "ModelChoice",
     "Notice",
     "NoticeLevel",
+    "OpenedMedia",
     "PlaybackPreparer",
     "PlaybackState",
     "PromptAssembler",

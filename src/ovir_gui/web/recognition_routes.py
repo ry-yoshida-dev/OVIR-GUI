@@ -96,7 +96,9 @@ class RecognitionRoutes:
 
         @router.put("/task")
         async def select_task(body: TaskBody) -> JsonObject:
+            await context.media_opened()
             context.workspace.select_task(RecognitionTask(body.task))
+            await context.media_opened()
             return {}
 
         @router.put("/model")

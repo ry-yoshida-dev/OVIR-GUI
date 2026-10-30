@@ -1,4 +1,5 @@
 from collections.abc import Callable, Sequence
+from typing import ClassVar
 
 from ..media import FrameKey, InferenceMode, MediaItem
 from ..models import ModelProfile
@@ -8,15 +9,20 @@ class BackgroundPlanner:
     """
     Chooses what to recognize next in the background, and remembers what failed.
 
-    With ``InferenceMode.SHOWN`` only the picture on screen is recognized: the image, or the sampled frame at or before
-    the shown video frame. With ``InferenceMode.ALL`` the shown media comes first, from the shown frame on, and the
-    other media follow in list order. While the shown video plays, in either mode, its sampled frames from the shown
-    frame on come first, in frame order, so results arrive just ahead of playback. Videos are left to the user with
-    sequential (tracking) models, which must run a whole video in frame order.
+    With ``InferenceMode.SHOWN`` only the picture on screen is recognized: the image, or the sampled frame at or
+    before the shown video frame. With ``InferenceMode.ALL`` the shown media comes first, from the shown frame on,
+    and the other media follow in list order; a job holds the pending frames of one video, or up to
+    ``GATHERED_IMAGE_COUNT`` pending images in a row, so a long list is not searched again for every single image.
+    While the shown video plays, in either mode, its sampled frames from the shown frame on come first, in frame
+    order, so results arrive just ahead of playback. Videos are left to the user with sequential (tracking) models,
+    which must run a whole video in frame order.
+
     Pictures that could not be read are skipped for the profile they failed with; a model error pauses background
     recognition until the user does something that may fix it. While the user pins a stored profile other than the
     selected model, nothing runs, so the shown results are not replaced.
     """
+
+    GATHERED_IMAGE_COUNT: ClassVar[int] = 32
 
     def __init__(self) -> None:
         self._failed_keys: dict[ModelProfile, set[FrameKey]] = {}
@@ -185,6 +191,7 @@ class BackgroundPlanner:
                 return (key,) if key is not None and is_pending(key) else ()
             case InferenceMode.ALL:
                 ordered: list[MediaItem] = [*items[shown_index:], *items[:shown_index]]
+                gathered_images: list[FrameKey] = []
                 for item in ordered:
                     if item.is_video and profile.is_sequential:
                         continue
@@ -193,9 +200,14 @@ class BackgroundPlanner:
                         filter(is_pending, expected_keys(item)),
                         key=lambda pending: (pending.frame_index or 0) < start_frame,
                     )
-                    if keys:
-                        return tuple(keys)
-                return ()
+                    if not keys:
+                        continue
+                    if item.is_video:
+                        return tuple(gathered_images) if gathered_images else tuple(keys)
+                    gathered_images.extend(keys)
+                    if len(gathered_images) >= self.GATHERED_IMAGE_COUNT:
+                        break
+                return tuple(gathered_images)
 
     @classmethod
     def _keys_ahead(cls, sampled_keys: tuple[FrameKey, ...], current: FrameKey) -> tuple[FrameKey, ...]:

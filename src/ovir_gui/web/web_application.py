@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,18 +23,20 @@ from .picture_prompt_routes import PicturePromptRoutes
 from .recognition_routes import RecognitionRoutes
 from .web_context import WebContext
 
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
 
 class WebApplication:
     """
     Web server of the application: a JSON API over the workspace, a WebSocket telling the browsers what changed, and
     the single-page user interface built into ``static``.
 
-    The workspace is created when the server starts, on its event loop, and shut down with it: inference stops, the
-    outcomes, exports and playable copies in flight are awaited for up to ``SHUTDOWN_WAIT_SECONDS``, and the results
-    and the session are saved. Errors caused by the request, such as an invalid class name or an unknown image, are
-    answered with status 400 and their message. Only a browser that opened the address with the access token can use
-    the server (see ``AccessGuard``), and only pages of the server and of the parent origins of the embedding policy may
-    show it in a frame (see ``FramingHeaders``).
+    The workspace is created when the server starts, on its event loop, and shut down with it: inference and the
+    encoding of playable copies stop, the current mini-batch, outcomes and exports in flight are awaited for up to
+    ``SHUTDOWN_WAIT_SECONDS`` each, and the results and the session are saved. Errors caused by the request, such as
+    an invalid class name or an unknown image, are answered with status 400 and their message. Only a browser that
+    opened the address with the access token can use the server (see ``AccessGuard``), and only pages of the server
+    and of the parent origins of the embedding policy may show it in a frame (see ``FramingHeaders``).
     """
 
     STATIC_DIRECTORY: ClassVar[Path] = Path(__file__).parent / "static"
@@ -144,13 +147,18 @@ class WebApplication:
             workspace.open_paths(self._initial_paths)
         else:
             workspace.restore_session()
+        await self._context.media_opened()
         try:
             yield
         finally:
             self._context.detach()
             workspace.playback.stop()
             workspace.jobs.stop()
-            await asyncio.to_thread(workspace.jobs.join)
+            is_worker_quit: bool = await asyncio.to_thread(workspace.jobs.join, self.SHUTDOWN_WAIT_SECONDS)
+            if not is_worker_quit:
+                LOGGER.warning(
+                    "Inference did not stop within %s seconds; quitting without it.", self.SHUTDOWN_WAIT_SECONDS
+                )
             await scheduler.settle(self.SHUTDOWN_WAIT_SECONDS)
             workspace.save_now()
 
