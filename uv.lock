@@ -468,7 +468,7 @@ wheels = [
 [[package]]
 name = "file-handler"
 version = "0.1.0"
-source = { git = "https://github.com/ry-yoshida-dev/FileHandler.git?rev=edc8a79785e09e89a5c6a0a37e55c435c1e4e579#edc8a79785e09e89a5c6a0a37e55c435c1e4e579" }
+source = { git = "https://github.com/ry-yoshida-dev/FileHandler.git#edc8a79785e09e89a5c6a0a37e55c435c1e4e579" }
 dependencies = [
     { name = "h5py" },
     { name = "numpy" },
@@ -557,7 +557,7 @@ wheels = [
 [[package]]
 name = "geometry"
 version = "0.0.1"
-source = { git = "https://github.com/ry-yoshida-dev/Geometry.git?rev=7a019d2696877c2beff959d8bb4b2e1efc9880c1#7a019d2696877c2beff959d8bb4b2e1efc9880c1" }
+source = { git = "https://github.com/ry-yoshida-dev/Geometry.git#7a019d2696877c2beff959d8bb4b2e1efc9880c1" }
 dependencies = [
     { name = "cartesian-axis-3d" },
     { name = "handedness-rotation" },
@@ -1701,7 +1701,7 @@ requires-dist = [
     { name = "python-multipart" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "segmentation-format", git = "https://github.com/ry-yoshida-dev/SegmentationFormat.git?rev=5fa833f0b8c143e9fddb84d1ab932bfa38855c82" },
-    { name = "time-series-iterator", git = "https://github.com/ry-yoshida-dev/TimeSeriesIterator.git?rev=ddbe88a0861d8229b5acb0a201c891fad9926b3c" },
+    { name = "time-series-iterator", git = "https://github.com/ry-yoshida-dev/TimeSeriesIterator.git?rev=fdfe3cbf9a729ef108c7a1fe84fe331a58b5bc2c" },
     { name = "torch" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "video-handler", git = "https://github.com/ry-yoshida-dev/VideoHandler.git?rev=8e9b5c0c133162b610b15b24f6f7e572eb3873bf" },
@@ -2525,7 +2525,7 @@ wheels = [
 [[package]]
 name = "time-series-iterator"
 version = "0.0.1"
-source = { git = "https://github.com/ry-yoshida-dev/TimeSeriesIterator.git?rev=ddbe88a0861d8229b5acb0a201c891fad9926b3c#ddbe88a0861d8229b5acb0a201c891fad9926b3c" }
+source = { git = "https://github.com/ry-yoshida-dev/TimeSeriesIterator.git?rev=fdfe3cbf9a729ef108c7a1fe84fe331a58b5bc2c#fdfe3cbf9a729ef108c7a1fe84fe331a58b5bc2c" }
 dependencies = [
     { name = "id-manager" },
     { name = "numpy" },

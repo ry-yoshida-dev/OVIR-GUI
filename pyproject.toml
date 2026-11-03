@@ -32,7 +32,7 @@ dependencies = [
     "object-detection-format @ git+https://github.com/ry-yoshida-dev/ObjectDetectionFormat.git@f5edaa53c41c5b9b3db1ed9bbee49af8d14853ce",
     "segmentation-format @ git+https://github.com/ry-yoshida-dev/SegmentationFormat.git@5fa833f0b8c143e9fddb84d1ab932bfa38855c82",
     "video-handler @ git+https://github.com/ry-yoshida-dev/VideoHandler.git@8e9b5c0c133162b610b15b24f6f7e572eb3873bf",
-    "time-series-iterator @ git+https://github.com/ry-yoshida-dev/TimeSeriesIterator.git@ddbe88a0861d8229b5acb0a201c891fad9926b3c",
+    "time-series-iterator @ git+https://github.com/ry-yoshida-dev/TimeSeriesIterator.git@fdfe3cbf9a729ef108c7a1fe84fe331a58b5bc2c",
     "open-vocabulary-classification @ git+https://github.com/ry-yoshida-dev/OpenVocabularyClassification.git@f74ac924284125cc7e9dbea5a5f6f26b56e2655e",
     "open-vocabulary-detector @ git+https://github.com/ry-yoshida-dev/OpenVocabularyDetector.git@6e2300c7e7cc75c97b09e34cda9eefef71b6029e",
     "open-vocabulary-segmentation @ git+https://github.com/ry-yoshida-dev/OpenVocabularySegmentation.git@a08eea4103d2d9fbd06f7d01c34b1a92022d24bd",

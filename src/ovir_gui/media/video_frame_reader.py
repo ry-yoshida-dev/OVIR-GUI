@@ -106,7 +106,7 @@ class VideoFrameReader:
             paths=[str(self._path)], params=self._parameters(frame_index, frame_index, 1)
         )
         try:
-            return self._to_image(iterator.get_image(frame_index))
+            return self._to_image(iterator.get_sample(frame_index))
         finally:
             iterator.close()
 
