@@ -11,11 +11,13 @@ API is exercised through FastAPI's `TestClient` on generated media, with `FakeRe
 | --- | --- |
 | [fake_recognizer_session.py](./fake_recognizer_session.py) | `FakeRecognizerSession`: deterministic detection and classification results without loading weights. |
 | [golden_snapshot.py](./golden_snapshot.py) | `GoldenSnapshot`: compares API documents with the files recorded under `golden/` (`OVIR_GUI_UPDATE_GOLDEN=1` records them again). |
+| [golden/](./golden) | API documents recorded for `GoldenSnapshot`. |
 | [manual_scheduled_call.py](./manual_scheduled_call.py) | `ManualScheduledCall`: handle of a delayed callback of `ManualTaskScheduler`. |
 | [manual_task_scheduler.py](./manual_task_scheduler.py) | `ManualTaskScheduler`: task scheduler whose delayed calls and blocking work run when the test says so. |
 | [test_asyncio_task_scheduler.py](./test_asyncio_task_scheduler.py) | `TestAsyncioTaskScheduler`: settling at shutdown waits for dispatched callbacks and blocking work, up to a timeout. |
 | [test_benchmark_catalog.py](./test_benchmark_catalog.py) | `TestBenchmarkCatalog`: the bundled LVIS AP and GFLOPs are read with their split and zero-shot markers, and every listed checkpoint is the weights of a shipped detection preset. |
 | [test_background_planner.py](./test_background_planner.py) | `TestBackgroundPlanner`: background recognition covers the shown picture or every picture, the shown media first and pending images gathered into one job, frames ahead of a playing video first, and leaves videos to sequential models' users. |
+| [test_classification_scorer.py](./test_classification_scorer.py) | `TestClassificationScorer`: prompts equal but for case are one query, template and prompt aggregation picks the best sentence, scores match the classifier, merged prompts report no matched prompt, and a stored result is rescored without its logits. |
 | [test_deferred_save.py](./test_deferred_save.py) | `TestDeferredSave`: coalesced writes, writes during writes, failures, and a write at quit waiting for a running write without being replaced by an older one. |
 | [test_embedding.py](./test_embedding.py) | `TestEmbeddingPolicy`, `TestCommandLineEmbedding`: embedding origins and the fixed access token. |
 | [test_ffmpeg.py](./test_ffmpeg.py) | `TestFFmpegStartupCheck`, `TestFFmpegDownloader`, `TestStartupImports`: a downloaded build is used without probing, the download is offered only on Windows in a terminal and not again after a decline, archives are checked and only their `bin` folder and license installed, and torchcodec is not imported before the check. |
