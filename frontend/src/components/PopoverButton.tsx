@@ -1,6 +1,6 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { useDismiss } from "../hooks/useDismiss";
-import { placeInViewport } from "../lib/viewportPlacement";
+import { useDismiss } from "@/behaviors/useDismiss";
+import { placeInViewport } from "@/domain/viewportPlacement";
 
 interface PopoverButtonProps {
   className: string;

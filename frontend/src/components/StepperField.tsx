@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { clamp } from "../lib/numbers";
+import { clamp } from "@/domain/numbers";
 
 interface StepperFieldProps {
   initialValue: number;

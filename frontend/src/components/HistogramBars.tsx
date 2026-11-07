@@ -1,4 +1,4 @@
-import { ScoreHistogram } from "../lib/scoreHistogram";
+import { ScoreHistogram } from "@/domain/scoreHistogram";
 
 interface HistogramBarsProps {
   histogram: ScoreHistogram;

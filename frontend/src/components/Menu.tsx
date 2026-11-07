@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
-import { useDismiss } from "../hooks/useDismiss";
-import { useViewportPosition } from "../hooks/useViewportPosition";
+import { useDismiss } from "@/behaviors/useDismiss";
+import { useViewportPosition } from "@/behaviors/useViewportPosition";
 
 export interface MenuEntry {
   label: ReactNode;

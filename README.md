@@ -39,8 +39,9 @@ The server runs on this machine and only the browser opening the printed address
 | Directory | Content |
 | --------- | ------- |
 | [src/ovir_gui](src/ovir_gui/README.md) | Python package: FastAPI server, workspace, models, results and exporters |
-| [frontend](frontend) | React + TypeScript user interface, built into `src/ovir_gui/web/static` |
+| [frontend](frontend/README.md) | React + TypeScript user interface, built into `src/ovir_gui/web/static` |
 | [tests](tests/README.md) | Pytest suite |
+| [examples](examples/embed/README.md) | Host page embedding the interface |
 
 ## Installation
 

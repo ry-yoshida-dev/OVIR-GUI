@@ -1,5 +1,5 @@
-import { useEditableText } from "../hooks/useEditableText";
-import { clamp } from "../lib/numbers";
+import { useEditableText } from "@/behaviors/useEditableText";
+import { clamp } from "@/domain/numbers";
 
 interface NumberFieldProps {
   value: number;
