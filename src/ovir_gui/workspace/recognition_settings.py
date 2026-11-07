@@ -1,7 +1,7 @@
 from typing import ClassVar
 
+from ..inference import ModelSelection
 from ..media import InferenceMode, VideoSampling
-from ..models import ModelSelection
 from ..recognition import RecognitionTask
 
 

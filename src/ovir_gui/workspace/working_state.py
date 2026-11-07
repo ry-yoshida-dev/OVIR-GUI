@@ -1,9 +1,9 @@
 from pathlib import Path
 
+from ..inference import ModelProfile
 from ..media import FrameKey, MediaItem
-from ..models import ModelProfile
 from ..recognition import RecognitionTask
-from .run_progress import RunProgress
+from .jobs.progress import RunProgress
 from .task_media import TaskMedia
 
 

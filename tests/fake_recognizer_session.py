@@ -2,17 +2,10 @@ from collections.abc import Sequence
 from threading import Lock
 from typing import ClassVar
 
+from ovir_gui.inference import RecognitionModel, RecognitionOutcome, RecognizerSession
 from ovir_gui.media import KeyedPicture
-from ovir_gui.models import RecognitionModel, RecognitionOutcome, RecognizerSession
 from ovir_gui.prompting import LabeledPrompt
-from ovir_gui.recognition import (
-    ClassScore,
-    FrameResult,
-    ImageSize,
-    PixelBox,
-    RecognitionTask,
-    RecognizedInstance,
-)
+from ovir_gui.recognition import ClassScore, FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance
 
 
 class FakeRecognizerSession(RecognizerSession):

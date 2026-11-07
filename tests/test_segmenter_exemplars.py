@@ -16,9 +16,9 @@ from open_vocabulary_segmentation import (
 )
 from PIL import Image
 
+from ovir_gui.inference import ModelSelector, PresetCatalog, RecognitionModel, SegmentationModel
+from ovir_gui.inference.segmentation.recognizer import SegmentationRecognizer
 from ovir_gui.media import FrameKey, KeyedPicture
-from ovir_gui.models import ModelSelector, PresetCatalog, RecognitionModel, SegmentationModel
-from ovir_gui.models.segmenter_recognizer import SegmenterRecognizer
 from ovir_gui.prompting import (
     ExemplarBox,
     LabeledPrompt,
@@ -110,7 +110,7 @@ class TestSegmenterExemplars:
             ),
         )
         image: Image.Image = Image.new("RGB", (IMAGE_SIDE, IMAGE_SIDE))
-        recognizer: SegmenterRecognizer = SegmenterRecognizer(model)
+        recognizer: SegmentationRecognizer = SegmentationRecognizer(model)
         results = recognizer.recognize([KeyedPicture(boxed, image), KeyedPicture(plain, image)], prompt)
         assert len(results) == 2
         assert [class_names for class_names, _ in segmenter.calls] == [("car", "dog"), ("car",)]

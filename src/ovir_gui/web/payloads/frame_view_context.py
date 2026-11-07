@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from ...inference import ModelProfile
 from ...media import FrameKey
-from ...models import ModelProfile
 from ...prompting import PromptChange
 from ...recognition import RecognitionTask
 from ...results import ResultCatalog

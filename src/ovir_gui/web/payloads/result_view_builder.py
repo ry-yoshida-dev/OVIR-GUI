@@ -1,7 +1,7 @@
 from pathlib import Path
 
+from ...inference import MaskGenerationModel, ModelProfile
 from ...media import ClassColors, FrameKey, MediaItem, VideoInfo
-from ...models import MaskGenerationModel, ModelProfile
 from ...prompting import PromptChange
 from ...recognition import Finding, FrameResult, RecognizedInstance
 from ...results import ProfileSummary, ResultCatalog, StoredResult

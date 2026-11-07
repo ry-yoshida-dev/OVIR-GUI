@@ -5,10 +5,10 @@ from pathlib import Path
 from PIL import Image
 
 from .frame_key import FrameKey
+from .item import MediaItem
 from .loaded_image import LoadedImage
 from .loaded_picture import LoadedPicture
-from .media_item import MediaItem
-from .video_frame_reader import VideoFrameReader
+from .video.frame_reader import VideoFrameReader
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,8 @@ from ..wording import CountedNoun
 from .frame_prompt import FramePrompt
 from .picture_prompts import PicturePrompts
 from .prompt_class import PromptClass
-from .prompt_signature import PromptSignature
 from .query_kind import QueryKind
+from .signature import PromptSignature
 
 
 @dataclass(frozen=True, eq=False)

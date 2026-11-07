@@ -17,9 +17,9 @@ from open_vocabulary_classification import (
     TextTemplates,
 )
 
-from ovir_gui.models import ClassificationScorer
-from ovir_gui.models.classifier_prompt_builder import ClassifierPromptBuilder
-from ovir_gui.models.classifier_query_layout import ClassifierQueryLayout
+from ovir_gui.inference import ClassificationScorer
+from ovir_gui.inference.classification.prompt_builder import ClassifierPromptBuilder
+from ovir_gui.inference.classification.query_layout import ClassifierQueryLayout
 from ovir_gui.prompting import LabeledPrompt, PromptClass, PromptSignature, QueryKind
 from ovir_gui.recognition import ClassifierLogits, ClassScore, FrameResult, ImageSize, RecognitionTask
 

@@ -1,4 +1,4 @@
-from ..models import RecognitionModel
+from ..inference import RecognitionModel
 from ..prompting import LabeledPrompt, PromptClass, PromptMode, QueryKind, ReferenceBoard
 from ..vocabulary import ClassDefinition
 from .class_workbench import ClassWorkbench

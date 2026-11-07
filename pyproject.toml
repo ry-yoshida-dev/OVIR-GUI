@@ -55,7 +55,7 @@ ultralytics = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-ovir_gui = ["py.typed", "models/*.json", "web/static/*", "web/static/assets/*"]
+ovir_gui = ["py.typed", "inference/benchmarks/*.json", "web/static/*", "web/static/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -14,8 +14,8 @@ from fastapi.testclient import TestClient
 from golden_snapshot import GoldenSnapshot
 from PIL import Image
 
+from ovir_gui.inference import DeviceAvailability, ModelSelector, PresetCatalog
 from ovir_gui.media import VideoSampling
-from ovir_gui.models import DeviceAvailability, ModelSelector, PresetCatalog
 from ovir_gui.web import EmbeddingPolicy, WebApplication
 from ovir_gui.workspace import WorkspaceStores
 

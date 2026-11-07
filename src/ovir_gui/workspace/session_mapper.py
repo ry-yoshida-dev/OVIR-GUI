@@ -1,11 +1,11 @@
 from pathlib import Path
 
+from ..inference import LicenseConsent, ModelSelection, ModelSelector
 from ..media import FrameKey, VideoSampling
-from ..models import LicenseConsent, ModelSelection, ModelSelector
 from ..recognition import RecognitionTask
 from ..storage import Session, SessionMedia, SessionStore, SessionTaskSettings
+from .messages.status_notifier import StatusNotifier
 from .recognition_settings import RecognitionSettings
-from .status_notifier import StatusNotifier
 from .working_state import WorkingState
 
 

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
 
-from ovir_gui.models import DeviceAvailability, LicensedDependency, ModelSelector, PresetCatalog
+from ovir_gui.inference import DeviceAvailability, LicensedDependency, ModelSelector, PresetCatalog
 from ovir_gui.web import EmbeddingPolicy, WebApplication
 from ovir_gui.workspace import WorkspaceStores
 
@@ -43,14 +43,14 @@ class TestLicenseRoutes:
         def found_spec(name: str) -> ModuleSpec:
             return ModuleSpec(name, None)
 
-        monkeypatch.setattr("ovir_gui.models.licensed_dependency.find_spec", found_spec)
+        monkeypatch.setattr("ovir_gui.inference.licensing.dependency.find_spec", found_spec)
 
     @pytest.fixture
     def missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def no_spec(name: str) -> None:
             return None
 
-        monkeypatch.setattr("ovir_gui.models.licensed_dependency.find_spec", no_spec)
+        monkeypatch.setattr("ovir_gui.inference.licensing.dependency.find_spec", no_spec)
 
     def _select_licensed_preset(self, client: TestClient) -> Response:
         return client.put("/api/model/preset", json={"backend": LICENSED_BACKEND, "preset_name": LICENSED_PRESET})

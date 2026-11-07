@@ -2,13 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ovir_gui.analysis import (
-    ConfidenceSummary,
-    ProfileComparison,
-    ResultStatistics,
-    SizeBand,
-    ThresholdCurve,
-)
+from ovir_gui.analysis import ConfidenceSummary, ProfileComparison, ResultStatistics, SizeBand, ThresholdCurve
 from ovir_gui.media import FrameKey
 from ovir_gui.prompting import PromptSignature
 from ovir_gui.recognition import ClassScore, FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance

@@ -4,11 +4,11 @@ from PIL import Image
 
 from ..vocabulary import ClassDefinition
 from .prompt_class import PromptClass
-from .prompt_signature import PromptSignature
 from .queried_class import QueriedClass
 from .query_kind import QueryKind
 from .reference_box import ReferenceBox
 from .reference_image import ReferenceImage
+from .signature import PromptSignature
 from .visual_example import VisualExample
 
 

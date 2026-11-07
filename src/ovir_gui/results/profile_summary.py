@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..models import ModelProfile
+from ..inference import ModelProfile
 
 
 @dataclass(frozen=True)

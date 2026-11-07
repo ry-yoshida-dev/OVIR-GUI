@@ -2,13 +2,13 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from ..analysis import ProfileComparison, ResultStatistics
+from ..inference import ModelProfile
 from ..media import FrameKey, MediaItem
-from ..models import ModelProfile
 from ..prompting import FramePrompt, PicturePrompts, PromptChange, PromptSignature, QueryKind
 from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
 from ..review import ReviewFilter
-from .background_planner import BackgroundPlanner
 from .class_workbench import ClassWorkbench
+from .jobs.background_planner import BackgroundPlanner
 from .media_state import MediaState
 from .media_status import MediaStatus
 from .recognition_settings import RecognitionSettings

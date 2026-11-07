@@ -1,16 +1,16 @@
 from collections.abc import Callable, Iterable, Mapping
 
+from ..inference import ModelProfile, RecognitionModel
 from ..media import FrameKey
-from ..models import ModelProfile, RecognitionModel
 from ..results import ResultCatalog, ResultLibrary
 from ..storage import ResultsSnapshot
-from .background_planner import BackgroundPlanner
-from .deferred_save import DeferredSave
+from .jobs.background_planner import BackgroundPlanner
+from .messages.status_notifier import StatusNotifier
 from .recognition_settings import RecognitionSettings
 from .result_read_model import ResultReadModel
-from .status_notifier import StatusNotifier
+from .scheduling.deferred_save import DeferredSave
+from .topic import WorkspaceTopic
 from .working_state import WorkingState
-from .workspace_topic import WorkspaceTopic
 
 
 class ResultProfiles:

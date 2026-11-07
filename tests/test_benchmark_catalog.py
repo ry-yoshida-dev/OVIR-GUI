@@ -1,4 +1,4 @@
-from ovir_gui.models import (
+from ovir_gui.inference import (
     BenchmarkCatalog,
     DeviceAvailability,
     LvisSplit,

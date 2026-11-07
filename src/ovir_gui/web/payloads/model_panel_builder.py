@@ -1,6 +1,6 @@
 from open_vocabulary_classification import AggregationMethod, PromptAggregation
 
-from ...models import (
+from ...inference import (
     BackendTraits,
     BenchmarkCatalog,
     ClassificationModel,

@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from dataclasses import replace
 
-from ..models import (
+from ..inference import (
     LicenseConsent,
     LicensedDependency,
     ModelSelection,
@@ -13,10 +13,10 @@ from ..models import (
 from ..prompting import QueryKind
 from ..recognition import RecognitionTask
 from ..storage import LicenseConsentStore
-from .background_planner import BackgroundPlanner
+from .jobs.background_planner import BackgroundPlanner
+from .messages.status_notifier import StatusNotifier
 from .recognition_settings import RecognitionSettings
-from .status_notifier import StatusNotifier
-from .workspace_topic import WorkspaceTopic
+from .topic import WorkspaceTopic
 
 
 class ModelChoice:

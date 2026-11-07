@@ -2,16 +2,16 @@ import contextlib
 from pathlib import Path
 
 from ...export import ExportReport
+from ...inference import ClassificationModel, ModelProfile, RecognitionModel
 from ...media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind
-from ...models import ClassificationModel, ModelProfile, RecognitionModel
 from ...prompting import FramePrompt, ObjectMark, PicturePrompts
 from ...recognition import LabelMode, RecognitionTask
 from ...review import DuplicateSuppression
 from ...storage import ClassThresholdStore
 from ...workspace import MediaStatus, RunProgress, Workspace
 from ..json_value import JsonObject, JsonValue
-from ..picture_info import PictureInfo
-from ..picture_preview_cache import PicturePreviewCache
+from ..previews.cache import PicturePreviewCache
+from ..previews.picture_info import PictureInfo
 from .class_view_builder import ClassViewBuilder
 from .marked_object import MarkedObject
 from .model_panel_builder import ModelPanelBuilder

@@ -5,8 +5,8 @@ from .classifier_logits import ClassifierLogits
 from .finding import Finding
 from .image_size import ImageSize
 from .label_mode import LabelMode
-from .recognition_task import RecognitionTask
 from .recognized_instance import RecognizedInstance
+from .task import RecognitionTask
 
 
 @dataclass(frozen=True, eq=False)

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ovir_gui.models import StoredWeights, WeightsStorage
+from ovir_gui.inference import StoredWeights, WeightsStorage
 
 
 class TestWeightsStorage:

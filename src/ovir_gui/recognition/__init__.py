@@ -7,8 +7,8 @@ from .image_size import ImageSize
 from .instance_mask import InstanceMask
 from .label_mode import LabelMode
 from .pixel_box import PixelBox
-from .recognition_task import RecognitionTask
 from .recognized_instance import RecognizedInstance
+from .task import RecognitionTask
 
 __all__ = [
     "ClassScore",

@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
 
-from ovir_gui.models import DeviceAvailability, ModelSelector, PresetCatalog
+from ovir_gui.inference import DeviceAvailability, ModelSelector, PresetCatalog
 from ovir_gui.web import EmbeddingPolicy, WebApplication
 from ovir_gui.workspace import WorkspaceStores
 

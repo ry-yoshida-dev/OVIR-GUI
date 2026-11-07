@@ -14,7 +14,7 @@ from ...analysis import (
     SizeDistribution,
     ThresholdCurve,
 )
-from ...models import ModelProfile
+from ...inference import ModelProfile
 from ...workspace import Workspace
 from ..json_value import JsonObject, JsonValue
 

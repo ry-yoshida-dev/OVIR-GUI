@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from .media_kind import MediaKind
+from .kind import MediaKind
 
 
 @dataclass(frozen=True, order=True)

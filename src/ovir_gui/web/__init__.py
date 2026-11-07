@@ -1,6 +1,6 @@
-from .embedding_policy import EmbeddingPolicy
-from .web_application import WebApplication
-from .web_launcher import WebLauncher
+from .application import WebApplication
+from .embedding.policy import EmbeddingPolicy
+from .launcher import WebLauncher
 
 __all__ = [
     "EmbeddingPolicy",

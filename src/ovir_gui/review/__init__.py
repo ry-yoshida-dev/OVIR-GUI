@@ -1,6 +1,6 @@
 from .class_thresholds import ClassThresholds
 from .duplicate_suppression import DuplicateSuppression
-from .review_filter import ReviewFilter
+from .filter import ReviewFilter
 
 __all__ = [
     "ClassThresholds",

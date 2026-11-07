@@ -2,11 +2,11 @@ from typing import ClassVar
 
 from open_vocabulary_classification import TextTemplates
 
-from ..models import ModelSelector
+from ..inference import ModelSelector
 from ..recognition import RecognitionTask
 from ..storage import TextTemplateStore
-from .status_notifier import StatusNotifier
-from .workspace_topic import WorkspaceTopic
+from .messages.status_notifier import StatusNotifier
+from .topic import WorkspaceTopic
 
 
 class TextTemplateLibrary:

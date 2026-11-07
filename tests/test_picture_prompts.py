@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import pytest
 
+from ovir_gui.inference import ModelProfile, StreamPosition
 from ovir_gui.media import FrameKey
-from ovir_gui.models import ModelProfile, StreamPosition
 from ovir_gui.prompting import (
     ExemplarBox,
     LabeledPrompt,

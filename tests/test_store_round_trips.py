@@ -11,14 +11,8 @@ from open_vocabulary_classification import (
     PromptAggregation,
 )
 
+from ovir_gui.inference import ComputeDevice, ComputePrecision, ModelProfile, ModelSelection, ProfileOption
 from ovir_gui.media import FrameKey, InferenceMode
-from ovir_gui.models import (
-    ComputeDevice,
-    ComputePrecision,
-    ModelProfile,
-    ModelSelection,
-    ProfileOption,
-)
 from ovir_gui.prompting import PromptSignature, QueriedClass
 from ovir_gui.recognition import (
     ClassifierLogits,

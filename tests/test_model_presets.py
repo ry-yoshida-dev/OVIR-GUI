@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from ovir_gui.models import (
+from ovir_gui.inference import (
     ComputePrecision,
     DeviceAvailability,
     ModelPreset,
