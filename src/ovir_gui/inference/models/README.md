@@ -2,7 +2,7 @@
 
 ## Overview
 
-The models a preset builds: `RecognitionModel` is the task-independent view of the settings of one model and `Recognizer` the loaded model turning keyed pictures and a prompt into the `FrameResult`s of `recognition/`. Each kind of model has its own directory holding its settings and recognizer: classification, detection and the five segmentation interfaces of `open_vocabulary_segmentation`. `ThresholdControls` tells which threshold settings a model reads.
+The models a preset builds: settings of one model and the loaded recognizer turning pictures and a prompt into the `FrameResult`s of `recognition/`, with one directory per kind of model.
 
 ## Components
 

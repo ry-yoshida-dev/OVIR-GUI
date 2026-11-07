@@ -2,7 +2,7 @@
 
 ## Overview
 
-What the user recognizes with and how far it has got: `RecognitionSettings` holds the task with the model, sampling and inference mode of each task, `ModelChoice` the model of every task and the accepted licenses, and `TextTemplateLibrary` the text templates offered to classifiers. `MediaStatus` and `MediaState` tell how far each open image or video is recognized with the shown model.
+What the user recognizes with (task, model, sampling, inference mode and text templates) and how far each open image or video is recognized with the shown model.
 
 ## Components
 

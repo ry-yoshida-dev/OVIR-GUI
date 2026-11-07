@@ -2,7 +2,7 @@
 
 ## Overview
 
-Library-independent prompts of a recognition run. A `LabeledPrompt` lists `PromptClass`es whose queries are text phrases or visual examples, i.e. `ReferenceBox`es the user draws on reference images, collected by `ReferenceBoard` (`reference/`). It also carries what is drawn on the recognized pictures themselves, collected by `PicturePromptBoard` (`picture_prompts/`): `ExemplarBox`es showing or excluding a class there (SAM 3) and `ObjectMark`s of points and a box marking single objects (promptable segmenters and video trackers). `PromptMode` tells whether a model takes classes, marks or nothing. `PromptSignature` captures what a prompt queries on each picture, drawings included, so that `PromptChange` can tell how classes changed since a result was recognized (`staleness/`). The prompt builders of `inference/` translate a `LabeledPrompt` into each library's prompt.
+Library-independent prompts of a recognition run: the classes with their text phrases and reference boxes, the drawings on the recognized pictures, and the signature telling whether a stored result's classes have changed since. The prompt builders of `inference/` translate them into each library's prompt.
 
 ## Components
 

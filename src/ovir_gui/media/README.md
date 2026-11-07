@@ -2,7 +2,7 @@
 
 ## Overview
 
-Media files opened in the GUI and the pixels read from them. `MediaCollection` finds image and video files in user-given paths, `MediaItem` describes an open file, and `FrameKey` identifies one recognizable picture: an image or one video frame chosen by `VideoSampling`. `PictureLoader` (`loading/`) reads pixels for recognition and export, streaming each video once through `VideoFrameReader`; in the browser, videos are played with the VideoPlayerUI player instead, and `PlaybackProxyWriter` re-encodes those the browser cannot decode into H.264 with the FFmpeg torchcodec found at start (`ffmpeg/`).
+Media files opened in the GUI and the pixels read from them: collecting image and video files, identifying each recognizable picture, sampling video frames, reading pixels for recognition and export, and writing browser-playable video copies.
 
 ## Components
 

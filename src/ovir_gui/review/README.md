@@ -2,7 +2,7 @@
 
 ## Overview
 
-Review settings applied to stored results before they are shown or exported, so findings can be filtered without re-running recognition. `ClassThresholds` sets a minimum confidence that a class and, in turn, a phrase can replace; `DuplicateSuppression` removes lower-scored boxes overlapping a better one of their class; `ReviewFilter` lists the findings of the label mode the user chose (a classified picture keeps only its best class, or every class reaching its minimum), following the scores of the model until one is chosen (multi-label for sigmoid, single-label for softmax), then applies the minimums and the suppression, in that order. They are persisted by `ClassThresholdStore`, `DuplicateSuppressionStore` and `LabelModeStore` in the `storage` package.
+Review settings applied to stored results before they are shown or exported, so findings can be filtered without recognizing again: minimum confidences, duplicate suppression and the label mode of classifications. The `storage` package persists them.
 
 ## Components
 

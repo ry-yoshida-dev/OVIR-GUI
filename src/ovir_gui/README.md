@@ -2,7 +2,7 @@
 
 ## Overview
 
-Browser GUI for open-vocabulary image recognition: classification, detection and segmentation of images and videos. A FastAPI server (`web/`) serves a React frontend and drives a `Workspace` (`workspace/`) that loads media (`media/`), builds prompts from text classes and drawn reference boxes (`prompting/`, `vocabulary/`), runs the chosen model (`inference/`) and keeps library-independent results (`recognition/`, `results/`). Videos are played in the browser with the VideoPlayerUI player, and the per-frame findings of a whole video are fetched from `GET /api/video-frames`. Results can be reviewed with per-class thresholds (`review/`), compared and summarized (`analysis/`), persisted between runs (`storage/`) and exported (`export/`).
+Python package of OVIR-GUI: a FastAPI server (`web/`) serving the React frontend and driving the `Workspace` (`workspace/`), which loads media, builds prompts, runs the chosen model and keeps, reviews, analyzes, stores and exports its results.
 
 ## Components
 

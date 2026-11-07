@@ -2,7 +2,7 @@
 
 ## Overview
 
-Writing reviewed results to disk. `ResultExporter` takes the `ExportItem`s selected by `ExportSelection`, writes them in the chosen `ExportFormat` (CSV/JSON tables, box formats of `object_detection_format`, mask formats of `segmentation_format`, classification formats of `classification_format`, mask images, class folders, cropped objects) and optionally saves annotated images and videos drawn by `OverlayRenderer`. It returns an `ExportReport`; the export jobs are planned and run by `workspace/`.
+Writing reviewed results to disk in the chosen format, optionally with annotated images and videos. The export jobs are planned and run by `workspace/`.
 
 ## Components
 

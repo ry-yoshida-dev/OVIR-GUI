@@ -2,14 +2,7 @@
 
 ## Overview
 
-Summaries of stored recognition results for the Statistics window. `ResultStatistics` gathers, for one model profile
-after the review, per-class `ClassStatistics` (counts, `ConfidenceSummary` quantiles, a `ThresholdCurve` of what every
-minimum would keep and COCO `SizeBand` counts in a `SizeDistribution`), per-picture `PictureStatistics`, and
-`ClassMatrix` relations between classes: pictures they share, objects two classes both cover and, for
-classifications, runner-up classes with a `ConfidenceHistogram` of top-score margins. `ProfileComparison` pairs the
-kept instances of two profiles of the same task with `InstanceMatcher` and reports the differences per class as
-`ClassComparison`s, per picture as `PictureDisagreement`s and, for classifications, as a confusion `ClassMatrix`. It
-reads results from `results/` and `recognition/` and does not run models.
+Summaries of stored recognition results for the Statistics window: per-class, per-picture and class-relation statistics of one model profile, and the comparison of two profiles of the same task. It does not run models.
 
 ## Components
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-In-memory store of the latest recognition results, kept per model profile. A `ResultLibrary` holds one `ResultCatalog` per profile, and each catalog maps every recognized image and video frame to a `StoredResult` that records the findings, what they were recognized with, and the findings the user rejected. The `workspace` package updates these results, and `storage` persists them to the data directory.
+In-memory store of the latest recognition results, kept per model profile. The `workspace` package updates them and `storage` persists them.
 
 ## Components
 

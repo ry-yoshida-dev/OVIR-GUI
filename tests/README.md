@@ -2,8 +2,7 @@
 
 ## Overview
 
-Pytest suite of `ovir_gui`. It runs without model weights: presets are only parsed into library settings, and the web
-API is exercised through FastAPI's `TestClient` on generated media, with `FakeRecognizerSession` standing in for the models where results are needed.
+Pytest suite of `ovir_gui`. It runs without model weights: `FakeRecognizerSession` stands in for the models, and the web API is exercised through FastAPI's `TestClient` on generated media.
 
 ## Components
 
@@ -39,10 +38,3 @@ API is exercised through FastAPI's `TestClient` on generated media, with `FakeRe
 | [test_upload_store.py](./test_upload_store.py) | `TestUploadStore`: uploads are streamed to disk, identical content reuses its copy and other content is numbered. |
 | [test_weights_storage.py](./test_weights_storage.py) | `TestWeightsStorage`: downloaded weights are found in the Hugging Face hub cache and Ultralytics directories, sized, listed once in order, and deleted. |
 | [test_workspace_flow.py](./test_workspace_flow.py) | `TestWorkspaceFlow`: characterization of the state, result, frame, timeline, statistics, comparison, export and restart payloads against `golden/`. |
-
-## Examples
-
-```bash
-pip install -e ".[dev]"
-pytest
-```

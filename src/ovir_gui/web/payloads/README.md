@@ -2,7 +2,7 @@
 
 ## Overview
 
-Builders of the JSON documents the routes of `web` answer with, one per part of the page. `PageStateBuilder` assembles the page state from the model settings of `ModelPanelBuilder`, the classes of `ClassViewBuilder` and the profiles of `ResultViewBuilder`. `ResultViewBuilder` reads the catalogs, review filter and prompt changes of one request once into a `FrameViewContext` and reuses it for every frame of a video. Pictures are named by `path` and `frame` (`null` for an image); boxes and mask outlines are in pixels of the full upright picture.
+Builders of the JSON documents the routes of `web` answer with, one per part of the page.
 
 ## Components
 

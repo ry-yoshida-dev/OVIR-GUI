@@ -2,7 +2,7 @@
 
 ## Overview
 
-Persistence of the application state in a data directory (`ovir_gui_data` by default). It saves named class sets as self-contained `.ovirset` ZIP archives, the stored results of the `results` package as `results.ovirresults` (a JSON manifest plus packed mask bits), per-class confidence thresholds, the label mode of classifications, the text templates saved for classifiers, the exemplar boxes and object marks drawn on pictures, and the session restored at the next start. Results are converted to a detached `ResultsSnapshot` first so they can be written on another thread; results of media files that cannot be reached at start, such as ones on a disconnected drive, are written back unchanged, and an archive that cannot be read is renamed aside instead of being overwritten. Every file is written through the primitives of `files`, and uploaded and browser-playable media copies are kept by `media_copies`. The `workspace` package reads these stores at start and writes them after changes.
+Persistence of the application state in a data directory (`ovir_gui_data` by default): class sets, results, review criteria, accepted licenses, text templates, drawings on pictures, media copies and the session. The `workspace` package reads these stores at start and writes them after changes.
 
 ## Components
 

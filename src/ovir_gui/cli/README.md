@@ -2,7 +2,7 @@
 
 ## Overview
 
-Command-line interface of the `ovir-gui` command. `CommandLine` parses the media paths, host, port, browser, embedding origins, data-directory and `--download-ffmpeg` arguments, and the access token of the `OVIR_GUI_TOKEN` environment variable, into `LaunchOptions`, which `__main__.py` hands to the `WebLauncher` of `web/`. Without paths, the media of the last session are restored. The package imports nothing heavy, so FFmpeg is made available (`ffmpeg/`) before torchcodec is imported.
+Command-line interface of the `ovir-gui` command, parsed into the `LaunchOptions` that `__main__.py` hands to the web launcher. `ovir-gui --help` lists every option.
 
 ## Components
 

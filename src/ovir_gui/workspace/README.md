@@ -2,15 +2,7 @@
 
 ## Overview
 
-User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits the classes (via `ClassWorkbench`) and the settings, and exposes its collaborators for everything else. They share the `WorkingState` (open media and shown picture of the current task, the media and compared profiles kept for the other tasks, shown and compared profiles) and the `RecognitionSettings` (task, and the model, sampling and inference mode of each task) owned by the thread behind a `TaskScheduler`, so no part needs locks:
-
-- `ModelChoice` picks the model of every task and the accepted licenses, and deletes downloaded weights the chosen model does not load; `TextTemplateLibrary` keeps the text templates saved for classifiers; `SessionMapper` restores and saves the session.
-- `ResultReadModel` answers what the stored results say (statuses, freshness, statistics, comparison); `ReviewSettings` holds the label mode of classifications, the minimums and the duplicate suppression; `ResultProfiles` switches the shown and compared profile and records the user's review.
-- `InferenceRunner` starts foreground jobs and background jobs on the `InferenceEngine`, whose single worker thread reports to the `InferenceOutcomeHandler`; `PromptAssembler` builds their prompts and `BackgroundPlanner` chooses what the background recognizes next.
-- `ExportCoordinator` plans and writes exports and `PlaybackPreparer` encodes browser-playable video copies, both off the owning thread.
-- `StatusNotifier` tells every `WorkspaceObserver` what changed (`WorkspaceTopic`) and keeps the status messages; `DeferredSave` writes the results shortly after changes, never overlapping a write at quit.
-
-The `web` package implements the scheduler and the observer, and `WorkspaceStores` connects the workspace to the `storage` package.
+User-interface-independent application core. `Workspace` is the facade the web routes drive: it opens and shows media, edits classes and settings, and coordinates the collaborators that read results, run recognition jobs, export and save. Every part runs on the thread behind a `TaskScheduler`, which the `web` package implements.
 
 ## Components
 

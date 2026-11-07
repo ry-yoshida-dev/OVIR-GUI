@@ -2,7 +2,7 @@
 
 ## Overview
 
-Request bodies of the JSON API, validated by FastAPI before a route handler of the `web` package runs, grouped in one sub-package per route group; the package exports them all. Each model describes one kind of user input, such as a picture to show, classes typed by the user, model settings or an export chosen in the export dialog. Reference models (`FindingReference`, `PhraseReference`, `ImagePromptReference`, `PictureFindings`) identify items inside larger bodies.
+Request bodies of the JSON API, validated by FastAPI before a route handler of the `web` package runs, grouped in one sub-package per route group.
 
 ## Components
 

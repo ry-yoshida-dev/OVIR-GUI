@@ -2,7 +2,7 @@
 
 ## Overview
 
-Library-independent types of what a model recognized. A `FrameResult` holds the outcome for one image or video frame: `ClassScore`s of a classifier with the `ClassifierLogits` they were computed from (`classification/`), or `RecognizedInstance`s of a detector or segmenter with their `PixelBox` and compact `InstanceMask`. `Finding` is one reviewable row of a result, as listed in the result tables; a classification lists its best class or every class depending on the `LabelMode`; `web/` serves the per-frame findings of a whole video from `GET /api/video-frames`. These types are produced by `inference/` and consumed by `results/`, `analysis/`, `review/` and `export/`.
+Library-independent types of what a model recognized: per-picture results with class scores or detected and segmented instances, and the reviewable findings listed in the result tables. Produced by `inference/` and consumed by `results/`, `analysis/`, `review/` and `export/`.
 
 ## Components
 

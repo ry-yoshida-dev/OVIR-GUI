@@ -2,7 +2,7 @@
 
 ## Overview
 
-What the user draws on the recognized pictures themselves: `ExemplarBox`es showing or excluding a class there (SAM 3) and `ObjectMark`s of points and a box marking single objects (promptable segmenters and video trackers). `FramePrompt` holds the drawings of one picture or one tracked video, `PicturePromptBoard` collects them while the user edits, and `PicturePrompts` is the snapshot a run takes of them.
+What the user draws on the recognized pictures themselves: exemplar boxes showing or excluding a class there (SAM 3) and object marks of points and a box (promptable segmenters and video trackers).
 
 ## Components
 

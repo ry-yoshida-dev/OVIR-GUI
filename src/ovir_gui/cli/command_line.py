@@ -14,6 +14,8 @@ class CommandLine:
     The access token of the printed address can be fixed with the ``OVIR_GUI_TOKEN`` environment variable, so an
     application embedding the interface knows the address in advance; an environment variable is not listed with the
     process arguments.
+
+    The ``cli`` package imports nothing heavy, so ``__main__`` can make FFmpeg available before torchcodec is imported.
     """
 
     DEFAULT_HOST: ClassVar[str] = "127.0.0.1"

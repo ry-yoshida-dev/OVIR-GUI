@@ -2,7 +2,7 @@
 
 ## Overview
 
-Text vocabulary of the classes to recognize. A `ClassDefinition` maps one output class to the phrases querying it (written `car: car, suv, taxi`), and a `ClassVocabulary` orders the classes so that the index is the class id. `ClassColors` gives each class id a stable color shared by the views and `export/`. Class lists can be read from plain-text files and the list of each task in the last run is remembered in the data directory. The `workspace` package edits classes on top of this vocabulary, and `storage` saves full class sets including reference images.
+Text vocabulary of the classes to recognize: class definitions with their phrases (written `car: car, suv, taxi`), their order and colors, and the class list files and stores. The `workspace` package edits classes on top of it.
 
 ## Components
 
