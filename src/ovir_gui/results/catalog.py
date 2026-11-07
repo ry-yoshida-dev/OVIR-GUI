@@ -6,7 +6,7 @@ from pathlib import Path
 from ..media import FrameKey
 from ..prompting import PromptChange, PromptSignature
 from ..recognition import FrameResult
-from .stored_result import StoredResult
+from .stored import StoredResult
 
 
 class ResultCatalog:

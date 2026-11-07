@@ -7,9 +7,9 @@ from ...media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind
 from ...prompting import FramePrompt, ObjectMark, PicturePrompts
 from ...recognition import LabelMode, RecognitionTask
 from ...review import DuplicateSuppression
-from ...storage import ClassThresholdStore
+from ...storage import ClassThresholdStore, JsonValue
 from ...workspace import MediaStatus, RunProgress, Workspace
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 from ..previews.cache import PicturePreviewCache
 from ..previews.picture_info import PictureInfo
 from .class_view_builder import ClassViewBuilder

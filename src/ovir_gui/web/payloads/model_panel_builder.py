@@ -18,8 +18,9 @@ from ...inference import (
 )
 from ...prompting import QueryKind
 from ...recognition import RecognitionTask
+from ...storage import JsonValue
 from ...workspace import Workspace
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class ModelPanelBuilder:

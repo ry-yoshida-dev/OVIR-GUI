@@ -11,7 +11,6 @@ from fastapi.staticfiles import StaticFiles
 
 from ..inference import ModelSelector, RecognizerSession
 from ..workspace import Workspace, WorkspaceStores
-from .asyncio_task_scheduler import AsyncioTaskScheduler
 from .context import WebContext
 from .embedding.policy import EmbeddingPolicy
 from .middleware.access_guard import AccessGuard
@@ -22,6 +21,7 @@ from .routes.export import ExportRoutes
 from .routes.media import MediaRoutes
 from .routes.picture_prompts import PicturePromptRoutes
 from .routes.recognition import RecognitionRoutes
+from .workspace_adapters.asyncio_task_scheduler import AsyncioTaskScheduler
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 

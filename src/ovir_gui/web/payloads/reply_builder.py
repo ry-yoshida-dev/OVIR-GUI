@@ -1,8 +1,9 @@
 from pathlib import Path
 
 from ...export import CropImageFormat, ExportFormat, ExportPurpose
+from ...storage import JsonValue
 from ...workspace import ActionReply, ExportPlan
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class ReplyBuilder:

@@ -4,7 +4,7 @@ from ..inference import ModelProfile
 from ..media import FrameKey, MediaItem
 from ..recognition import RecognitionTask
 from .jobs.progress import RunProgress
-from .task_media import TaskMedia
+from .open_media.task import TaskMedia
 
 
 class WorkingState:

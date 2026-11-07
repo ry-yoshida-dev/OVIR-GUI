@@ -4,8 +4,8 @@ from importlib.resources.abc import Traversable
 from typing import ClassVar
 
 from ...recognition import RecognitionTask
-from ..segmentation_mode import SegmentationMode
 from .model import ModelPreset
+from .segmentation_mode import SegmentationMode
 
 
 class PresetCatalog:

@@ -4,8 +4,8 @@ from typing import ClassVar
 
 from ...prompting import ExemplarBox, ObjectMark, PicturePrompts
 from ...recognition import RecognitionTask
-from ..json_fields import JsonFields, JsonValue
-from ..task_settings_file import TaskSettingsFile
+from ..files.json_fields import JsonFields, JsonValue
+from ..files.task_settings import TaskSettingsFile
 from .codec import PicturePromptCodec
 
 

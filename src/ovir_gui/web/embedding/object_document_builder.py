@@ -7,8 +7,9 @@ from ...media import FrameKey
 from ...recognition import FrameResult, RecognizedInstance
 from ...results import ResultCatalog, StoredResult
 from ...review import ReviewFilter
+from ...storage import JsonValue
 from ...workspace import Workspace
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class ObjectDocumentBuilder:

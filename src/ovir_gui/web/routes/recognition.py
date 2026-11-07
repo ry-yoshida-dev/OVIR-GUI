@@ -20,23 +20,23 @@ from ...results import ResultCatalog
 from ...review import ClassThresholds, DuplicateSuppression
 from ...workspace import Workspace
 from ..context import WebContext
-from ..json_value import JsonObject
-from ..request_bodies.acceptance import AcceptanceBody
-from ..request_bodies.approval import ApprovalBody
-from ..request_bodies.label_mode import LabelModeBody
-from ..request_bodies.license import LicenseBody
-from ..request_bodies.model_selection import ModelSelectionBody
+from ..json_object import JsonObject
 from ..request_bodies.picture_findings import PictureFindings
-from ..request_bodies.preset import PresetBody
-from ..request_bodies.profile import ProfileBody
-from ..request_bodies.profiles import ProfilesBody
-from ..request_bodies.run_all import RunAllBody
-from ..request_bodies.suppression import SuppressionBody
-from ..request_bodies.table import TableBody
-from ..request_bodies.task import TaskBody
-from ..request_bodies.text_templates import TextTemplatesBody
-from ..request_bodies.thresholds import ThresholdsBody
-from ..request_bodies.weights import WeightsBody
+from ..request_bodies.recognition.approval import ApprovalBody
+from ..request_bodies.recognition.model_settings.label_mode import LabelModeBody
+from ..request_bodies.recognition.model_settings.license import LicenseBody
+from ..request_bodies.recognition.model_settings.preset import PresetBody
+from ..request_bodies.recognition.model_settings.selection import ModelSelectionBody
+from ..request_bodies.recognition.model_settings.task import TaskBody
+from ..request_bodies.recognition.model_settings.text_templates import TextTemplatesBody
+from ..request_bodies.recognition.model_settings.weights import WeightsBody
+from ..request_bodies.recognition.profile import ProfileBody
+from ..request_bodies.recognition.profiles import ProfilesBody
+from ..request_bodies.recognition.review.acceptance import AcceptanceBody
+from ..request_bodies.recognition.review.suppression import SuppressionBody
+from ..request_bodies.recognition.review.table import TableBody
+from ..request_bodies.recognition.review.thresholds import ThresholdsBody
+from ..request_bodies.recognition.run_all import RunAllBody
 
 
 class RecognitionRoutes:

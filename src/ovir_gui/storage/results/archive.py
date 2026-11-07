@@ -8,9 +8,9 @@ from typing import ClassVar
 import numpy as np
 
 from ...recognition.array_types import UInt8Array
-from ..atomic_file import AtomicFile
-from ..json_fields import JsonValue
-from ..zip_manifest import ZipManifest
+from ..files.atomic import AtomicFile
+from ..files.json_fields import JsonValue
+from ..files.zip_manifest import ZipManifest
 from .manifest_reader import ResultsManifestReader
 from .restored import RestoredResults
 from .snapshot import ResultsSnapshot

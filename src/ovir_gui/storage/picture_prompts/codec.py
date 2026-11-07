@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ...media import FrameKey
 from ...prompting import ExemplarBox, ObjectMark
-from ..json_fields import JsonFields, JsonValue
+from ..files.json_fields import JsonFields, JsonValue
 
 
 class PicturePromptCodec:

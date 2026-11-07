@@ -9,9 +9,9 @@ from PIL import Image
 
 from ...prompting import ReferenceBox, ReferenceImage
 from ...vocabulary import ClassDefinition
-from ..atomic_file import AtomicFile
-from ..json_fields import JsonFields, JsonValue
-from ..zip_manifest import ZipManifest
+from ..files.atomic import AtomicFile
+from ..files.json_fields import JsonFields, JsonValue
+from ..files.zip_manifest import ZipManifest
 from .classes import ClassSet
 from .reference_image import StoredReferenceImage
 from .summary import ClassSetSummary

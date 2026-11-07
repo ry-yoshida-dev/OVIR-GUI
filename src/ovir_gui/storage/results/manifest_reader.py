@@ -21,7 +21,7 @@ from ...recognition import (
 )
 from ...recognition.array_types import UInt8Array
 from ...results import ResultLibrary, StoredResult
-from ..json_fields import JsonFields, JsonValue
+from ..files.json_fields import JsonFields, JsonValue
 from ..picture_prompts.codec import PicturePromptCodec
 from .manifest_writer import ResultsManifestWriter
 from .media_stamp import MediaStamp

@@ -5,8 +5,8 @@ from typing import ClassVar
 from PIL import Image
 
 from ...media import FrameKey, MediaItem, PictureLoader
-from ..item import ExportItem
 from ..overlay_renderer import OverlayRenderer
+from ..pictures.item import ExportItem
 
 
 class AnnotatedImageWriter:

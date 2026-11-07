@@ -7,11 +7,11 @@ from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
 from ..media import MediaItem
 from ..recognition import RecognitionTask
-from .format import ExportFormat
-from .item import ExportItem
+from .choices.format import ExportFormat
 from .options import ExportOptions
 from .overlay_renderer import OverlayRenderer
-from .picture_files import PictureFiles
+from .pictures.files import PictureFiles
+from .pictures.item import ExportItem
 from .report import ExportReport
 from .writers.annotated_image import AnnotatedImageWriter
 from .writers.annotated_video import AnnotatedVideoWriter

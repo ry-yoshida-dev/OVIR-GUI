@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from ...recognition import Finding, RecognitionTask
 from ...storage import JsonValue
-from ..item import ExportItem
+from ..pictures.item import ExportItem
 
 
 class TableExportWriter:

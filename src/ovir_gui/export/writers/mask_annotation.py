@@ -16,8 +16,8 @@ from segmentation_format import (
 
 from ...recognition.array_types import BoolArray
 from ...storage import JsonValue
-from ..item import ExportItem
-from ..picture_files import PictureFiles
+from ..pictures.files import PictureFiles
+from ..pictures.item import ExportItem
 
 
 class MaskAnnotationWriter:

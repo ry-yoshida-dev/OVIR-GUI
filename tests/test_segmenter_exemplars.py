@@ -17,7 +17,7 @@ from open_vocabulary_segmentation import (
 from PIL import Image
 
 from ovir_gui.inference import ModelSelector, PresetCatalog, RecognitionModel, SegmentationModel
-from ovir_gui.inference.segmentation.recognizer import SegmentationRecognizer
+from ovir_gui.inference.models.segmentation.recognizer import SegmentationRecognizer
 from ovir_gui.media import FrameKey, KeyedPicture
 from ovir_gui.prompting import (
     ExemplarBox,

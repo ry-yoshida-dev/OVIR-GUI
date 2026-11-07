@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
 
-from ..atomic_file import AtomicFile
+from ..files.atomic import AtomicFile
 from .archive import ClassSetArchive
 from .classes import ClassSet
 from .entry import ClassSetEntry

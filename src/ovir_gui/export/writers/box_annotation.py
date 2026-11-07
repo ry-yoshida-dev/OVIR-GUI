@@ -14,8 +14,8 @@ from object_detection_format import (
     YoloWriter,
 )
 
-from ..item import ExportItem
-from ..picture_files import PictureFiles
+from ..pictures.files import PictureFiles
+from ..pictures.item import ExportItem
 
 
 class BoxAnnotationWriter:

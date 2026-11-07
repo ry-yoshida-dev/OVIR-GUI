@@ -4,17 +4,17 @@ from ...inference import ModelProfile, RecognitionModel
 from ...media import FrameKey, MediaItem
 from ...prompting import LabeledPrompt, PromptMode
 from ...results import ResultCatalog
-from ..class_workbench import ClassWorkbench
+from ..classes.prompt_assembler import PromptAssembler
+from ..classes.prompt_preparation import PromptPreparation
+from ..classes.workbench import ClassWorkbench
 from ..exporting.coordinator import ExportCoordinator
 from ..messages.action_reply import ActionReply
 from ..messages.status_notifier import StatusNotifier
-from ..prompt_assembler import PromptAssembler
-from ..prompt_preparation import PromptPreparation
-from ..recognition_settings import RecognitionSettings
-from ..result_profiles import ResultProfiles
+from ..messages.topic import WorkspaceTopic
+from ..recognition.settings import RecognitionSettings
 from ..result_read_model import ResultReadModel
+from ..review.profiles import ResultProfiles
 from ..session_mapper import SessionMapper
-from ..topic import WorkspaceTopic
 from ..working_state import WorkingState
 from .background_planner import BackgroundPlanner
 from .engine import InferenceEngine

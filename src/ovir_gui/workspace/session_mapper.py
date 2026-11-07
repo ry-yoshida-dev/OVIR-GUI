@@ -5,7 +5,7 @@ from ..media import FrameKey, VideoSampling
 from ..recognition import RecognitionTask
 from ..storage import Session, SessionMedia, SessionStore, SessionTaskSettings
 from .messages.status_notifier import StatusNotifier
-from .recognition_settings import RecognitionSettings
+from .recognition.settings import RecognitionSettings
 from .working_state import WorkingState
 
 

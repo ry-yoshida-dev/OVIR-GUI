@@ -20,7 +20,8 @@ from ..results import ResultLibrary
 from ..storage import ResultsSnapshot, SessionMedia
 from ..vocabulary import ClassDefinition
 from ..wording import CountedNoun
-from .class_workbench import ClassWorkbench
+from .classes.prompt_assembler import PromptAssembler
+from .classes.workbench import ClassWorkbench
 from .exporting.coordinator import ExportCoordinator
 from .jobs.background_planner import BackgroundPlanner
 from .jobs.engine import InferenceEngine
@@ -28,20 +29,19 @@ from .jobs.outcome_handler import InferenceOutcomeHandler
 from .jobs.progress import RunProgress
 from .jobs.runner import InferenceRunner
 from .messages.status_notifier import StatusNotifier
-from .model_choice import ModelChoice
-from .opened_media import OpenedMedia
+from .messages.topic import WorkspaceTopic
+from .open_media.addition import OpenedMedia
 from .playback.preparer import PlaybackPreparer
-from .prompt_assembler import PromptAssembler
-from .recognition_settings import RecognitionSettings
-from .result_profiles import ResultProfiles
+from .recognition.model_choice import ModelChoice
+from .recognition.settings import RecognitionSettings
+from .recognition.text_templates import TextTemplateLibrary
 from .result_read_model import ResultReadModel
-from .review_settings import ReviewSettings
+from .review.profiles import ResultProfiles
+from .review.settings import ReviewSettings
 from .scheduling.deferred_save import DeferredSave
 from .scheduling.task_scheduler import TaskScheduler
 from .session_mapper import SessionMapper
 from .stores import WorkspaceStores
-from .text_template_library import TextTemplateLibrary
-from .topic import WorkspaceTopic
 from .working_state import WorkingState
 
 

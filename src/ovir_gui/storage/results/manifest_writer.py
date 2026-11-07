@@ -8,7 +8,7 @@ from ...prompting import PromptSignature, QueriedClass, ReferenceBox
 from ...recognition import ClassifierLogits, FrameResult, InstanceMask, RecognizedInstance
 from ...recognition.array_types import UInt8Array
 from ...results import ResultCatalog, ResultLibrary, StoredResult
-from ..json_fields import JsonValue
+from ..files.json_fields import JsonValue
 from ..picture_prompts.codec import PicturePromptCodec
 from .media_stamp import MediaStamp
 from .snapshot import ResultsSnapshot

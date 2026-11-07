@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from .visual_example import VisualExample
+from .reference.visual_example import VisualExample
 
 
 @dataclass(frozen=True)

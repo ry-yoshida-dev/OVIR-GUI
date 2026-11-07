@@ -6,13 +6,13 @@ from ...export import ExportItem, ExportReport, ExportSelection, ResultExporter
 from ...inference import ModelProfile
 from ...media import FrameKey, MediaKind
 from ...results import ResultCatalog, ResultLibrary, StoredResult
-from ..class_workbench import ClassWorkbench
+from ..classes.workbench import ClassWorkbench
 from ..messages.action_reply import ActionReply
 from ..messages.status_notifier import StatusNotifier
+from ..messages.topic import WorkspaceTopic
 from ..result_read_model import ResultReadModel
-from ..review_settings import ReviewSettings
+from ..review.settings import ReviewSettings
 from ..scheduling.task_scheduler import TaskScheduler
-from ..topic import WorkspaceTopic
 from ..working_state import WorkingState
 from .plan import ExportPlan
 from .preview_source import ExportPreviewSource

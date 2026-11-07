@@ -1,10 +1,10 @@
 from collections.abc import Callable
 from typing import ClassVar
 
-from ..observer import WorkspaceObserver
-from ..topic import WorkspaceTopic
 from .action_reply import ActionReply
 from .notice import Notice
+from .observer import WorkspaceObserver
+from .topic import WorkspaceTopic
 
 
 class StatusNotifier:

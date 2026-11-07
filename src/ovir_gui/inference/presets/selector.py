@@ -3,23 +3,23 @@ from dataclasses import replace
 from typing import ClassVar
 
 from ...recognition import RecognitionTask
-from ..classification.recognition_model import ClassificationModel
 from ..compute.device import ComputeDevice
 from ..compute.device_availability import DeviceAvailability
 from ..compute.precision import ComputePrecision
-from ..concept_tracking.recognition_model import ConceptTrackingModel
-from ..detection.recognition_model import DetectionModel
-from ..mask_generation.recognition_model import MaskGenerationModel
-from ..model_selection import ModelSelection
-from ..object_tracking.recognition_model import ObjectTrackingModel
-from ..promptable_segmentation.recognition_model import PromptableSegmentationModel
-from ..recognition_model import RecognitionModel
-from ..segmentation.recognition_model import SegmentationModel
-from ..segmentation_mode import SegmentationMode
+from ..models.classification.recognition_model import ClassificationModel
+from ..models.concept_tracking.recognition_model import ConceptTrackingModel
+from ..models.detection.recognition_model import DetectionModel
+from ..models.mask_generation.recognition_model import MaskGenerationModel
+from ..models.object_tracking.recognition_model import ObjectTrackingModel
+from ..models.promptable_segmentation.recognition_model import PromptableSegmentationModel
+from ..models.recognition_model import RecognitionModel
+from ..models.segmentation.recognition_model import SegmentationModel
 from .backend_traits import BackendTraits
 from .catalog import PresetCatalog
 from .model import ModelPreset
 from .reference import PresetReference
+from .segmentation_mode import SegmentationMode
+from .selection import ModelSelection
 
 
 class ModelSelector:

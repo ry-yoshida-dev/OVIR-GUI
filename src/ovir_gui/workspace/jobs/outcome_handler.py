@@ -6,8 +6,8 @@ from ...recognition import FrameResult
 from ...results import ResultLibrary
 from ...storage import ResultsSnapshot
 from ..messages.status_notifier import StatusNotifier
+from ..messages.topic import WorkspaceTopic
 from ..scheduling.deferred_save import DeferredSave
-from ..topic import WorkspaceTopic
 from ..working_state import WorkingState
 from .background_planner import BackgroundPlanner
 from .inference import InferenceJob

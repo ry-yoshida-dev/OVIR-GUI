@@ -7,12 +7,12 @@ from ..media import FrameKey, MediaItem
 from ..prompting import FramePrompt, PicturePrompts, PromptChange, PromptSignature, QueryKind
 from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
 from ..review import ReviewFilter
-from .class_workbench import ClassWorkbench
+from .classes.workbench import ClassWorkbench
 from .jobs.background_planner import BackgroundPlanner
-from .media_state import MediaState
-from .media_status import MediaStatus
-from .recognition_settings import RecognitionSettings
-from .review_settings import ReviewSettings
+from .recognition.media_state import MediaState
+from .recognition.media_status import MediaStatus
+from .recognition.settings import RecognitionSettings
+from .review.settings import ReviewSettings
 from .working_state import WorkingState
 
 

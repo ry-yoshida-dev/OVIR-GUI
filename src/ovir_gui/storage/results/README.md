@@ -2,7 +2,7 @@
 
 ## Overview
 
-Stored results: `ResultsStore` loads and saves the archive `results.ovirresults`, which `ResultsArchive` writes as a JSON manifest plus packed mask bits. `ResultsManifestWriter` converts the live results into a detached `ResultsSnapshot` so they can be written on another thread, and `ResultsManifestReader` rebuilds them; `MediaStamp` and `RestoredResults` keep results of media files that cannot be reached.
+Saves the results that the top-level [`results`](../../results/README.md) package models in memory: `ResultsStore` loads and saves the archive `results.ovirresults`, which `ResultsArchive` writes as a JSON manifest plus packed mask bits. `ResultsManifestWriter` converts the live results into a detached `ResultsSnapshot` so they can be written on another thread, and `ResultsManifestReader` rebuilds them; `MediaStamp` and `RestoredResults` keep results of media files that cannot be reached.
 
 ## Components
 

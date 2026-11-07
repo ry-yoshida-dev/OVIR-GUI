@@ -3,9 +3,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
+from ...storage import JsonValue
 from ..context import WebContext
 from ..embedding.policy import EmbeddingPolicy
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class EmbeddingRoutes:

@@ -6,8 +6,8 @@ from open_vocabulary_classification import AggregationStep, PromptAggregation
 from ...inference import ComputeDevice, ComputePrecision, ModelSelection
 from ...media import InferenceMode
 from ...recognition import RecognitionTask
-from ..json_fields import JsonFields, JsonValue
-from ..json_file import JsonFile
+from ..files.json_fields import JsonFields, JsonValue
+from ..files.json_object import JsonFile
 from .media import SessionMedia
 from .state import Session
 from .task_settings import SessionTaskSettings

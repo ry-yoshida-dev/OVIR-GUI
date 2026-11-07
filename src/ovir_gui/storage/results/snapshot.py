@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ...recognition.array_types import UInt8Array
-from ..json_fields import JsonValue
+from ..files.json_fields import JsonValue
 
 
 @dataclass(frozen=True, eq=False)

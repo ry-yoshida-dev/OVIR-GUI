@@ -7,8 +7,8 @@ from PIL import Image
 
 from ...media import FrameKey, MediaItem, PictureLoader
 from ...recognition import PixelBox, RecognizedInstance
-from ..crop_options import CropOptions
-from ..item import ExportItem
+from ..choices.crop import CropOptions
+from ..pictures.item import ExportItem
 
 
 class CroppedObjectWriter:

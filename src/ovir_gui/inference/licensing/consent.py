@@ -1,4 +1,4 @@
-from ..recognition_model import RecognitionModel
+from ..models.recognition_model import RecognitionModel
 from .dependency import LicensedDependency
 
 

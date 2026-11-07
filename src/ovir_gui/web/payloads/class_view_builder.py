@@ -1,9 +1,9 @@
 from ...media import ClassColors
 from ...prompting import PicturePrompts, ReferenceBoard
 from ...review import ClassThresholds, DuplicateSuppression
-from ...storage import ClassSet, ClassSetEntry
+from ...storage import ClassSet, ClassSetEntry, JsonValue
 from ...workspace import ClassWorkbench
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class ClassViewBuilder:

@@ -16,28 +16,17 @@ The `web` package implements the scheduler and the observer, and `WorkspaceStore
 
 | Component | Description |
 | --- | --- |
+| [classes/](./classes/README.md) | Classes of each task with their reference images and drawings, and the model prompt built from them. |
 | [exporting/](./exporting/README.md) | Planning and running exports of the stored results. |
 | [jobs/](./jobs/README.md) | Recognition jobs: planning, running on a worker thread, progress and outcomes. |
 | [messages/](./messages/README.md) | Replies to requests, notices and change notifications for the views. |
+| [open_media/](./open_media/README.md) | Open media of the tasks that are not shown, and files read before they are opened. |
 | [playback/](./playback/README.md) | Preparing browser-playable copies of open videos. |
+| [recognition/](./recognition/README.md) | What the user recognizes with (task, model, sampling, text templates) and how far each open file is recognized. |
+| [review/](./review/README.md) | Switching the shown and compared result profile, the user's review of findings and the criteria findings must pass. |
 | [scheduling/](./scheduling/README.md) | Scheduling on the owning thread and deferred saving of changed state. |
-| [class_workbench.py](./class_workbench.py) | `ClassWorkbench` edits the classes of the current task with their phrases and reference images by class id, keeps the exemplar boxes and object marks drawn for them on pictures, and tracks their class set; every task keeps its own. |
 | [facade.py](./facade.py) | `Workspace` is the facade over the open media, classes, settings and the collaborators handling results, jobs and exports. |
-| [media_state.py](./media_state.py) | `MediaState` enumerates how far an open image or video is recognized with the shown model. |
-| [media_status.py](./media_status.py) | `MediaStatus` is the recognition state of one open image or video with the shown model. |
-| [model_choice.py](./model_choice.py) | `ModelChoice` holds the model chosen for each task with its overrides and the accepted licenses of optional modules, and lists and deletes the downloaded weights of the current task's presets. |
-| [observer.py](./observer.py) | `WorkspaceObserver` is a view following the workspace, always called on the owning thread. |
-| [opened_media.py](./opened_media.py) | `OpenedMedia` holds the image and video files found and read off the owning thread, before they are added to the open media. |
-| [prompt_assembler.py](./prompt_assembler.py) | `PromptAssembler` builds the prompt of a model from the classes, reference images and drawings, asking approval to skip classes it cannot query. |
-| [prompt_preparation.py](./prompt_preparation.py) | `PromptPreparation` holds the prompt built from the classes, or why none could be built. |
-| [recognition_settings.py](./recognition_settings.py) | `RecognitionSettings` holds the task and, for each task, the model, the video sampling and the inference mode remembered in the session. |
-| [result_profiles.py](./result_profiles.py) | `ResultProfiles` switches the shown and compared result profile, forgets profiles and records which findings the user keeps. |
-| [result_read_model.py](./result_read_model.py) | `ResultReadModel` answers what the stored results say about the open media: statuses, freshness, summaries, statistics and comparison. |
-| [review_settings.py](./review_settings.py) | `ReviewSettings` keeps the label mode of classifications and the class minimums and duplicate suppression of every task, and remembers them. |
+| [result_read_model.py](./result_read_model.py) | `ResultReadModel` answers what the stored results say about the open media: statuses, freshness, pending pictures, statistics and comparison. |
 | [session_mapper.py](./session_mapper.py) | `SessionMapper` restores the valid choices of the remembered session, hands out the remembered media of each task when it is first shown, and saves the current session. |
 | [stores.py](./stores.py) | `WorkspaceStores` is the data directory the workspace reads at start and writes after changes. |
-| [task_classes.py](./task_classes.py) | `TaskClasses` holds the classes, reference images, drawings and class set of one task. |
-| [task_media.py](./task_media.py) | `TaskMedia` holds the open media and shown picture of a task that is not shown. |
-| [text_template_library.py](./text_template_library.py) | `TextTemplateLibrary` keeps the text templates saved for reuse by every classifier, starting from those of the presets. |
-| [topic.py](./topic.py) | `WorkspaceTopic` enumerates the parts of the workspace a view shows, reported when they change. |
-| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media and shown picture of the current task, the media and compared profiles kept for the other tasks, and profiles. |
+| [working_state.py](./working_state.py) | `WorkingState` is what the user works on right now, shared by the parts of the workspace: open media and shown picture of the current task, the media and compared profiles kept for the other tasks, and the shown and compared profiles. |

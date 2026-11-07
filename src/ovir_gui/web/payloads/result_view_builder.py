@@ -6,8 +6,9 @@ from ...prompting import PromptChange
 from ...recognition import Finding, FrameResult, RecognizedInstance
 from ...results import ProfileSummary, ResultCatalog, StoredResult
 from ...review import ClassThresholds, ReviewFilter
+from ...storage import JsonValue
 from ...workspace import Workspace
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 from .frame_view_context import FrameViewContext
 
 

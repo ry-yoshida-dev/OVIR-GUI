@@ -6,8 +6,8 @@ import numpy as np
 from PIL import Image
 
 from ...recognition.array_types import BoolArray
-from ..item import ExportItem
-from ..picture_files import PictureFiles
+from ..pictures.files import PictureFiles
+from ..pictures.item import ExportItem
 
 
 class MaskImageWriter:

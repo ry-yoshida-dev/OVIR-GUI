@@ -15,8 +15,9 @@ from ...analysis import (
     ThresholdCurve,
 )
 from ...inference import ModelProfile
+from ...storage import JsonValue
 from ...workspace import Workspace
-from ..json_value import JsonObject, JsonValue
+from ..json_object import JsonObject
 
 
 class StatisticsViewBuilder:

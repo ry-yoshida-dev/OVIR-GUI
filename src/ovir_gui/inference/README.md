@@ -9,24 +9,10 @@ Bridge between the GUI and the model libraries `open_vocabulary_classification`,
 | Component | Description |
 | --- | --- |
 | [benchmarks/](./benchmarks/README.md) | LVIS AP and GFLOPs of the detection checkpoints, read from `catalog.json`. |
-| [classification/](./classification/README.md) | Classifier settings, recognizer, prompt and query layout, and scoring of text-vector logits. |
 | [compute/](./compute/README.md) | Compute device, precision and the GPU backends available on this machine. |
-| [concept_tracking/](./concept_tracking/README.md) | Video concept tracker settings and recognizer. |
-| [detection/](./detection/README.md) | Detector settings, recognizer and the detector prompt shared with the segmenters. |
+| [execution/](./execution/README.md) | The session keeping one model loaded, the outcome of each mini-batch and the position of a tracker's stream. |
 | [licensing/](./licensing/README.md) | Licensed optional modules and the consent required before a model uses them. |
-| [mask_generation/](./mask_generation/README.md) | Automatic mask generator settings and recognizer. |
-| [object_tracking/](./object_tracking/README.md) | Video object tracker settings and recognizer. |
-| [presets/](./presets/README.md) | Preset discovery and the selector building a model from a chosen preset. |
-| [promptable_segmentation/](./promptable_segmentation/README.md) | Promptable segmenter settings, recognizer and the object prompt shared with the object trackers. |
-| [segmentation/](./segmentation/README.md) | Instance segmenter settings and recognizer. |
+| [models/](./models/README.md) | `RecognitionModel` and `Recognizer` with one directory per kind of model: classification, detection and the five segmentation interfaces. |
+| [presets/](./presets/README.md) | Preset discovery, the chosen preset with its overrides, and the selector building a model from it. |
+| [profiles/](./profiles/README.md) | Identity of the model and options a result was recognized with. |
 | [weights/](./weights/README.md) | Finding, sizing and deleting downloaded weights. |
-| [model_profile.py](./model_profile.py) | `ModelProfile` identifies the model and options a result was recognized with. |
-| [model_selection.py](./model_selection.py) | `ModelSelection` holds the preset chosen in the model settings with its overrides, including the batch size. |
-| [profile_option.py](./profile_option.py) | `ProfileOption` holds one setting telling results of the same model apart, e.g. `Conf` = `0.35`. |
-| [recognition_model.py](./recognition_model.py) | `RecognitionModel` is the task-independent view of the settings of one model. |
-| [recognition_outcome.py](./recognition_outcome.py) | `RecognitionOutcome` holds the results of one mini-batch with what it cost. |
-| [recognizer.py](./recognizer.py) | `Recognizer` is a loaded model turning keyed pictures and a prompt into library-independent `FrameResult`s. |
-| [recognizer_session.py](./recognizer_session.py) | `RecognizerSession` keeps one loaded model and reloads only when other weights are needed. |
-| [segmentation_mode.py](./segmentation_mode.py) | `SegmentationMode` enumerates the segmentation interfaces, each read from its own preset folder and heading its group of models. |
-| [stream_position.py](./stream_position.py) | `StreamPosition` tells whether the next picture continues the streaming session of a tracker. |
-| [threshold_controls.py](./threshold_controls.py) | `ThresholdControls` tells which threshold settings a model reads, shown with its settings. |

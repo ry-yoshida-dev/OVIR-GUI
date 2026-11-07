@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..segmentation_mode import SegmentationMode
+from .segmentation_mode import SegmentationMode
 
 
 @dataclass(frozen=True)

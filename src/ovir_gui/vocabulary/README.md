@@ -2,7 +2,7 @@
 
 ## Overview
 
-Text vocabulary of the classes to recognize. A `ClassDefinition` maps one output class to the phrases querying it (written `car: car, suv, taxi`), and a `ClassVocabulary` orders the classes so that the index is the class id. Class lists can be read from plain-text files and the list of each task in the last run is remembered in the data directory. The `workspace` package edits classes on top of this vocabulary, and `storage` saves full class sets including reference images.
+Text vocabulary of the classes to recognize. A `ClassDefinition` maps one output class to the phrases querying it (written `car: car, suv, taxi`), and a `ClassVocabulary` orders the classes so that the index is the class id. `ClassColors` gives each class id a stable color shared by the views and `export/`. Class lists can be read from plain-text files and the list of each task in the last run is remembered in the data directory. The `workspace` package edits classes on top of this vocabulary, and `storage` saves full class sets including reference images.
 
 ## Components
 
@@ -12,3 +12,4 @@ Text vocabulary of the classes to recognize. A `ClassDefinition` maps one output
 | [class_list_file.py](./class_list_file.py) | `ClassListFile` reads and writes a plain-text class list with one class per line. |
 | [class_list_store.py](./class_list_store.py) | `ClassListStore` remembers the class list of each task in the last run in a data directory. |
 | [classes.py](./classes.py) | `ClassVocabulary` holds the ordered classes to detect, the index being the class id. |
+| [colors.py](./colors.py) | `ClassColors` assigns distinct, stable colors to class ids for every view and annotated export. |

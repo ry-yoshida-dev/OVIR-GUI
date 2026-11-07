@@ -3,8 +3,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import ClassVar
 
-from ..item import ExportItem
-from ..picture_files import PictureFiles
+from ..pictures.files import PictureFiles
+from ..pictures.item import ExportItem
 
 
 class ClassFolderWriter:

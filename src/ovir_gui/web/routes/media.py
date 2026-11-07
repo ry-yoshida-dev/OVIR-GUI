@@ -9,13 +9,13 @@ from fastapi.responses import FileResponse
 from ...media import InferenceMode, MediaItem
 from ...workspace import Workspace
 from ..context import WebContext
-from ..json_value import JsonObject
+from ..json_object import JsonObject
 from ..previews.image import ImagePreview
-from ..request_bodies.inference import InferenceBody
+from ..request_bodies.media.inference import InferenceBody
+from ..request_bodies.media.paths import PathsBody
+from ..request_bodies.media.sampling import SamplingBody
+from ..request_bodies.media.show import ShowBody
 from ..request_bodies.path import PathBody
-from ..request_bodies.paths import PathsBody
-from ..request_bodies.sampling import SamplingBody
-from ..request_bodies.show import ShowBody
 
 
 class MediaRoutes:

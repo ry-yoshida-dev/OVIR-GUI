@@ -2,7 +2,7 @@ import asyncio
 import time
 from typing import ClassVar
 
-from ovir_gui.web.asyncio_task_scheduler import AsyncioTaskScheduler
+from ovir_gui.web.workspace_adapters.asyncio_task_scheduler import AsyncioTaskScheduler
 
 
 class TestAsyncioTaskScheduler:

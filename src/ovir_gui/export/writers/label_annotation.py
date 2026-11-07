@@ -13,8 +13,8 @@ from classification_format import (
     LabelPresence,
 )
 
-from ..item import ExportItem
-from ..picture_files import PictureFiles
+from ..pictures.files import PictureFiles
+from ..pictures.item import ExportItem
 
 
 class LabelAnnotationWriter:

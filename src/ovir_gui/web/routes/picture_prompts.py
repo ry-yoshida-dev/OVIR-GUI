@@ -6,13 +6,13 @@ from ...media import FrameKey
 from ...prompting import ExemplarBox, ObjectMark
 from ...workspace import Workspace
 from ..context import WebContext
-from ..json_value import JsonObject
+from ..json_object import JsonObject
 from ..request_bodies.box_corners import BoxCorners
-from ..request_bodies.exemplar import ExemplarBody
-from ..request_bodies.exemplar_removal import ExemplarRemovalBody
-from ..request_bodies.mark import MarkBody
-from ..request_bodies.mark_removal import MarkRemovalBody
-from ..request_bodies.picture import PictureBody
+from ..request_bodies.picture_prompts.exemplar import ExemplarBody
+from ..request_bodies.picture_prompts.exemplar_removal import ExemplarRemovalBody
+from ..request_bodies.picture_prompts.mark import MarkBody
+from ..request_bodies.picture_prompts.mark_removal import MarkRemovalBody
+from ..request_bodies.picture_prompts.picture import PictureBody
 
 
 class PicturePromptRoutes:

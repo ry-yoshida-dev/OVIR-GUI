@@ -12,20 +12,20 @@ from ...storage import ClassSet
 from ...vocabulary import ClassDefinition
 from ...workspace import Workspace
 from ..context import WebContext
-from ..json_value import JsonObject
+from ..json_object import JsonObject
 from ..previews.cache import PicturePreviewCache
 from ..previews.image import ImagePreview
-from ..reference_draft import ReferenceDraft
+from ..reference_drafts.draft import ReferenceDraft
 from ..request_bodies.box_corners import BoxCorners
-from ..request_bodies.class_row import ClassRowBody
-from ..request_bodies.move_phrase import MovePhraseBody
-from ..request_bodies.move_reference import MoveReferenceBody
-from ..request_bodies.name import NameBody
+from ..request_bodies.classes.move_phrase import MovePhraseBody
+from ..request_bodies.classes.move_reference import MoveReferenceBody
+from ..request_bodies.classes.name import NameBody
+from ..request_bodies.classes.reference_boxes import ReferenceBoxesBody
+from ..request_bodies.classes.removal import RemoveClassesBody
+from ..request_bodies.classes.row import ClassRowBody
+from ..request_bodies.classes.text import TextBody
 from ..request_bodies.path import PathBody
-from ..request_bodies.reference_boxes import ReferenceBoxesBody
-from ..request_bodies.remove_classes import RemoveClassesBody
-from ..request_bodies.text import TextBody
-from ..temporary_upload import TemporaryUpload
+from ..server_files.temporary_upload import TemporaryUpload
 
 
 class ClassRoutes:

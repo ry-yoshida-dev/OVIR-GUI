@@ -3,9 +3,7 @@ from pathlib import Path
 
 from ..inference import BenchmarkCatalog
 from ..workspace import Workspace
-from .directory_browser import DirectoryBrowser
 from .embedding.object_document_builder import ObjectDocumentBuilder
-from .event_hub import EventHub
 from .payloads.class_view_builder import ClassViewBuilder
 from .payloads.model_panel_builder import ModelPanelBuilder
 from .payloads.page_state_builder import PageStateBuilder
@@ -13,7 +11,9 @@ from .payloads.reply_builder import ReplyBuilder
 from .payloads.result_view_builder import ResultViewBuilder
 from .payloads.statistics_view_builder import StatisticsViewBuilder
 from .previews.cache import PicturePreviewCache
-from .reference_draft_store import ReferenceDraftStore
+from .reference_drafts.store import ReferenceDraftStore
+from .server_files.directory_browser import DirectoryBrowser
+from .workspace_adapters.event_hub import EventHub
 
 
 class WebContext:

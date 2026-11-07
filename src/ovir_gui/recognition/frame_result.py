@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from .class_score import ClassScore
-from .classifier_logits import ClassifierLogits
+from .classification.class_score import ClassScore
+from .classification.label_mode import LabelMode
+from .classification.logits import ClassifierLogits
 from .finding import Finding
 from .image_size import ImageSize
-from .label_mode import LabelMode
 from .recognized_instance import RecognizedInstance
 from .task import RecognitionTask
 

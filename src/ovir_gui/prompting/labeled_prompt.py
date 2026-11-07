@@ -3,11 +3,11 @@ from dataclasses import dataclass, field, replace
 
 from ..media import FrameKey
 from ..wording import CountedNoun
-from .frame_prompt import FramePrompt
-from .picture_prompts import PicturePrompts
+from .picture_prompts.frame import FramePrompt
+from .picture_prompts.snapshot import PicturePrompts
 from .prompt_class import PromptClass
 from .query_kind import QueryKind
-from .signature import PromptSignature
+from .staleness.signature import PromptSignature
 
 
 @dataclass(frozen=True, eq=False)
