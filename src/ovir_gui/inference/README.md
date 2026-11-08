@@ -2,7 +2,7 @@
 
 ## Overview
 
-Bridge between the GUI and the model libraries `open_vocabulary_classification`, `open_vocabulary_detector` and `open_vocabulary_segmentation`: discovering presets, building and loading the chosen model, and converting its output into the library-independent results of `recognition/`.
+Bridge between the GUI and the model libraries `open_vocabulary_classification`, `open_vocabulary_detector` and `open_vocabulary_segmentation`: discovering presets, building and loading the chosen model, and converting its output into the library-independent results of `results/`.
 
 ## Components
 

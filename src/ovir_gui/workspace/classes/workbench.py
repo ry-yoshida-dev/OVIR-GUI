@@ -3,11 +3,10 @@ from pathlib import Path
 
 from PIL import Image
 
-from ...media import ClassColors
 from ...prompting import PicturePromptBoard, PicturePrompts, ReferenceBoard, ReferenceBox, ReferenceImage
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ...storage import ClassSet, ClassSetArchive, ClassSetStore
-from ...vocabulary import ClassDefinition, ClassListFile
+from ...vocabulary import ClassColors, ClassDefinition, ClassListFile
 from ..recognition.settings import RecognitionSettings
 from .task import TaskClasses
 

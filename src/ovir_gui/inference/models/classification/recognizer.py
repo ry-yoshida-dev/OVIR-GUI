@@ -5,7 +5,7 @@ from PIL import Image
 
 from ....media import KeyedPicture
 from ....prompting import LabeledPrompt
-from ....recognition import ClassifierLogits, FrameResult, ImageSize, LabelMode, RecognitionTask
+from ....results import ClassifierLogits, FrameResult, ImageSize, LabelMode, RecognitionTask
 from ..recognizer import Recognizer
 from .prompt_builder import ClassifierPromptBuilder
 from .query_layout import ClassifierQueryLayout

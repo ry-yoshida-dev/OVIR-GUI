@@ -10,7 +10,7 @@ from open_vocabulary_classification import (
     ScoreActivation,
 )
 
-from ....recognition import ClassifierLogits, ClassScore, EmbeddingLogit, FrameResult
+from ....results import ClassifierLogits, ClassScore, EmbeddingLogit, FrameResult
 
 
 class ClassificationScorer:

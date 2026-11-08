@@ -14,7 +14,7 @@ from ovir_gui.inference import (
     SegmentationModel,
 )
 from ovir_gui.prompting import PromptMode, QueryKind
-from ovir_gui.recognition import RecognitionTask
+from ovir_gui.results import RecognitionTask
 
 CATALOG: PresetCatalog = PresetCatalog.from_packages()
 

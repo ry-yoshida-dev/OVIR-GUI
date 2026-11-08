@@ -6,7 +6,7 @@ from typing import ClassVar
 from PIL import Image
 
 from ...media import FrameKey, MediaItem, PictureLoader
-from ...recognition import PixelBox, RecognizedInstance
+from ...results import PixelBox, RecognizedInstance
 from ..choices.crop import CropOptions
 from ..pictures.item import ExportItem
 

@@ -21,7 +21,7 @@ from ovir_gui.inference import ClassificationScorer
 from ovir_gui.inference.models.classification.prompt_builder import ClassifierPromptBuilder
 from ovir_gui.inference.models.classification.query_layout import ClassifierQueryLayout
 from ovir_gui.prompting import LabeledPrompt, PromptClass, PromptSignature, QueryKind
-from ovir_gui.recognition import ClassifierLogits, ClassScore, FrameResult, ImageSize, RecognitionTask
+from ovir_gui.results import ClassifierLogits, ClassScore, FrameResult, ImageSize, RecognitionTask
 
 PHOTO_TEMPLATE: str = "a photo of a {}."
 TEMPLATES: TextTemplates = TextTemplates(("{}", PHOTO_TEMPLATE))

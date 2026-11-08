@@ -7,7 +7,7 @@ from ovir_gui.inference import (
     PresetCatalog,
     RecognitionModel,
 )
-from ovir_gui.recognition import RecognitionTask
+from ovir_gui.results import RecognitionTask
 
 
 class TestBenchmarkCatalog:

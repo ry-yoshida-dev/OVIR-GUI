@@ -1,7 +1,8 @@
-from ...media import ClassColors, FrameKey
+from ...media import FrameKey
 from ...prompting import ExemplarBox, ObjectMark, PicturePrompts, ReferenceBoard
 from ...review import ClassThresholds, DuplicateSuppression
 from ...storage import ClassSet, ClassSetEntry, JsonValue
+from ...vocabulary import ClassColors
 from ...workspace import ClassWorkbench
 from ..json_object import JsonObject
 

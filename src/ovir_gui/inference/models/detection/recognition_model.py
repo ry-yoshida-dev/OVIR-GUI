@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 from open_vocabulary_detector import DetectionThresholds, DetectorBackend, DetectorSettings, Device
 
 from ....prompting import QueryKind
-from ....recognition import RecognitionTask
+from ....results import RecognitionTask
 from ...compute.device import ComputeDevice
 from ...compute.precision import ComputePrecision
 from ...licensing.dependency import LicensedDependency

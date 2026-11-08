@@ -5,7 +5,7 @@ from ..analysis import ProfileComparison, ResultStatistics
 from ..inference import ModelProfile
 from ..media import FrameKey, MediaItem
 from ..prompting import FramePrompt, PicturePrompts, PromptChange, PromptSignature, QueryKind
-from ..results import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
+from ..results.in_memory import ProfileSummary, ResultCatalog, ResultLibrary, StoredResult
 from ..review import ReviewFilter
 from .classes.workbench import ClassWorkbench
 from .jobs.background_planner import BackgroundPlanner

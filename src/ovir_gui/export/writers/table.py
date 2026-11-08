@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import ClassVar
 
-from ...recognition import Finding, RecognitionTask
+from ...results import Finding, RecognitionTask
 from ...storage import JsonValue
 from ..pictures.item import ExportItem
 

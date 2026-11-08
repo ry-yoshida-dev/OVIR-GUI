@@ -3,7 +3,7 @@ from importlib.resources import files
 from importlib.resources.abc import Traversable
 from typing import ClassVar
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from .model import ModelPreset
 from .segmentation_mode import SegmentationMode
 

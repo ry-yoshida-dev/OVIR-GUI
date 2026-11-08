@@ -14,7 +14,7 @@ from open_vocabulary_classification import (
 from ovir_gui.inference import ComputeDevice, ComputePrecision, ModelProfile, ModelSelection, ProfileOption
 from ovir_gui.media import FrameKey, InferenceMode
 from ovir_gui.prompting import PromptSignature, QueriedClass
-from ovir_gui.recognition import (
+from ovir_gui.results import (
     ClassifierLogits,
     ClassScore,
     EmbeddingLogit,
@@ -26,7 +26,7 @@ from ovir_gui.recognition import (
     RecognitionTask,
     RecognizedInstance,
 )
-from ovir_gui.results import ResultLibrary
+from ovir_gui.results.in_memory import ResultLibrary
 from ovir_gui.review import ClassThresholds, DuplicateSuppression
 from ovir_gui.storage import (
     ClassThresholdStore,

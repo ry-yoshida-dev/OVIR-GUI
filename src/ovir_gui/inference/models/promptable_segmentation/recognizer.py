@@ -12,7 +12,7 @@ from open_vocabulary_segmentation import (
 
 from ....media import FrameKey, KeyedPicture
 from ....prompting import LabeledPrompt, ObjectMark, ReferenceImage
-from ....recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from ..recognizer import Recognizer
 from .object_prompt_builder import ObjectPromptBuilder
 from .recognition_model import PromptableSegmentationModel

@@ -2,8 +2,8 @@ from collections.abc import Callable
 
 from ...inference import ModelProfile, RecognitionOutcome
 from ...media import FrameKey
-from ...recognition import FrameResult
-from ...results import ResultLibrary
+from ...results import FrameResult
+from ...results.in_memory import ResultLibrary
 from ...storage import ResultsSnapshot
 from ..messages.status_notifier import StatusNotifier
 from ..messages.topic import WorkspaceTopic

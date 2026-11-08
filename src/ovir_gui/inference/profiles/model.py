@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass, field
 
 from ...prompting import QueryKind
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from .option import ProfileOption
 
 

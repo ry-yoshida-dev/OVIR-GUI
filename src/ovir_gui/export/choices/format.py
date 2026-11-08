@@ -5,7 +5,7 @@ from classification_format import CsvLayout
 from object_detection_format import AnnotationFormat as BoxAnnotationFormat
 from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from .purpose import ExportPurpose
 
 

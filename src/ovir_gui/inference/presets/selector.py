@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from typing import ClassVar
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..compute.device import ComputeDevice
 from ..compute.device_availability import DeviceAvailability
 from ..compute.precision import ComputePrecision

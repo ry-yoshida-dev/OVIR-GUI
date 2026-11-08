@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...results import ResultLibrary
+from ...results.in_memory import ResultLibrary
 from .media_stamp import MediaStamp
 
 

@@ -6,7 +6,7 @@ from PIL import Image
 
 from ovir_gui.export import ExportFormat, ExportItem, ExportOptions, ExportReport, ResultExporter
 from ovir_gui.media import FrameKey
-from ovir_gui.recognition import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
+from ovir_gui.results import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
 
 CLASS_NAMES: tuple[str, ...] = ("cat", "dog", "bird")
 

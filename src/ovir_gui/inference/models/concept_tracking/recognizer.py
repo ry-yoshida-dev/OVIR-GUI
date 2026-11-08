@@ -4,7 +4,7 @@ from open_vocabulary_segmentation import ConceptFrame, ConceptTracker, ConceptTr
 
 from ....media import KeyedPicture
 from ....prompting import LabeledPrompt
-from ....recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from ...execution.stream_position import StreamPosition
 from ..detection.prompt_builder import DetectorPromptBuilder
 from ..recognizer import Recognizer

@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from ...media import FrameKey
-from ...recognition import ClassScore, Finding, RecognitionTask, RecognizedInstance
-from ...results import ResultCatalog, StoredResult
+from ...results import ClassScore, Finding, RecognitionTask, RecognizedInstance
+from ...results.in_memory import ResultCatalog, StoredResult
 from ...review import ReviewFilter
 from ..class_matrix import ClassMatrix
 from ..instance_matcher import InstanceMatcher

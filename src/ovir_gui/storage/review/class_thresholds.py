@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import ClassVar
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ...review import ClassThresholds
 from ..files.json_fields import JsonFields, JsonValue
 from ..files.task_settings import TaskSettingsFile

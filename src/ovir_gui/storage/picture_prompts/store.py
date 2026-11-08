@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from ...prompting import ExemplarBox, ObjectMark, PicturePrompts
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..files.json_fields import JsonFields, JsonValue
 from ..files.task_settings import TaskSettingsFile
 from .codec import PicturePromptCodec

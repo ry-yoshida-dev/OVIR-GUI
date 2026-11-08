@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from open_vocabulary_classification import PromptAggregation
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..compute.device import ComputeDevice
 from ..compute.precision import ComputePrecision
 

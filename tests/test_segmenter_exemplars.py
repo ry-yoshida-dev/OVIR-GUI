@@ -28,7 +28,7 @@ from ovir_gui.prompting import (
     QueriedClass,
     QueryKind,
 )
-from ovir_gui.recognition import RecognitionTask
+from ovir_gui.results import RecognitionTask
 
 IMAGE_SIDE = 32
 

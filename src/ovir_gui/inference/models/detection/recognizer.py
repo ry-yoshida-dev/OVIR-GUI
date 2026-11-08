@@ -5,7 +5,7 @@ from open_vocabulary_detector import DetectionResult, OpenVocabularyDetector, Pr
 
 from ....media import KeyedPicture
 from ....prompting import LabeledPrompt
-from ....recognition import FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, PixelBox, RecognitionTask, RecognizedInstance
 from ..recognizer import Recognizer
 from .prompt_builder import DetectorPromptBuilder
 from .recognition_model import DetectionModel

@@ -14,7 +14,7 @@ from segmentation_format import (
     YoloWriter,
 )
 
-from ...recognition.array_types import BoolArray
+from ...results.array_types import BoolArray
 from ...storage import JsonValue
 from ..pictures.files import PictureFiles
 from ..pictures.item import ExportItem

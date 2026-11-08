@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ...recognition import PixelBox
+from ...results import PixelBox
 from .crop_image_format import CropImageFormat
 
 

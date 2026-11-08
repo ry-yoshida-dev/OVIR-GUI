@@ -5,7 +5,7 @@ from open_vocabulary_classification import AggregationStep, PromptAggregation
 
 from ...inference import ComputeDevice, ComputePrecision, ModelSelection
 from ...media import InferenceMode
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..files.json_fields import JsonFields, JsonValue
 from ..files.json_object import JsonFile
 from .media import SessionMedia

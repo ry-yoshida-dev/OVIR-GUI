@@ -4,7 +4,7 @@ from open_vocabulary_segmentation import AutomaticMaskGenerator, GeneratedMask, 
 
 from ....media import KeyedPicture
 from ....prompting import LabeledPrompt
-from ....recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from ..recognizer import Recognizer
 from .recognition_model import MaskGenerationModel
 

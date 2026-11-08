@@ -15,8 +15,8 @@ from ...inference import (
     StoredWeights,
 )
 from ...media import FrameKey
-from ...recognition import RecognitionTask
-from ...results import ResultCatalog
+from ...results import RecognitionTask
+from ...results.in_memory import ResultCatalog
 from ...review import ClassThresholds, DuplicateSuppression
 from ...workspace import Workspace
 from ..context import WebContext

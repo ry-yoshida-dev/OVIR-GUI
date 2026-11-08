@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from ...media import FrameKey, MediaItem
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..choices.crop import CropOptions
 from ..choices.format import ExportFormat
 from ..options import ExportOptions

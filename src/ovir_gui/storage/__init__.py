@@ -1,3 +1,4 @@
+from .class_lists import ClassListStore
 from .class_sets.archive import ClassSetArchive
 from .class_sets.classes import ClassSet
 from .class_sets.entry import ClassSetEntry
@@ -22,6 +23,7 @@ from .session.task_settings import SessionTaskSettings
 from .text_templates import TextTemplateStore
 
 __all__ = [
+    "ClassListStore",
     "ClassSet",
     "ClassSetArchive",
     "ClassSetEntry",

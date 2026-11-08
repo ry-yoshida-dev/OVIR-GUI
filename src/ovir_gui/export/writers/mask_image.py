@@ -5,7 +5,7 @@ from typing import ClassVar
 import numpy as np
 from PIL import Image
 
-from ...recognition.array_types import BoolArray
+from ...results.array_types import BoolArray
 from ..pictures.files import PictureFiles
 from ..pictures.item import ExportItem
 

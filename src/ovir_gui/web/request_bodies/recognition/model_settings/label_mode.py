@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from .....recognition import LabelMode
+from .....results import LabelMode
 
 
 class LabelModeBody(BaseModel):

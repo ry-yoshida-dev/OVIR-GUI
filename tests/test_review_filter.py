@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ovir_gui.recognition import Finding, PixelBox, RecognitionTask
+from ovir_gui.results import Finding, PixelBox, RecognitionTask
 from ovir_gui.review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ovir_gui.storage import ClassThresholdStore, DuplicateSuppressionStore
 

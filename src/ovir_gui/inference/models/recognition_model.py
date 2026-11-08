@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from open_vocabulary_classification import PromptAggregation, ScoreActivation
 
 from ...prompting import PromptMode, QueryKind
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ..compute.device import ComputeDevice
 from ..compute.precision import ComputePrecision
 from ..licensing.dependency import LicensedDependency

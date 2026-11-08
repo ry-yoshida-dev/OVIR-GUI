@@ -2,9 +2,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import ClassVar
 
-from ..recognition import RecognitionTask
-from .class_definition import ClassDefinition
-from .class_list_file import ClassListFile
+from ..results import RecognitionTask
+from ..vocabulary import ClassDefinition, ClassListFile
 
 
 class ClassListStore:

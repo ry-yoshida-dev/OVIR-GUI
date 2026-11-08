@@ -19,7 +19,7 @@ from open_vocabulary_classification import (
 )
 
 from ....prompting import QueryKind
-from ....recognition import LabelMode, RecognitionTask
+from ....results import LabelMode, RecognitionTask
 from ...compute.device import ComputeDevice
 from ...compute.precision import ComputePrecision
 from ...presets.model import ModelPreset

@@ -7,7 +7,7 @@ from typing import ClassVar
 
 import numpy as np
 
-from ...recognition.array_types import UInt8Array
+from ...results.array_types import UInt8Array
 from ..files.atomic import AtomicFile
 from ..files.json_fields import JsonValue
 from ..files.zip_manifest import ZipManifest

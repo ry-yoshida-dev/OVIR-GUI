@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from open_vocabulary_classification import ClassificationResult, EmbeddingEntry, Prompt
 
 from ....prompting import LabeledPrompt
-from ....recognition import ClassifierLogits, EmbeddingLogit
+from ....results import ClassifierLogits, EmbeddingLogit
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ...recognition.array_types import UInt8Array
+from ...results.array_types import UInt8Array
 from ..files.json_fields import JsonValue
 
 

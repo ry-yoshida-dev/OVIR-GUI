@@ -1,4 +1,4 @@
-from ...recognition import LabelMode, RecognitionTask
+from ...results import LabelMode, RecognitionTask
 from ...review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ...storage import ClassThresholdStore, DuplicateSuppressionStore, LabelModeStore
 from ..messages.status_notifier import StatusNotifier

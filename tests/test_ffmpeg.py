@@ -9,7 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from ovir_gui.ffmpeg import FFmpegDownloader, FFmpegInstallation, FFmpegProbe, FFmpegStartupCheck, OperatingSystem
+from ovir_gui.external_programs import (
+    FFmpegDownloader,
+    FFmpegInstallation,
+    FFmpegProbe,
+    FFmpegStartupCheck,
+    OperatingSystem,
+)
 
 BUILD_NAME = "ffmpeg-9.0.2-full_build-shared"
 
@@ -214,7 +220,7 @@ class TestStartupImports:
 
     def test_torchcodec_is_not_imported_before_the_check(self) -> None:
         script: str = (
-            "import sys, ovir_gui.cli, ovir_gui.ffmpeg, ovir_gui.__main__; "
+            "import sys, ovir_gui.cli, ovir_gui.external_programs, ovir_gui.__main__; "
             + "sys.exit(1 if 'torchcodec' in sys.modules else 0)"
         )
         completed: subprocess.CompletedProcess[bytes] = subprocess.run(

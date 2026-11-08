@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from ...inference import ModelSelection
 from ...media import InferenceMode, VideoSampling
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 
 
 class RecognitionSettings:

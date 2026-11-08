@@ -5,7 +5,7 @@ from .classification.label_mode import LabelMode
 from .classification.logits import ClassifierLogits
 from .finding import Finding
 from .image_size import ImageSize
-from .recognized_instance import RecognizedInstance
+from .instance import RecognizedInstance
 from .task import RecognitionTask
 
 

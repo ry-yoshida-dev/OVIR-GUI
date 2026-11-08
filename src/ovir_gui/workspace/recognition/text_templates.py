@@ -3,7 +3,7 @@ from typing import ClassVar
 from open_vocabulary_classification import TextTemplates
 
 from ...inference import ModelSelector
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ...storage import TextTemplateStore
 from ..messages.status_notifier import StatusNotifier
 from ..messages.topic import WorkspaceTopic

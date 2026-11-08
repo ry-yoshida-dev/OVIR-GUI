@@ -5,9 +5,9 @@ from typing import ClassVar
 from ...inference import ModelProfile
 from ...media import FrameKey
 from ...prompting import PromptSignature, QueriedClass, ReferenceBox
-from ...recognition import ClassifierLogits, FrameResult, InstanceMask, RecognizedInstance
-from ...recognition.array_types import UInt8Array
-from ...results import ResultCatalog, ResultLibrary, StoredResult
+from ...results import ClassifierLogits, FrameResult, InstanceMask, RecognizedInstance
+from ...results.array_types import UInt8Array
+from ...results.in_memory import ResultCatalog, ResultLibrary, StoredResult
 from ..files.json_fields import JsonValue
 from ..picture_prompts.codec import PicturePromptCodec
 from .media_stamp import MediaStamp

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..storage import (
+    ClassListStore,
     ClassSetStore,
     ClassThresholdStore,
     DuplicateSuppressionStore,
@@ -14,7 +15,6 @@ from ..storage import (
     TextTemplateStore,
     UploadStore,
 )
-from ..vocabulary import ClassListStore
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import ClassVar
 
-from ..recognition import RecognizedInstance
+from ..results import RecognizedInstance
 
 
 class InstanceMatcher:

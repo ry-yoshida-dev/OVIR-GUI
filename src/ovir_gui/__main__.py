@@ -1,7 +1,7 @@
 import sys
 
 from .cli import CommandLine, LaunchOptions
-from .ffmpeg import FFmpegStartupCheck
+from .external_programs import FFmpegStartupCheck
 
 
 def main() -> None:

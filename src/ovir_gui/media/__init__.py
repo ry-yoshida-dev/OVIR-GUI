@@ -1,4 +1,3 @@
-from ..vocabulary.colors import ClassColors
 from .collection import MediaCollection
 from .frame_key import FrameKey
 from .inference_mode import InferenceMode
@@ -14,7 +13,6 @@ from .video.playback_proxy_writer import PlaybackProxyWriter
 from .video.sampling import VideoSampling
 
 __all__ = [
-    "ClassColors",
     "FrameKey",
     "InferenceMode",
     "KeyedPicture",

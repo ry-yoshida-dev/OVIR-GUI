@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import ClassVar
 
-from ...results import ResultLibrary
+from ...results.in_memory import ResultLibrary
 from .archive import ResultsArchive
 from .manifest_writer import ResultsManifestWriter
 from .media_stamp import MediaStamp

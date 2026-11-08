@@ -17,7 +17,7 @@ from ...inference import (
     ThresholdControls,
 )
 from ...prompting import QueryKind
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ...storage import JsonValue
 from ...workspace import Workspace
 from ..json_object import JsonObject

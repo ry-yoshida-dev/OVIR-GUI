@@ -2,7 +2,7 @@
 
 ## Overview
 
-Persistence of the application state in a data directory (`ovir_gui_data` by default): class sets, results, review criteria, accepted licenses, text templates, drawings on pictures, media copies and the session. The `workspace` package reads these stores at start and writes them after changes.
+Persistence of the application state in a data directory (`ovir_gui_data` by default): the last class lists, class sets, results, review criteria, accepted licenses, text templates, drawings on pictures, media copies and the session. The `workspace` package reads these stores at start and writes them after changes.
 
 ## Components
 
@@ -15,5 +15,6 @@ Persistence of the application state in a data directory (`ovir_gui_data` by def
 | [results/](./results/README.md) | The results archive with its manifest, snapshot and media stamps. |
 | [review/](./review/README.md) | Review criteria remembered between runs: class minimums, duplicate suppression and label mode. |
 | [session/](./session/README.md) | What the user was working on, restored at the next start. |
+| [class_lists.py](./class_lists.py) | `ClassListStore` remembers the class list of each task in the last run in `last_classes_<task>.txt`. |
 | [license_consent.py](./license_consent.py) | `LicenseConsentStore` remembers the licenses of optional modules the user accepted, and when, in `license_consent.json`. |
 | [text_templates.py](./text_templates.py) | `TextTemplateStore` remembers the text templates saved for reuse by classifiers in `text_templates.json`. |

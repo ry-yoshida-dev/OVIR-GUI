@@ -8,8 +8,8 @@ from ovir_gui.analysis import ProfileComparison
 from ovir_gui.inference import ModelProfile
 from ovir_gui.media import FrameKey
 from ovir_gui.prompting import PromptSignature, QueriedClass
-from ovir_gui.recognition import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
-from ovir_gui.results import ResultCatalog, ResultLibrary, StoredResult
+from ovir_gui.results import ClassScore, FrameResult, ImageSize, LabelMode, RecognitionTask
+from ovir_gui.results.in_memory import ResultCatalog, ResultLibrary, StoredResult
 from ovir_gui.review import ClassThresholds, DuplicateSuppression, ReviewFilter
 from ovir_gui.storage import JsonValue, LabelModeStore, ResultsSnapshot, ResultsStore
 from ovir_gui.storage.results.manifest_reader import ResultsManifestReader

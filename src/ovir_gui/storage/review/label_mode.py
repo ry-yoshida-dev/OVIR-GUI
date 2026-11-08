@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import ClassVar
 
-from ...recognition import LabelMode
+from ...results import LabelMode
 from ..files.json_fields import JsonFields, JsonValue
 from ..files.json_object import JsonFile
 

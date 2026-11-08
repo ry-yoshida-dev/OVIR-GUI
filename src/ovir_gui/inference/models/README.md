@@ -2,7 +2,7 @@
 
 ## Overview
 
-The models a preset builds: settings of one model and the loaded recognizer turning pictures and a prompt into the `FrameResult`s of `recognition/`, with one directory per kind of model.
+The models a preset builds: settings of one model and the loaded recognizer turning pictures and a prompt into the `FrameResult`s of `results/`, with one directory per kind of model.
 
 ## Components
 

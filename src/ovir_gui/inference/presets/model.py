@@ -3,7 +3,7 @@ from importlib.resources.abc import Traversable
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 
 
 @dataclass(frozen=True)

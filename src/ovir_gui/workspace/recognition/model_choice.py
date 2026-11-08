@@ -11,7 +11,7 @@ from ...inference import (
     WeightsStorage,
 )
 from ...prompting import QueryKind
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from ...storage import LicenseConsentStore
 from ..jobs.background_planner import BackgroundPlanner
 from ..messages.status_notifier import StatusNotifier

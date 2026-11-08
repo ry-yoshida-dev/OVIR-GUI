@@ -16,7 +16,7 @@ from open_vocabulary_segmentation.backends.box_prompted import BoxPromptedSegmen
 
 from ....media import KeyedPicture
 from ....prompting import ExemplarBox, FramePrompt, LabeledPrompt, PromptClass
-from ....recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from ..detection.prompt_builder import DetectorPromptBuilder
 from ..promptable_segmentation.recognizer import PromptableSegmentationRecognizer
 from ..recognizer import Recognizer

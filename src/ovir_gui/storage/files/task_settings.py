@@ -1,7 +1,7 @@
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from .json_fields import JsonFields, JsonValue
 from .json_object import JsonFile
 

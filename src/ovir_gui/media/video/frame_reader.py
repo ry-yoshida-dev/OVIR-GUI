@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 from time_series_iterator import IndexBase, VideoBackend, VideoIterationParameters, VideoIterator
 
-from ...recognition.array_types import UInt8Array
+from ...results.array_types import UInt8Array
 from .info import VideoInfo
 
 

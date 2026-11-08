@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ...recognition import FrameResult
+from ...results import FrameResult
 
 
 @dataclass(frozen=True, eq=False)

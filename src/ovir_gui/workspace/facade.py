@@ -15,8 +15,8 @@ from ..inference import (
 )
 from ..media import FrameKey, InferenceMode, MediaCollection, MediaItem, VideoSampling
 from ..prompting import PicturePromptBoard, PicturePrompts
-from ..recognition import RecognitionTask
-from ..results import ResultLibrary
+from ..results import RecognitionTask
+from ..results.in_memory import ResultLibrary
 from ..storage import ResultsSnapshot, SessionMedia
 from ..vocabulary import ClassDefinition
 from ..wording import CountedNoun

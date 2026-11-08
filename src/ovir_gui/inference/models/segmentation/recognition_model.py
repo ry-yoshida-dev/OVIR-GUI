@@ -15,7 +15,7 @@ from open_vocabulary_segmentation import (
 )
 
 from ....prompting import QueryKind
-from ....recognition import RecognitionTask
+from ....results import RecognitionTask
 from ...compute.device import ComputeDevice
 from ...compute.precision import ComputePrecision
 from ...licensing.dependency import LicensedDependency

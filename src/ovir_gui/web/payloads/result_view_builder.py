@@ -1,12 +1,13 @@
 from pathlib import Path
 
 from ...inference import MaskGenerationModel, ModelProfile
-from ...media import ClassColors, FrameKey, MediaItem, VideoInfo
+from ...media import FrameKey, MediaItem, VideoInfo
 from ...prompting import PromptChange
-from ...recognition import Finding, FrameResult, RecognizedInstance
-from ...results import ProfileSummary, ResultCatalog, StoredResult
+from ...results import Finding, FrameResult, RecognizedInstance
+from ...results.in_memory import ProfileSummary, ResultCatalog, StoredResult
 from ...review import ClassThresholds, ReviewFilter
 from ...storage import JsonValue
+from ...vocabulary import ClassColors
 from ...workspace import Workspace
 from ..json_object import JsonObject
 from .frame_view_context import FrameViewContext

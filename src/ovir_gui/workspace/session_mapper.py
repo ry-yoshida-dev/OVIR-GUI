@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ..inference import LicenseConsent, ModelSelection, ModelSelector
 from ..media import FrameKey, VideoSampling
-from ..recognition import RecognitionTask
+from ..results import RecognitionTask
 from ..storage import Session, SessionMedia, SessionStore, SessionTaskSettings
 from .messages.status_notifier import StatusNotifier
 from .recognition.settings import RecognitionSettings

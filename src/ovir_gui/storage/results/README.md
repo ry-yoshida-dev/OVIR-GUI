@@ -2,7 +2,7 @@
 
 ## Overview
 
-Saves the results that the top-level [`results`](../../results/README.md) package keeps in memory to the archive `results.ovirresults` of the data directory.
+Saves the results that the [`results/in_memory`](../../results/in_memory/README.md) package keeps to the archive `results.ovirresults` of the data directory.
 
 ## Components
 

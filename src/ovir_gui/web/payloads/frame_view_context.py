@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from ...inference import ModelProfile
 from ...media import FrameKey
 from ...prompting import PromptChange
-from ...recognition import RecognitionTask
-from ...results import ResultCatalog
+from ...results import RecognitionTask
+from ...results.in_memory import ResultCatalog
 from ...review import ReviewFilter
 from ...workspace import Workspace
 

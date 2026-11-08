@@ -3,10 +3,10 @@ from functools import partial
 
 from open_vocabulary_classification import PromptAggregation, ScoreActivation
 
-from ..inference import ClassificationModel, ClassificationScorer, ModelProfile
-from ..media import FrameKey
-from ..prompting import PromptChange, PromptSignature
-from ..recognition import FrameResult, RecognitionTask
+from ...inference import ClassificationModel, ClassificationScorer, ModelProfile
+from ...media import FrameKey
+from ...prompting import PromptChange, PromptSignature
+from .. import FrameResult, RecognitionTask
 from .catalog import ResultCatalog
 
 

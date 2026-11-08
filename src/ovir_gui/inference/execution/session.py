@@ -4,7 +4,7 @@ from time import perf_counter
 
 from ...media import KeyedPicture
 from ...prompting import LabeledPrompt
-from ...recognition import FrameResult
+from ...results import FrameResult
 from ..models.recognition_model import RecognitionModel
 from ..models.recognizer import Recognizer
 from .outcome import RecognitionOutcome

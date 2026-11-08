@@ -1,8 +1,8 @@
 from dataclasses import dataclass, replace
 
-from ..prompting import PromptSignature
-from ..recognition import FrameResult
-from ..review import ReviewFilter
+from ...prompting import PromptSignature
+from ...review import ReviewFilter
+from .. import FrameResult
 
 
 @dataclass(frozen=True, eq=False)

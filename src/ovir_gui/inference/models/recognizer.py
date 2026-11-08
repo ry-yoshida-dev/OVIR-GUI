@@ -3,7 +3,7 @@ from collections.abc import Sequence
 
 from ...media import KeyedPicture
 from ...prompting import LabeledPrompt
-from ...recognition import FrameResult
+from ...results import FrameResult
 from .recognition_model import RecognitionModel
 
 

@@ -7,7 +7,7 @@ import numpy as np
 from ...inference import ClassificationModel, ModelProfile, ProfileOption
 from ...media import FrameKey
 from ...prompting import PromptSignature, QueriedClass, QueryKind, ReferenceBox, ReferenceImage
-from ...recognition import (
+from ...results import (
     ClassifierLogits,
     ClassScore,
     EmbeddingLogit,
@@ -19,8 +19,8 @@ from ...recognition import (
     RecognitionTask,
     RecognizedInstance,
 )
-from ...recognition.array_types import UInt8Array
-from ...results import ResultLibrary, StoredResult
+from ...results.array_types import UInt8Array
+from ...results.in_memory import ResultLibrary, StoredResult
 from ..files.json_fields import JsonFields, JsonValue
 from ..picture_prompts.codec import PicturePromptCodec
 from .manifest_writer import ResultsManifestWriter

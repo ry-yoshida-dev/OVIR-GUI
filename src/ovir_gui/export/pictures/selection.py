@@ -2,8 +2,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
 from ...media import FrameKey
-from ...recognition import FrameResult, RecognitionTask
-from ...results import StoredResult
+from ...results import FrameResult, RecognitionTask
+from ...results.in_memory import StoredResult
 from ...review import ReviewFilter
 from .item import ExportItem
 

@@ -7,7 +7,7 @@ import pytest
 
 from ovir_gui.inference import ModelProfile
 from ovir_gui.media import FrameKey, InferenceMode, MediaItem, VideoSampling
-from ovir_gui.recognition import RecognitionTask
+from ovir_gui.results import RecognitionTask
 from ovir_gui.workspace import BackgroundPlanner
 
 FRAME_COUNT = 6

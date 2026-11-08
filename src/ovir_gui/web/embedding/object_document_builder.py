@@ -4,8 +4,8 @@ from typing import ClassVar
 
 from ...inference import ModelProfile
 from ...media import FrameKey
-from ...recognition import FrameResult, RecognizedInstance
-from ...results import ResultCatalog, StoredResult
+from ...results import FrameResult, RecognizedInstance
+from ...results.in_memory import ResultCatalog, StoredResult
 from ...review import ReviewFilter
 from ...storage import JsonValue
 from ...workspace import Workspace

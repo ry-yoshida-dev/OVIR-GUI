@@ -19,8 +19,8 @@ from ovir_gui.prompting import (
     QueriedClass,
     QueryKind,
 )
-from ovir_gui.recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
-from ovir_gui.results import ResultLibrary
+from ovir_gui.results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ovir_gui.results.in_memory import ResultLibrary
 from ovir_gui.storage import PicturePromptStore, ResultsStore
 
 IMAGE_WIDTH = 32

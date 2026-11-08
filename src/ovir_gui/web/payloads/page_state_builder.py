@@ -3,11 +3,12 @@ from pathlib import Path
 
 from ...export import ExportReport
 from ...inference import ClassificationModel, ModelProfile, RecognitionModel
-from ...media import ClassColors, FrameKey, InferenceMode, MediaItem, MediaKind
+from ...media import FrameKey, InferenceMode, MediaItem, MediaKind
 from ...prompting import FramePrompt, ObjectMark, PicturePrompts
-from ...recognition import LabelMode, RecognitionTask
+from ...results import LabelMode, RecognitionTask
 from ...review import DuplicateSuppression
 from ...storage import ClassThresholdStore, JsonValue
+from ...vocabulary import ClassColors
 from ...workspace import MediaStatus, RunProgress, Workspace
 from ..json_object import JsonObject
 from ..previews.cache import PicturePreviewCache

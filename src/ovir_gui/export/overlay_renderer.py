@@ -4,8 +4,8 @@ from typing import ClassVar
 import numpy as np
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
-from ..recognition import ClassScore, FrameResult, RecognizedInstance
-from ..recognition.array_types import BoolArray
+from ..results import ClassScore, FrameResult, RecognizedInstance
+from ..results.array_types import BoolArray
 
 
 class OverlayRenderer:

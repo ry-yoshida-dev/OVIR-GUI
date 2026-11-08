@@ -6,7 +6,7 @@ from object_detection_format import AnnotationFormat as BoxAnnotationFormat
 from segmentation_format import AnnotationFormat as MaskAnnotationFormat
 
 from ..media import MediaItem
-from ..recognition import RecognitionTask
+from ..results import RecognitionTask
 from .choices.format import ExportFormat
 from .options import ExportOptions
 from .overlay_renderer import OverlayRenderer

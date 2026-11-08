@@ -5,7 +5,7 @@ from pathlib import Path
 from ...export import ExportItem, ExportReport, ExportSelection, ResultExporter
 from ...inference import ModelProfile
 from ...media import FrameKey, MediaKind
-from ...results import ResultCatalog, ResultLibrary, StoredResult
+from ...results.in_memory import ResultCatalog, ResultLibrary, StoredResult
 from ..classes.workbench import ClassWorkbench
 from ..messages.action_reply import ActionReply
 from ..messages.status_notifier import StatusNotifier

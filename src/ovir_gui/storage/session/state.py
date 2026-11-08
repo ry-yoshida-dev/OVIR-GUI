@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from ...inference import ModelSelection
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 from .media import SessionMedia
 from .task_settings import SessionTaskSettings
 

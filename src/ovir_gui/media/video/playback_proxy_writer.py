@@ -15,7 +15,7 @@ from video_handler import (
     VideoWriteParameters,
 )
 
-from ...ffmpeg import OperatingSystem
+from ...external_programs import OperatingSystem
 from ..item import MediaItem
 from .frame_reader import VideoFrameReader
 

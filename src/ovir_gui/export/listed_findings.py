@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import ClassVar
 
 from ..media import FrameKey, MediaItem
-from ..recognition import Finding
-from ..results import ResultCatalog, StoredResult
+from ..results import Finding
+from ..results.in_memory import ResultCatalog, StoredResult
 
 
 class ListedFindingsWriter:

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Identity of the model and options a result was recognized with: `ModelProfile` tells results of different models and options apart for `results/`, each setting held as a `ProfileOption`.
+Identity of the model and options a result was recognized with: `ModelProfile` tells results of different models and options apart for `results/in_memory/`, each setting held as a `ProfileOption`.
 
 ## Components
 

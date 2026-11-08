@@ -4,7 +4,7 @@ from open_vocabulary_segmentation import ObjectPrompt, ObjectTracker, TrackedFra
 
 from ....media import KeyedPicture
 from ....prompting import LabeledPrompt, ObjectMark
-from ....recognition import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
+from ....results import FrameResult, ImageSize, InstanceMask, RecognitionTask, RecognizedInstance
 from ...execution.stream_position import StreamPosition
 from ..promptable_segmentation.object_prompt_builder import ObjectPromptBuilder
 from ..recognizer import Recognizer

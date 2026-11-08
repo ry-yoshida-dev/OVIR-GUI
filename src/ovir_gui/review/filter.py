@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from ..recognition import Finding, FrameResult, LabelMode, PixelBox
+from ..results import Finding, FrameResult, LabelMode, PixelBox
 from .class_thresholds import ClassThresholds
 from .duplicate_suppression import DuplicateSuppression
 

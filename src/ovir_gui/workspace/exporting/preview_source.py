@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ...export import ExportItem
 from ...media import FrameKey, MediaItem
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 
 
 @dataclass(frozen=True, eq=False)

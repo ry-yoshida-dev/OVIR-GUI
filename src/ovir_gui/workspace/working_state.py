@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ..inference import ModelProfile
 from ..media import FrameKey, MediaItem
-from ..recognition import RecognitionTask
+from ..results import RecognitionTask
 from .jobs.progress import RunProgress
 from .open_media.task import TaskMedia
 

@@ -3,8 +3,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ...media import FrameKey
-from ...recognition import RecognizedInstance
-from ...results import ResultCatalog, StoredResult
+from ...results import RecognizedInstance
+from ...results.in_memory import ResultCatalog, StoredResult
 from ...review import ReviewFilter
 from ..class_matrix import ClassMatrix
 from ..instance_matcher import InstanceMatcher

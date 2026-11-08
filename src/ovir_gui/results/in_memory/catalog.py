@@ -3,9 +3,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import replace
 from pathlib import Path
 
-from ..media import FrameKey
-from ..prompting import PromptChange, PromptSignature
-from ..recognition import FrameResult
+from ...media import FrameKey
+from ...prompting import PromptChange, PromptSignature
+from .. import FrameResult
 from .stored import StoredResult
 
 

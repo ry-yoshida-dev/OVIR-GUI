@@ -2,7 +2,7 @@ from collections.abc import Callable, Iterable, Mapping
 
 from ...inference import ModelProfile, RecognitionModel
 from ...media import FrameKey
-from ...results import ResultCatalog, ResultLibrary
+from ...results.in_memory import ResultCatalog, ResultLibrary
 from ...storage import ResultsSnapshot
 from ..jobs.background_planner import BackgroundPlanner
 from ..messages.status_notifier import StatusNotifier

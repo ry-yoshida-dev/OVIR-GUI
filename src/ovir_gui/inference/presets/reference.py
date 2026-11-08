@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ...recognition import RecognitionTask
+from ...results import RecognitionTask
 
 
 @dataclass(frozen=True)

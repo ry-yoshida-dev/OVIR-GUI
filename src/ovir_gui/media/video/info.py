@@ -3,7 +3,7 @@ from pathlib import Path
 
 from video_handler import VideoBackend, VideoMetadata, VideoReaderFactory
 
-from ...recognition import ImageSize
+from ...results import ImageSize
 
 
 @dataclass(frozen=True)

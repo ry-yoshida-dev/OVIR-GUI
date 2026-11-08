@@ -3,7 +3,7 @@ from collections.abc import Callable
 from ...inference import ModelProfile, RecognitionModel
 from ...media import FrameKey, MediaItem
 from ...prompting import LabeledPrompt, PromptMode
-from ...results import ResultCatalog
+from ...results.in_memory import ResultCatalog
 from ..classes.prompt_assembler import PromptAssembler
 from ..classes.prompt_preparation import PromptPreparation
 from ..classes.workbench import ClassWorkbench
