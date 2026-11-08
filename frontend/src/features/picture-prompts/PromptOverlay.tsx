@@ -9,8 +9,8 @@ interface PromptOverlayProps {
   activeKind: DrawingKindValue;
 }
 
-const POSITIVE_COLOR = "#2fbf71";
-const NEGATIVE_COLOR = "#e5484d";
+export const POSITIVE_COLOR = "#2fbf71";
+export const NEGATIVE_COLOR = "#e5484d";
 const POINT_RADIUS = 6;
 const LABEL_FONT_SIZE = 12;
 const INACTIVE_KIND_OPACITY = 0.4;

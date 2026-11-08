@@ -1,8 +1,11 @@
 import { type DragEvent, useMemo, useRef, useState } from "react";
 import { api, attempt } from "@/api/client";
 import type {
+  ClassDrawing,
   ClassEntry,
   ClassSetState,
+  DrawingKindEntry,
+  DrawingKindValue,
   LabelModeState,
   LabelModeValue,
 } from "@/api/types";
@@ -11,6 +14,7 @@ import { toggledMembership } from "@/domain/sets";
 import { ClassRow } from "@/features/classes/class-tree/ClassRow";
 import {
   type DragPayload,
+  drawingKeyOf,
   type DropTarget,
   type Editing,
   isRowPresent,
@@ -18,8 +22,10 @@ import {
   removalOf,
   type TreeRow,
 } from "@/features/classes/class-tree/classTreeModel";
+import { DrawingRow } from "@/features/classes/class-tree/DrawingRow";
 import { InlineInput } from "@/features/classes/class-tree/InlineInput";
 import { PhraseRow } from "@/features/classes/class-tree/PhraseRow";
+import { PromptKindTile } from "@/features/classes/class-tree/PromptKindTile";
 import { ReferenceRow } from "@/features/classes/class-tree/ReferenceRow";
 import { useDialogs } from "@/components/DialogHost";
 import { SaveGlyph, TrashGlyph } from "@/components/Glyphs";
@@ -30,24 +36,33 @@ interface ClassEditorProps {
   classes: ClassEntry[];
   classSet: ClassSetState;
   isImagePromptSupported: boolean;
+  drawingKinds: DrawingKindEntry[];
+  isPointSupported: boolean;
   labelMode: LabelModeState | null;
   onLabelModeChange: (labelMode: LabelModeValue) => void;
   onReport: (message: string) => void;
   onAddImagePrompt: (classIndex: number) => void;
+  onStartDrawing: (kind: DrawingKindValue, className: string) => void;
+  onShowDrawing: (drawing: ClassDrawing, className: string) => void;
   onOpenLibrary: () => void;
   onEditAsText: () => void;
 }
 
 const DRAG_TYPE = "application/x-ovir-query";
+const MARK_MODELS_REASON = " (needs SAM, SAM 2, EdgeTAM or SAM 3 original)";
 
 export function ClassEditor({
   classes,
   classSet,
   isImagePromptSupported,
+  drawingKinds,
+  isPointSupported,
   labelMode,
   onLabelModeChange,
   onReport,
   onAddImagePrompt,
+  onStartDrawing,
+  onShowDrawing,
   onOpenLibrary,
   onEditAsText,
 }: ClassEditorProps) {
@@ -81,14 +96,30 @@ export function ClassEditor({
         setEditing({ kind: "new-phrase", classIndex: selected.classIndex, position: selected.phraseIndex + 1 });
         break;
       case "reference":
+      case "drawing":
         expand(entry.name);
         setEditing({ kind: "new-phrase", classIndex: selected.classIndex, position: entry.phrases.length });
         break;
     }
   };
 
+  const removeDrawing = async (drawing: ClassDrawing): Promise<boolean> => {
+    const picture = { path: drawing.path, frame: drawing.frame };
+    if (drawing.kind === "mark") return run(() => api.removeMark(picture, drawing.object_id));
+    const indices = drawing.boxes.map((entry) => entry.index).sort((left, right) => right - left);
+    return run(async () => {
+      for (const index of indices) await api.removeExemplar(picture, index);
+    });
+  };
+
   const removeSelection = async () => {
     if (selected === null) return;
+    if (selected.kind === "drawing") {
+      const key = selected.drawingKey;
+      const drawing = classes[selected.classIndex]?.drawings.find((entry) => drawingKeyOf(entry) === key);
+      if (drawing !== undefined && (await removeDrawing(drawing))) setSelected(null);
+      return;
+    }
     const body = removalOf(selected);
     if (await run(() => api.removeClassRows(body))) setSelected(null);
   };
@@ -222,9 +253,57 @@ export function ClassEditor({
     if (isConfirmed) await run(api.clearClasses);
   };
 
+  const kindEntryOf = (kind: DrawingKindValue) => drawingKinds.find((candidate) => candidate.value === kind);
+  const markKind = kindEntryOf("mark");
+  const exemplarKind = kindEntryOf("exemplar");
+  const isDrawingUsed = (drawing: ClassDrawing): boolean =>
+    drawing.kind === "exemplar"
+      ? exemplarKind?.is_used === true
+      : markKind?.is_used === true && (isPointSupported || drawing.box !== null);
+
+  const drawingEntries = (entry: ClassEntry, classIndex: number): MenuEntry[] => {
+    const start = (kind: DrawingKindValue) => () => {
+      expand(entry.name);
+      setSelected({ kind: "class", classIndex });
+      onStartDrawing(kind, entry.name);
+    };
+    const entries: MenuEntry[] = [];
+    if (markKind !== undefined) {
+      const pointReason = !markKind.is_used
+        ? MARK_MODELS_REASON
+        : isPointSupported
+          ? ""
+          : " (this model takes boxes only)";
+      entries.push(
+        {
+          label: `Point Prompt${pointReason}`,
+          icon: <PromptKindTile kind="point" />,
+          isDisabled: pointReason !== "",
+          onSelect: start("mark"),
+        },
+        {
+          label: markKind.is_used ? "Box Prompt" : `Box Prompt${MARK_MODELS_REASON}`,
+          icon: <PromptKindTile kind="box" />,
+          isDisabled: !markKind.is_used,
+          onSelect: start("mark"),
+        },
+      );
+    }
+    if (exemplarKind !== undefined) {
+      entries.push({
+        label: exemplarKind.is_used ? "Exemplar Prompt" : "Exemplar Prompt (needs SAM 3)",
+        icon: <PromptKindTile kind="exemplar" />,
+        isDisabled: !exemplarKind.is_used,
+        onSelect: start("exemplar"),
+      });
+    }
+    return entries;
+  };
+
   const promptEntries = (entry: ClassEntry, classIndex: number): MenuEntry[] => [
     {
       label: "Text Prompt",
+      icon: <PromptKindTile kind="text" />,
       onSelect: () => {
         expand(entry.name);
         setSelected({ kind: "class", classIndex });
@@ -233,12 +312,14 @@ export function ClassEditor({
     },
     {
       label: isImagePromptSupported ? "Image Prompt…" : "Image Prompt… (needs OWL-ViT or YOLOE)",
+      icon: <PromptKindTile kind="image" />,
       isDisabled: !isImagePromptSupported,
       onSelect: () => {
         setSelected({ kind: "class", classIndex });
         onAddImagePrompt(classIndex);
       },
     },
+    ...drawingEntries(entry, classIndex),
   ];
 
   const rows = useMemo(() => classes.map((entry, classIndex) => ({ entry, classIndex })), [classes]);
@@ -433,12 +514,29 @@ export function ClassEditor({
                     onDragOver={(event) => onDragOver(event, { kind: "into-class", classIndex })}
                   />
                 ))}
+              {isExpanded &&
+                entry.drawings.map((drawing) => {
+                  const drawingKey = drawingKeyOf(drawing);
+                  return (
+                    <DrawingRow
+                      key={drawingKey}
+                      drawing={drawing}
+                      color={entry.color}
+                      isSelected={isSameRow(selected, { kind: "drawing", classIndex, drawingKey })}
+                      isUsed={isDrawingUsed(drawing)}
+                      onSelect={() => {
+                        setSelected({ kind: "drawing", classIndex, drawingKey });
+                        onShowDrawing(drawing, entry.name);
+                      }}
+                    />
+                  );
+                })}
               {isExpanded && !isAddingPhraseAtEnd && (
                 <div className="tree-row child tree-add-prompt">
                   <button
                     className="ghost"
                     onClick={(event) => menu.openBelow(event.currentTarget, promptEntries(entry, classIndex))}
-                    title={`Add a text or image prompt to ${entry.name}`}
+                    title={`Add a prompt to ${entry.name}`}
                   >
                     + Add Prompt
                   </button>

@@ -4,6 +4,8 @@ import { useViewportPosition } from "@/behaviors/useViewportPosition";
 
 export interface MenuEntry {
   label: ReactNode;
+  /** Shown in place of the check mark column. */
+  icon?: ReactNode;
   onSelect?: () => void;
   isDisabled?: boolean;
   isChecked?: boolean;
@@ -45,7 +47,7 @@ export function Menu({ x, y, entries, onClose }: MenuProps) {
               entry.onSelect?.();
             }}
           >
-            <span style={{ width: 12 }}>{entry.isChecked ? "✓" : ""}</span>
+            {entry.icon ?? <span style={{ width: 12 }}>{entry.isChecked ? "✓" : ""}</span>}
             <span>{entry.label}</span>
             {entry.shortcut !== undefined && <span className="shortcut">{entry.shortcut}</span>}
           </div>

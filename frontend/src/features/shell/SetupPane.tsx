@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { api } from "@/api/client";
 import type {
+  ClassDrawing,
+  DrawingKindValue,
   MediaEntry,
   ModelSelection,
   TaskValue,
@@ -40,6 +42,8 @@ interface SetupPaneProps {
   onUploadFiles: () => void;
   onUploadFolder: () => void;
   onShowMedia: (path: string) => void;
+  onStartDrawing: (kind: DrawingKindValue, className: string) => void;
+  onShowDrawing: (drawing: ClassDrawing, className: string) => void;
   onInfer: () => void;
 }
 
@@ -62,6 +66,8 @@ export function SetupPane({
   onUploadFiles,
   onUploadFolder,
   onShowMedia,
+  onStartDrawing,
+  onShowDrawing,
   onInfer,
 }: SetupPaneProps) {
   const [checkedMediaPaths, setCheckedMediaPaths] = useState<Set<string>>(new Set());
@@ -140,6 +146,8 @@ export function SetupPane({
             classes={state.classes}
             classSet={state.class_set}
             isImagePromptSupported={state.model.is_image_prompt_supported}
+            drawingKinds={state.model.drawing_kinds}
+            isPointSupported={state.model.is_point_supported}
             labelMode={task === "classification" ? state.label_mode : null}
             onLabelModeChange={(labelMode) =>
               void call(() => api.setLabelMode(labelMode))
@@ -148,6 +156,8 @@ export function SetupPane({
             onAddImagePrompt={(classIndex) =>
               onOpenDialog({ kind: "reference", classIndex })
             }
+            onStartDrawing={onStartDrawing}
+            onShowDrawing={onShowDrawing}
             onOpenLibrary={() => onOpenDialog({ kind: "class-sets" })}
             onEditAsText={() => onOpenDialog({ kind: "class-text" })}
           />

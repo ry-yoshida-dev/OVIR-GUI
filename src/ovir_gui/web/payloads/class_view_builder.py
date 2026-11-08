@@ -1,5 +1,5 @@
-from ...media import ClassColors
-from ...prompting import PicturePrompts, ReferenceBoard
+from ...media import ClassColors, FrameKey
+from ...prompting import ExemplarBox, ObjectMark, PicturePrompts, ReferenceBoard
 from ...review import ClassThresholds, DuplicateSuppression
 from ...storage import ClassSet, ClassSetEntry, JsonValue
 from ...workspace import ClassWorkbench
@@ -24,8 +24,8 @@ class ClassViewBuilder:
         Returns
         -------
         list[JsonValue]
-            Name, color, phrases, reference images and counts of exemplar boxes and marked objects of every class,
-            in class order.
+            Name, color, phrases, reference images, pictures drawn on and counts of exemplar boxes and marked
+            objects of every class, in class order.
         """
         board: ReferenceBoard = workbench.reference_board
         prompts: PicturePrompts = workbench.picture_board.prompts
@@ -185,4 +185,55 @@ class ClassViewBuilder:
             "object_count": len(
                 {(mark.frame_key.path, mark.object_id) for mark in prompts.marks if mark.class_name == name}
             ),
+            "drawings": ClassViewBuilder._drawings(name, prompts),
         }
+
+    @staticmethod
+    def _drawings(name: str, prompts: PicturePrompts) -> list[JsonValue]:
+        """
+        What is drawn for one class, picture by picture.
+
+        Parameters
+        ----------
+        name : str
+            Class name.
+        prompts : PicturePrompts
+            Every drawing of the open pictures.
+
+        Returns
+        -------
+        list[JsonValue]
+            Per picture in picture order, its exemplar boxes of the class as one entry, then every object mark of
+            the class in object order. Exemplar indices count every box of the picture, as removal takes them.
+        """
+        keys: set[FrameKey] = {box.frame_key for box in prompts.exemplars if box.class_name == name} | {
+            mark.frame_key for mark in prompts.marks if mark.class_name == name
+        }
+        drawings: list[JsonValue] = []
+        for frame_key in sorted(keys, key=lambda key: key.sort_key()):
+            picture: JsonObject = {
+                "path": str(frame_key.path),
+                "frame": frame_key.frame_index,
+                "label": frame_key.label,
+            }
+            on_picture: tuple[ExemplarBox, ...] = prompts.of(frame_key).exemplars
+            boxes: list[JsonValue] = [
+                {"index": index, "box": list[JsonValue](box.xyxy), "is_positive": box.is_positive}
+                for index, box in enumerate(on_picture)
+                if box.class_name == name
+            ]
+            if boxes:
+                drawings.append({**picture, "kind": "exemplar", "boxes": boxes})
+            marks: list[ObjectMark] = [mark for mark in prompts.of(frame_key).marks if mark.class_name == name]
+            drawings.extend(
+                {
+                    **picture,
+                    "kind": "mark",
+                    "object_id": mark.object_id,
+                    "positive_points": [list[JsonValue](point) for point in mark.positive_points],
+                    "negative_points": [list[JsonValue](point) for point in mark.negative_points],
+                    "box": None if mark.box is None else list[JsonValue](mark.box),
+                }
+                for mark in marks
+            )
+        return drawings

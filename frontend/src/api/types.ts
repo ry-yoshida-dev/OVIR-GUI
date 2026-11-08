@@ -220,7 +220,24 @@ export interface ClassEntry {
   references: ReferenceEntry[];
   exemplar_count: number;
   object_count: number;
+  drawings: ClassDrawing[];
 }
+
+interface DrawnPicture {
+  path: string;
+  frame: number | null;
+  label: string;
+}
+
+export interface ClassExemplarBox {
+  index: number;
+  box: Box;
+  is_positive: boolean;
+}
+
+export type ClassDrawing =
+  | (DrawnPicture & { kind: "exemplar"; boxes: ClassExemplarBox[] })
+  | (DrawnPicture & Omit<MarkEntry, "class_name"> & { kind: "mark" });
 
 export interface ClassSetState {
   name: string;

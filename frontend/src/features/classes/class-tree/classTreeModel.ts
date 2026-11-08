@@ -1,9 +1,18 @@
-import type { ClassEntry } from "@/api/types";
+import type { ClassDrawing, ClassEntry } from "@/api/types";
 
 export type TreeRow =
   | { kind: "class"; classIndex: number }
   | { kind: "phrase"; classIndex: number; phraseIndex: number }
-  | { kind: "reference"; classIndex: number; name: string; digest: string };
+  | { kind: "reference"; classIndex: number; name: string; digest: string }
+  | { kind: "drawing"; classIndex: number; drawingKey: string };
+
+/**
+ * Identity of a drawing row: its kind, picture and, for a mark, its object.
+ */
+export function drawingKeyOf(drawing: ClassDrawing): string {
+  const object = drawing.kind === "mark" ? drawing.object_id : "";
+  return `${drawing.kind}:${drawing.path}:${drawing.frame ?? ""}:${object}`;
+}
 
 export type Editing =
   | { kind: "rename-class"; classIndex: number }
@@ -41,6 +50,8 @@ export function isSameRow(left: TreeRow | null, right: TreeRow): boolean {
         left.digest === right.digest &&
         left.name === right.name
       );
+    case "drawing":
+      return right.kind === "drawing" && left.drawingKey === right.drawingKey;
   }
 }
 
@@ -56,6 +67,8 @@ export function isRowPresent(row: TreeRow, classes: ClassEntry[]): boolean {
       return entry.references.some(
         (reference) => reference.digest === row.digest,
       );
+    case "drawing":
+      return entry.drawings.some((drawing) => drawingKeyOf(drawing) === row.drawingKey);
   }
 }
 

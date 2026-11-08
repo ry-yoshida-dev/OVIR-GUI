@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { api } from "@/api/client";
-import type { TaskValue } from "@/api/types";
+import type { ClassDrawing, DrawingKindValue, TaskValue } from "@/api/types";
 import { type AppDialog, AppDialogs } from "@/features/shell/AppDialogs";
 import { BinderShape } from "@/features/shell/BinderShape";
 import { BinderTabs } from "@/features/shell/BinderTabs";
@@ -184,6 +184,19 @@ export function App() {
     setCenterLayout({ mode: "image" });
     show(path, frame);
   };
+  const startDrawing = (kind: DrawingKindValue, className: string) => {
+    if (state.picture_prompt === null) {
+      report("Open a picture first; point, box and exemplar prompts are drawn on it.");
+      return;
+    }
+    setCenterLayout({ mode: "image" });
+    promptEditor.startDrawing(kind, className);
+  };
+  const showDrawing = (drawing: ClassDrawing, className: string) => {
+    const objectId = drawing.kind === "mark" ? drawing.object_id : null;
+    promptEditor.focusDrawing(drawing.kind, className, { path: drawing.path, frame: drawing.frame }, objectId);
+    openPicture(drawing.path, drawing.frame);
+  };
   const setAccepted = (targets: TableRow[], isAccepted: boolean) => {
     void call(() => api.setAccepted(groupFindings(targets), isAccepted));
   };
@@ -226,6 +239,8 @@ export function App() {
               onUploadFiles={upload.chooseFiles}
               onUploadFolder={upload.chooseFolder}
               onShowMedia={showMedia}
+              onStartDrawing={startDrawing}
+              onShowDrawing={showDrawing}
               onInfer={infer}
             />
             <Splitter onResize={(delta) => resize("sidebarWidth", delta)} />

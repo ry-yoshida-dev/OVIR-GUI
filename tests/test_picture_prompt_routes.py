@@ -182,6 +182,27 @@ class TestPicturePromptRoutes:
         }
         assert counts["person"] == (1, 2)
 
+    def test_classes_list_their_drawings_by_picture(self, client: TestClient, media_directory: Path) -> None:
+        self.switch_to_segmentation(client, media_directory)
+        first: JsonDict = {"path": str(media_directory / "first.png"), "frame": None}
+        second: JsonDict = {"path": str(media_directory / "second.png"), "frame": None}
+        _ = client.put("/api/prompts/marks", json={**second, "class_name": "person", "positive_points": [[4, 5]]})
+        _ = client.put("/api/prompts/marks", json={**first, "class_name": "person", "box": [1, 1, 9, 9]})
+        _ = client.post(
+            "/api/prompts/exemplars", json={**first, "class_name": "person", "box": [2, 2, 8, 8], "is_positive": False}
+        )
+        classes: list[JsonDict] = client.get("/api/state").json()["classes"]
+        person: JsonDict = next(entry for entry in classes if entry["name"] == "person")
+        drawings: list[JsonDict] = cast(list[JsonDict], person["drawings"])
+        assert [(entry["label"], entry["kind"]) for entry in drawings] == [
+            ("first.png", "exemplar"),
+            ("first.png", "mark"),
+            ("second.png", "mark"),
+        ]
+        assert drawings[0]["boxes"] == [{"index": 0, "box": [2, 2, 8, 8], "is_positive": False}]
+        assert drawings[1]["box"] == [1, 1, 9, 9]
+        assert drawings[2]["positive_points"] == [[4, 5]]
+
     def test_promptable_presets_are_taken_over_by_concept_models(self, client: TestClient) -> None:
         assert client.put("/api/task", json={"task": "segmentation"}).status_code == 200
         response: Response = client.put(

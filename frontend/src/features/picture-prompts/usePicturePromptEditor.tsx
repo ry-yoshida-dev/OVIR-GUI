@@ -34,6 +34,8 @@ export interface PicturePromptEditor {
   removeMarkHere: (objectId: number) => void;
   removeObject: (objectId: number) => void;
   clearPicture: () => void;
+  startDrawing: (kind: DrawingKindValue, className: string) => void;
+  focusDrawing: (kind: DrawingKindValue, className: string, picture: PictureKey, objectId: number | null) => void;
 }
 
 interface PicturePromptEditorOptions {
@@ -60,6 +62,10 @@ function kindOf(kinds: DrawingKindEntry[], chosen: DrawingKindValue | null): Dra
   return preferred ?? kinds[0]?.value ?? null;
 }
 
+function isSamePicture(left: PictureKey, right: PictureKey): boolean {
+  return left.path === right.path && left.frame === right.frame;
+}
+
 function modelKeyOf(state: WorkspaceState | null): string {
   return state === null ? "" : `${state.model.selection.backend}/${state.model.selection.preset_name}`;
 }
@@ -82,13 +88,16 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
   const [isExcluding, setIsExcluding] = useState(false);
   const [chosenClass, setChosenClass] = useState<string | null>(null);
   const [activeObjectId, setActiveObjectId] = useState<number | null>(null);
+  const [awaitedPicture, setAwaitedPicture] = useState<PictureKey | null>(null);
   const className = chosenClass !== null && classNames.includes(chosenClass) ? chosenClass : (classNames[0] ?? null);
   const picture: PictureKey | null = useMemo(
     () => (prompt === null ? null : { path: prompt.path, frame: prompt.frame }),
     [prompt],
   );
 
-  if (activeObjectId !== null && prompt !== null) {
+  if (awaitedPicture !== null && prompt !== null && isSamePicture(awaitedPicture, prompt)) setAwaitedPicture(null);
+
+  if (activeObjectId !== null && prompt !== null && awaitedPicture === null) {
     const isKnown = isSequential
       ? prompt.objects.some((entry) => entry.object_id === activeObjectId)
       : prompt.marks.some((entry) => entry.object_id === activeObjectId);
@@ -249,6 +258,21 @@ export function usePicturePromptEditor({ state, call, report }: PicturePromptEdi
       if (picture === null) return;
       setActiveObjectId(null);
       void call(() => api.clearPicturePrompts(picture));
+    },
+    startDrawing: (chosen, name) => {
+      setKindChoice({ modelKey, kind: chosen });
+      setChosenClass(name);
+      setActiveObjectId(null);
+      setAwaitedPicture(null);
+      setIsExcluding(false);
+      setIsEnabled(true);
+    },
+    focusDrawing: (chosen, name, target, objectId) => {
+      setKindChoice({ modelKey, kind: chosen });
+      setChosenClass(name);
+      setActiveObjectId(objectId);
+      setAwaitedPicture(prompt !== null && isSamePicture(target, prompt) ? null : target);
+      setIsEnabled(true);
     },
   };
 }

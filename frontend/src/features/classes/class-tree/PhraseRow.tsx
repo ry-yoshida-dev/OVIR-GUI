@@ -1,4 +1,5 @@
 import type { DragEvent, ReactNode } from "react";
+import { PromptKindTile } from "./PromptKindTile";
 
 interface PhraseRowProps {
   phrase: string;
@@ -35,7 +36,7 @@ export function PhraseRow({
       onClick={onSelect}
       onDoubleClick={onRename}
     >
-      <span className="faint">“</span>
+      <PromptKindTile kind="text" />
       {renameInput ?? <span className="label">{phrase}</span>}
     </div>
   );
