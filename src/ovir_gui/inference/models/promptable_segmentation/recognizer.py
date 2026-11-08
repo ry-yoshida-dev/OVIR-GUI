@@ -28,17 +28,20 @@ class PromptableSegmentationRecognizer(Recognizer[PromptableSegmentationModel]):
 
     ENCODING_CACHE_SIZE: ClassVar[int] = 4
 
-    def __init__(self, model: PromptableSegmentationModel) -> None:
+    def __init__(self, model: PromptableSegmentationModel, segmenter: PromptableSegmenter | None = None) -> None:
         """
-        Load the promptable segmenter.
+        Load the promptable segmenter, unless one already loaded on the same weights is handed over.
 
         Parameters
         ----------
         model : PromptableSegmentationModel
             Settings to load.
+        segmenter : PromptableSegmenter | None
+            Loaded segmenter of the model's weights, e.g. the one masking the boxes of a concept segmenter; ``None``
+            to load one.
         """
         super().__init__(model, PromptableSegmentationModel)
-        self._segmenter: PromptableSegmenter = model.settings.build()
+        self._segmenter: PromptableSegmenter = model.settings.build() if segmenter is None else segmenter
         self._prompts: ObjectPromptBuilder = ObjectPromptBuilder(model.supported_elements)
         self._encodings: OrderedDict[FrameKey, tuple[str, EncodedImage]] = OrderedDict()
 

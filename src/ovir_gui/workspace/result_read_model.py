@@ -365,11 +365,11 @@ class ResultReadModel:
         Returns
         -------
         Callable[[FrameKey], bool]
-            True for a picture with an up-to-date result, or, for a model segmenting marked objects, without marks and
+            True for a picture with an up-to-date result, or, for a model taking object marks only, without marks and
             without a result.
         """
         is_up_to_date: Callable[[FrameKey], bool] = self.up_to_date_check(profile)
-        if QueryKind.MARK not in profile.query_kinds:
+        if profile.query_kinds != frozenset({QueryKind.MARK}):
             return is_up_to_date
         prompts: PicturePrompts = self._workbench.picture_board.prompts
         catalog: ResultCatalog | None = self._catalog_of(profile)

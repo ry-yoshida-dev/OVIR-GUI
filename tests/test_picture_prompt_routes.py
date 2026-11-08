@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 
 import cv2
 import numpy as np
@@ -128,7 +129,6 @@ class TestPicturePromptRoutes:
         assert isinstance(modes, list)
         assert [mode["value"] for mode in modes if isinstance(mode, dict)] == [
             "concept",
-            "promptable",
             "generation",
             "tracker",
             "concept_tracker",
@@ -137,8 +137,9 @@ class TestPicturePromptRoutes:
     @pytest.mark.parametrize(
         ("backend", "preset", "drawing_kinds", "is_sequential"),
         [
-            ("sam3", "original", {"exemplar": True, "mark": False}, False),
-            ("promptable/sam2", "hiera_tiny", {"exemplar": False, "mark": True}, False),
+            ("sam3", "original", {"exemplar": True, "mark": True}, False),
+            ("sam3", "litetext_s0", {"exemplar": True, "mark": False}, False),
+            ("sam2", "hiera_tiny", {"exemplar": False, "mark": True}, False),
             ("generation/sam2", "hiera_tiny", {"exemplar": False, "mark": False}, False),
             ("tracker/sam2", "hiera_tiny", {"exemplar": False, "mark": True}, True),
             ("concept_tracker/sam3", "original", {"exemplar": False, "mark": False}, True),
@@ -181,16 +182,17 @@ class TestPicturePromptRoutes:
         }
         assert counts["person"] == (1, 2)
 
-    def test_mark_models_refuse_to_run_without_marks(self, client: TestClient, media_directory: Path) -> None:
-        self.switch_to_segmentation(client, media_directory)
+    def test_promptable_presets_are_taken_over_by_concept_models(self, client: TestClient) -> None:
+        assert client.put("/api/task", json={"task": "segmentation"}).status_code == 200
         response: Response = client.put(
             "/api/model/preset", json={"backend": "promptable/sam2", "preset_name": "hiera_tiny"}
         )
         assert response.status_code == 200
-        reply: JsonDict = client.post("/api/run", json={"is_skipping_approved": False}).json()
-        assert reply["status"] == "rejected"
-        message: object = reply["message"]
-        assert isinstance(message, str) and "mark" in message
+        model: JsonDict = client.get("/api/state").json()["model"]
+        selection: JsonDict = cast(JsonDict, model["selection"])
+        assert (selection["backend"], selection["preset_name"]) == ("sam2", "hiera_tiny")
+        backends: list[JsonDict] = cast(list[JsonDict], model["backends"])
+        assert not any(str(entry["value"]).startswith("promptable/") for entry in backends)
 
     def test_drawings_survive_a_restart(self, tmp_path: Path, client: TestClient, media_directory: Path) -> None:
         picture: JsonDict = {"path": str(media_directory / "second.png"), "frame": None}

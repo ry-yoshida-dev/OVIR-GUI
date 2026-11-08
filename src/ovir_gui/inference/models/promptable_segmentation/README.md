@@ -2,7 +2,7 @@
 
 ## Overview
 
-Segmentation of the objects marked by points and boxes on each picture: `PromptableSegmentationModel` holds the settings, `PromptableSegmentationRecognizer` runs it, and `ObjectPromptBuilder` turns an `ObjectMark` into the library `ObjectPrompt`, also used by the object trackers.
+Segmentation of the objects marked by points and boxes on each picture: `PromptableSegmentationModel` holds the settings, `PromptableSegmentationRecognizer` runs it, and `ObjectPromptBuilder` turns an `ObjectMark` into the library `ObjectPrompt`, also used by the object trackers. A promptable preset with a concept preset of the same family and name is not offered on its own; `SegmentationModel` runs it for the marks.
 
 ## Components
 

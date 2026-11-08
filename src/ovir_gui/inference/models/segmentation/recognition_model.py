@@ -24,6 +24,7 @@ from ...presets.segmentation_mode import SegmentationMode
 from ...presets.selection import ModelSelection
 from ...profiles.option import ProfileOption
 from ..detection.recognition_model import DetectionModel
+from ..promptable_segmentation.recognition_model import PromptableSegmentationModel
 from ..recognition_model import RecognitionModel
 from ..threshold_controls import ThresholdControls
 
@@ -42,14 +43,21 @@ class SegmentationModel(RecognitionModel):
     without recognizing again. NMS thresholds are read at inference time.
 
     A box-prompted backend accepts the query kinds of its box detector, SAM 3 phrases, reference images and exemplar
-    boxes, and the others phrases only.
+    boxes, and the others phrases only. A family that also has a promptable preset of the same name segments the
+    objects marked on each picture with it as well, so one model takes both class queries and object marks.
     """
 
     TASK: ClassVar[RecognitionTask] = RecognitionTask.SEGMENTATION
     SECTION_KEY: ClassVar[str] = "segmenter"
     BOX_DETECTOR_KEY: ClassVar[str] = "box_detector"
 
-    def __init__(self, preset: ModelPreset, settings: SegmenterSettings, box_detector_label: str | None) -> None:
+    def __init__(
+        self,
+        preset: ModelPreset,
+        settings: SegmenterSettings,
+        box_detector_label: str | None,
+        mark_model: PromptableSegmentationModel | None = None,
+    ) -> None:
         """
         Parameters
         ----------
@@ -59,10 +67,14 @@ class SegmentationModel(RecognitionModel):
             Library settings, possibly overridden.
         box_detector_label : str | None
             Detection preset whose detector replaced the one of the segmentation preset; ``None`` when unchanged.
+        mark_model : PromptableSegmentationModel | None
+            Promptable segmenter of the same family segmenting the objects marked on each picture; ``None`` when the
+            model takes no object marks.
         """
         super().__init__(preset)
         self._settings: SegmenterSettings = settings
         self._box_detector_label: str | None = box_detector_label
+        self._mark_model: PromptableSegmentationModel | None = mark_model
 
     @classmethod
     def from_preset(cls, preset: ModelPreset) -> "SegmentationModel":
@@ -112,6 +124,38 @@ class SegmentationModel(RecognitionModel):
         if backend.value != preset.backend:
             raise ValueError(f"{preset.label}: preset declares backend {backend.value}")
         return cls(preset, settings, None)
+
+    def with_mark_model(self, mark_model: PromptableSegmentationModel) -> "SegmentationModel":
+        """
+        Same model also segmenting the objects marked on each picture.
+
+        Parameters
+        ----------
+        mark_model : PromptableSegmentationModel
+            Promptable segmenter of the same family.
+
+        Returns
+        -------
+        SegmentationModel
+            Copy taking object marks besides its class queries.
+        """
+        return SegmentationModel(self.preset, self._settings, self._box_detector_label, mark_model)
+
+    @property
+    def mark_model(self) -> PromptableSegmentationModel | None:
+        """
+        Promptable segmenter segmenting the objects marked on each picture.
+
+        Returns
+        -------
+        PromptableSegmentationModel | None
+            ``None`` when the model takes no object marks.
+        """
+        return self._mark_model
+
+    @property
+    def is_point_supported(self) -> bool:
+        return self._mark_model is None or self._mark_model.is_point_supported
 
     @staticmethod
     def is_box_prompted_backend(backend: str) -> bool:
@@ -207,6 +251,10 @@ class SegmentationModel(RecognitionModel):
 
     @property
     def supported_query_kinds(self) -> frozenset[QueryKind]:
+        mark_kinds: frozenset[QueryKind] = frozenset() if self._mark_model is None else frozenset({QueryKind.MARK})
+        return self._class_query_kinds() | mark_kinds
+
+    def _class_query_kinds(self) -> frozenset[QueryKind]:
         box_detector: DetectorSettings | None = self._settings.box_detector
         if box_detector is not None:
             return DetectionModel.query_kinds_of(box_detector.backend)
@@ -267,14 +315,17 @@ class SegmentationModel(RecognitionModel):
 
     @property
     def usage_description(self) -> str:
+        descriptions: list[str] = []
         if self.is_box_prompted:
-            return f"Boxes from {self.box_detector_description}"
+            descriptions.append(f"Boxes from {self.box_detector_description}.")
         if QueryKind.EXEMPLAR in self.supported_query_kinds:
-            return (
+            descriptions.append(
                 "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "  # noqa: RUF001
                 + "a class without phrases is segmented from its boxes alone."
             )
-        return ""
+        if self._mark_model is not None:
+            descriptions.append(f"Objects drawn on a picture are segmented too: {self._mark_model.usage_description}")
+        return " ".join(descriptions)
 
     @property
     def threshold_controls(self) -> ThresholdControls:
@@ -342,7 +393,10 @@ class SegmentationModel(RecognitionModel):
             box_detector=box_detector,
             batch_size=batch_size,
         )
-        return SegmentationModel(self.preset, settings, box_label)
+        mark_model: PromptableSegmentationModel | None = (
+            None if self._mark_model is None else self._mark_model.customized(selection, box_detector_of)
+        )
+        return SegmentationModel(self.preset, settings, box_label, mark_model)
 
     def build_recognizer(self) -> "Recognizer[SegmentationModel]":
         from .recognizer import SegmentationRecognizer

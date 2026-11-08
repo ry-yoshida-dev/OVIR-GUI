@@ -29,6 +29,9 @@ class ModelSelector:
     Choosing a preset fills every override with the preset values. A device missing on this machine falls back to
     ``ComputeDevice.AUTO``, and a precision the device or library cannot run falls back to float32. Preset files are
     read once and remembered.
+
+    A promptable segmentation preset with a concept preset of the same family and name is not offered on its own: the
+    concept model segments the objects marked on each picture with it, and a selection of it is moved to that model.
     """
 
     PREFERRED_PRESETS: ClassVar[Mapping[RecognitionTask, PresetReference]] = {
@@ -98,9 +101,28 @@ class ModelSelector:
         Returns
         -------
         tuple[str, ...]
-            Backends in catalog order.
+            Backends in catalog order, without the promptable backends whose presets concept models take over.
         """
-        return self._catalog.backends_of(task)
+        return tuple(
+            backend
+            for backend in self._catalog.backends_of(task)
+            if self._concept_backend_taking_over(task, backend) is None
+        )
+
+    def _concept_backend_taking_over(self, task: RecognitionTask, backend: str) -> str | None:
+        if (
+            task is not RecognitionTask.SEGMENTATION
+            or SegmentationMode.of_backend(backend) is not SegmentationMode.PROMPTABLE
+        ):
+            return None
+        concept_backend: str = backend.removeprefix(SegmentationMode.PROMPTABLE.backend_prefix)
+        concept_names: frozenset[str] = frozenset(
+            preset.name for preset in self._catalog.presets_of(task, concept_backend)
+        )
+        presets: tuple[ModelPreset, ...] = self._catalog.presets_of(task, backend)
+        if not presets or any(preset.name not in concept_names for preset in presets):
+            return None
+        return concept_backend
 
     def presets_of(self, task: RecognitionTask, backend: str) -> tuple[ModelPreset, ...]:
         """
@@ -271,7 +293,8 @@ class ModelSelector:
         ModelSelection
             ``selection`` with a precision the device or library cannot run replaced by float32, and the thresholds the
             class minimums take over and the batch size of models running one picture at a time cleared; a missing
-            batch size is filled in with the preset's.
+            batch size is filled in with the preset's. A promptable preset a concept model takes over is replaced by
+            that model.
 
         Raises
         ------
@@ -280,6 +303,14 @@ class ModelSelector:
         ValueError
             If the device is not available or the pooling is not offered by the backend.
         """
+        concept_backend: str | None = self._concept_backend_taking_over(selection.task, selection.backend)
+        if concept_backend is not None:
+            taken_over: ModelSelection = self.selection_of(selection.task, concept_backend, selection.preset_name)
+            return self.validated(
+                replace(
+                    taken_over, device=selection.device, precision=selection.precision, batch_size=selection.batch_size
+                )
+            )
         base: RecognitionModel = self.base_model(selection.task, selection.backend, selection.preset_name)
         if not self._device_availability.is_available(selection.device):
             raise ValueError(f"The device {selection.device.value} is not available on this machine.")
@@ -332,7 +363,8 @@ class ModelSelector:
         Returns
         -------
         RecognitionModel
-            Model read from the preset, remembered for later calls.
+            Model read from the preset, remembered for later calls; a concept segmentation model also takes object
+            marks through the promptable preset it takes over.
 
         Raises
         ------
@@ -344,8 +376,22 @@ class ModelSelector:
         if cached is not None:
             return cached
         model: RecognitionModel = self.read_preset(self._catalog.preset(task, backend, preset_name))
+        if isinstance(model, SegmentationModel):
+            mark_model: PromptableSegmentationModel | None = self._mark_model_of(backend, preset_name)
+            if mark_model is not None:
+                model = model.with_mark_model(mark_model)
         self._base_models[key] = model
         return model
+
+    def _mark_model_of(self, concept_backend: str, preset_name: str) -> PromptableSegmentationModel | None:
+        task: RecognitionTask = RecognitionTask.SEGMENTATION
+        backend: str = f"{SegmentationMode.PROMPTABLE.backend_prefix}{concept_backend}"
+        if self._concept_backend_taking_over(task, backend) is None or not any(
+            preset.name == preset_name for preset in self._catalog.presets_of(task, backend)
+        ):
+            return None
+        model: RecognitionModel = self.base_model(task, backend, preset_name)
+        return model if isinstance(model, PromptableSegmentationModel) else None
 
     @classmethod
     def read_preset(cls, preset: ModelPreset) -> RecognitionModel:

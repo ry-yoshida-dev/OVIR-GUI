@@ -82,7 +82,7 @@ class SegmentationMode(Enum):
         """
         match self:
             case SegmentationMode.CONCEPT:
-                return "Find by phrases or examples"
+                return "Find by prompts"
             case SegmentationMode.PROMPTABLE:
                 return "Segment marked objects"
             case SegmentationMode.GENERATION:
