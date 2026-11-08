@@ -199,6 +199,20 @@ export function InfoGlyph() {
   );
 }
 
+export function ListGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M6 4.25h7M6 8h7M6 11.75h7M3 4.25h.01M3 8h.01M3 11.75h.01"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </Glyph>
+  );
+}
+
 export function MediaGlyph() {
   return (
     <Glyph>
@@ -237,6 +251,21 @@ export function ProfilesGlyph() {
         <path d="M8 2.25 14 5.25 8 8.25 2 5.25Z" />
         <path d="M2 8.25l6 3 6-3M2 11.25l6 3 6-3" />
       </g>
+    </Glyph>
+  );
+}
+
+export function RedoGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M10.25 3.5 13 6.25 10.25 9M12.75 6.25h-6a3.5 3.5 0 0 0 0 7H8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Glyph>
   );
 }
@@ -310,3 +339,19 @@ export function TrashGlyph() {
     </Glyph>
   );
 }
+
+export function UndoGlyph() {
+  return (
+    <Glyph>
+      <path
+        d="M5.75 3.5 3 6.25 5.75 9M3.25 6.25h6a3.5 3.5 0 0 1 0 7H7.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Glyph>
+  );
+}
+

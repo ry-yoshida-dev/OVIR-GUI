@@ -738,7 +738,54 @@ class Workspace:
             If the picture's file is not open.
         """
         self.media_item(frame_key.path)
-        edit(self._workbench.picture_board)
+        self._workbench.picture_board.edit(frame_key.path, edit)
+        self._picture_prompts_changed(frame_key)
+
+    def undo_picture_prompts(self, path: Path) -> None:
+        """
+        Bring back the drawings of a media file as they were before its last edit, as ``edit_picture_prompts`` would.
+
+        Parameters
+        ----------
+        path : Path
+            Open image or video.
+
+        Raises
+        ------
+        KeyError
+            If the file is not open.
+        IndexError
+            If the file has no edit to undo.
+        """
+        self.media_item(path)
+        self._workbench.picture_board.undo(path)
+        self._picture_prompts_changed(self._shown_key_of(path))
+
+    def redo_picture_prompts(self, path: Path) -> None:
+        """
+        Apply the last undone drawing edit of a media file again, as ``edit_picture_prompts`` would.
+
+        Parameters
+        ----------
+        path : Path
+            Open image or video.
+
+        Raises
+        ------
+        KeyError
+            If the file is not open.
+        IndexError
+            If the file has no undone edit.
+        """
+        self.media_item(path)
+        self._workbench.picture_board.redo(path)
+        self._picture_prompts_changed(self._shown_key_of(path))
+
+    def _shown_key_of(self, path: Path) -> FrameKey:
+        current: FrameKey | None = self._working.current_key
+        return current if current is not None and current.path == path else self.media_item(path).key_at(None)
+
+    def _picture_prompts_changed(self, frame_key: FrameKey) -> None:
         self._notifier.save_reporting_failure(
             lambda: self._stores.picture_prompt_store.save(self._workbench.picture_prompts_by_task),
             "Could not remember the drawings",

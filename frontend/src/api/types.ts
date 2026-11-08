@@ -318,6 +318,8 @@ export interface PicturePrompt {
   marks: MarkEntry[];
   objects: MarkedObject[];
   next_object_id: number;
+  can_undo: boolean;
+  can_redo: boolean;
 }
 
 export interface WorkspaceState {

@@ -108,6 +108,24 @@ class TestPicturePromptRoutes:
         assert client.post("/api/prompts/exemplars/remove", json={**picture, "index": 0}).status_code == 200
         assert [entry["is_positive"] for entry in self.exemplars(client)] == [False]
 
+    def test_clearing_is_undone_and_redone(self, client: TestClient, media_directory: Path) -> None:
+        path: str = str(media_directory / "first.png")
+        picture: JsonDict = {"path": path, "frame": None}
+        for box in ([1, 1, 20, 20], [5, 5, 30, 30]):
+            response: Response = client.post(
+                "/api/prompts/exemplars", json={**picture, "class_name": "car", "box": box, "is_positive": True}
+            )
+            assert response.status_code == 200
+        assert client.post("/api/prompts/clear", json=picture).status_code == 200
+        assert self.exemplars(client) == []
+        assert self.picture_prompt(client)["can_undo"] is True
+        assert client.post("/api/prompts/undo", json={"path": path}).status_code == 200
+        assert len(self.exemplars(client)) == 2
+        assert self.picture_prompt(client)["can_redo"] is True
+        assert client.post("/api/prompts/redo", json={"path": path}).status_code == 200
+        assert self.exemplars(client) == []
+        assert client.post("/api/prompts/redo", json={"path": path}).status_code == 400
+
     def exemplars(self, client: TestClient) -> list[JsonDict]:
         exemplars: object = self.picture_prompt(client)["exemplars"]
         assert isinstance(exemplars, list)

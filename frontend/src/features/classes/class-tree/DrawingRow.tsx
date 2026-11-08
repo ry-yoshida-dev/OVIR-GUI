@@ -102,12 +102,13 @@ export function DrawingRow({ drawing, color, isSelected, isUsed, onSelect }: Dra
         : "The selected model does not take box prompts";
   return (
     <div
-      className={["tree-row child", isSelected ? "selected" : "", isUsed ? "" : "disabled"].join(" ")}
+      className={["tree-row child", isSelected ? "selected" : "", isUsed ? "" : "unused"].join(" ")}
       title={isUsed ? `${content} on ${drawing.label}; click to show it` : unusedTitle}
       onClick={onSelect}
     >
       <DrawingThumb drawing={drawing} color={color} />
       <span className="label">{drawing.label}</span>
+      {!isUsed && <span className="unused-tag">unused</span>}
       <span className="faint small">{content}</span>
     </div>
   );

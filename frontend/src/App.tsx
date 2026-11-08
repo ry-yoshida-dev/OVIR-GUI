@@ -119,7 +119,7 @@ export function App() {
   );
   const videoPlayer = useVideoPlayerFallback(
     current,
-    promptEditor.drawing !== null,
+    promptEditor.drawing?.isDrawing === true,
     call,
     report,
   );

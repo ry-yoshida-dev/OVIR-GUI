@@ -285,6 +285,10 @@ export const api = {
     }),
   clearPicturePrompts: (picture: PictureKey) =>
     post("/api/prompts/clear", picture),
+  removeDrawings: (picture: PictureKey, exemplarIndices: number[], objectIds: number[]) =>
+    post("/api/prompts/remove", { ...picture, exemplar_indices: exemplarIndices, object_ids: objectIds }),
+  undoPicturePrompts: (path: string) => post("/api/prompts/undo", { path }),
+  redoPicturePrompts: (path: string) => post("/api/prompts/redo", { path }),
 
   embedding: () => get<{ parent_origins: string[] }>("/api/embedding"),
   resultDocument: (paths: string[] | null) =>

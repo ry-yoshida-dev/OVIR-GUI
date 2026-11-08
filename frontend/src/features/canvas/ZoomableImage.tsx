@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { Box } from "@/api/types";
+import type { AnchoredContent } from "./viewerDrawing";
 import type { ShownPicture } from "@/domain/annotatedSnapshot";
 import { clamp } from "@/domain/numbers";
 
@@ -27,10 +28,14 @@ interface ZoomableImageProps {
   isDrawing?: boolean;
   drawColor?: string;
   onDrawn?: (box: Box, isInverted: boolean) => void;
-  onPointClicked?: (point: [number, number], isInverted: boolean) => void;
+  onPointClicked?: (point: [number, number], isInverted: boolean, scale: number) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onBackgroundClick?: () => void;
+  // Called when a click without dragging starts on the bare picture, i.e. not on a result or a drawing.
+  onEmptyClick?: () => void;
   hud?: ReactNode;
+  banner?: ReactNode;
+  anchored?: AnchoredContent | null;
   shownPictureRef?: RefObject<ShownPicture | null>;
 }
 
@@ -49,7 +54,10 @@ export function ZoomableImage({
   onPointClicked,
   onKeyDown,
   onBackgroundClick,
+  onEmptyClick,
   hud,
+  banner = null,
+  anchored = null,
   shownPictureRef,
 }: ZoomableImageProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -60,7 +68,7 @@ export function ZoomableImage({
   const [loadedViewKey, setLoadedViewKey] = useState<string | null>(null);
   const isUserZoomed = useRef(false);
   const gesture = useRef<
-    | { kind: "pan"; startX: number; startY: number; view: View; hasMoved: boolean }
+    | { kind: "pan"; startX: number; startY: number; view: View; hasMoved: boolean; isOnPicture: boolean }
     | { kind: "draw"; start: [number, number]; isInverted: boolean }
     | null
   >(null);
@@ -137,7 +145,14 @@ export function ZoomableImage({
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     container.current?.focus();
     if (event.button === 1 || (event.button === 0 && (!isDrawing || event.shiftKey || event.altKey))) {
-      gesture.current = { kind: "pan", startX: event.clientX, startY: event.clientY, view, hasMoved: false };
+      gesture.current = {
+        kind: "pan",
+        startX: event.clientX,
+        startY: event.clientY,
+        view,
+        hasMoved: false,
+        isOnPicture: event.target instanceof SVGImageElement,
+      };
       setIsPanning(true);
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
@@ -173,6 +188,7 @@ export function ZoomableImage({
     if (current?.kind === "pan" && !current.hasMoved && event.target === event.currentTarget.querySelector("image")) {
       onBackgroundClick?.();
     }
+    if (current?.kind === "pan" && !current.hasMoved && current.isOnPicture) onEmptyClick?.();
     if (current?.kind === "draw" && draft !== null) {
       const box: Box = [
         Math.min(draft[0], draft[2]),
@@ -184,7 +200,7 @@ export function ZoomableImage({
       if (box[2] - box[0] >= MIN_DRAWN_SIDE && box[3] - box[1] >= MIN_DRAWN_SIDE) {
         onDrawn?.(box, current.isInverted);
       } else {
-        onPointClicked?.(current.start, current.isInverted);
+        onPointClicked?.(current.start, current.isInverted, view.scale);
       }
     }
   };
@@ -231,6 +247,17 @@ export function ZoomableImage({
           )}
         </g>
       </svg>
+      {banner !== null && <div className="viewer-banner">{banner}</div>}
+      {anchored !== null && isLoaded && (
+        <div
+          className="viewer-anchored"
+          style={{ left: view.x + anchored.point[0] * view.scale, top: view.y + anchored.point[1] * view.scale }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          {anchored.content}
+        </div>
+      )}
       <div className="viewer-hud">
         {Math.round(view.scale * 100)}%{hud}
       </div>

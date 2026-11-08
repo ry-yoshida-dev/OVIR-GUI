@@ -139,6 +139,63 @@ class PicturePrompts:
             marks=tuple(mark for mark in self.marks if mark.frame_key.path in kept),
         )
 
+    def has_same_drawings(self, other: "PicturePrompts") -> bool:
+        """
+        Whether two copies hold the same drawings, exemplars in the same order.
+
+        Parameters
+        ----------
+        other : PicturePrompts
+            Copy to compare with.
+
+        Returns
+        -------
+        bool
+            True when nothing differs.
+        """
+        return self.exemplars == other.exemplars and frozenset(self.marks) == frozenset(other.marks)
+
+    def with_class_renamed(self, old_name: str, new_name: str) -> "PicturePrompts":
+        """
+        Drawings with one class name replaced.
+
+        Parameters
+        ----------
+        old_name : str
+            Previous class name.
+        new_name : str
+            Current class name.
+
+        Returns
+        -------
+        PicturePrompts
+            Copy whose drawings of ``old_name`` belong to ``new_name``.
+        """
+        return PicturePrompts(
+            exemplars=tuple(box.renamed(new_name) if box.class_name == old_name else box for box in self.exemplars),
+            marks=tuple(mark.renamed(new_name) if mark.class_name == old_name else mark for mark in self.marks),
+        )
+
+    def with_classes(self, class_names: Iterable[str]) -> "PicturePrompts":
+        """
+        Drawings of some classes only.
+
+        Parameters
+        ----------
+        class_names : Iterable[str]
+            Classes to keep.
+
+        Returns
+        -------
+        PicturePrompts
+            Copy without the drawings of other classes.
+        """
+        kept: frozenset[str] = frozenset(class_names)
+        return PicturePrompts(
+            exemplars=tuple(box for box in self.exemplars if box.class_name in kept),
+            marks=tuple(mark for mark in self.marks if mark.class_name in kept),
+        )
+
     @staticmethod
     def _ordered(marks: Iterable[ObjectMark]) -> tuple[ObjectMark, ...]:
         return tuple(sorted(marks, key=lambda mark: (mark.frame_key.sort_key(), mark.object_id)))

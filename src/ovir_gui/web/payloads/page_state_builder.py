@@ -221,6 +221,8 @@ class PageStateBuilder:
                 for object_id, marked in sorted(objects.items())
             ],
             "next_object_id": workspace.workbench.picture_board.next_object_id(frame_key.path),
+            "can_undo": workspace.workbench.picture_board.can_undo(frame_key.path),
+            "can_redo": workspace.workbench.picture_board.can_redo(frame_key.path),
         }
 
     @staticmethod

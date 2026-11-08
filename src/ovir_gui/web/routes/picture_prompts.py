@@ -8,6 +8,8 @@ from ...workspace import Workspace
 from ..context import WebContext
 from ..json_object import JsonObject
 from ..request_bodies.box_corners import BoxCorners
+from ..request_bodies.path import PathBody
+from ..request_bodies.picture_prompts.drawings_removal import DrawingsRemovalBody
 from ..request_bodies.picture_prompts.exemplar import ExemplarBody
 from ..request_bodies.picture_prompts.exemplar_removal import ExemplarRemovalBody
 from ..request_bodies.picture_prompts.mark import MarkBody
@@ -17,7 +19,8 @@ from ..request_bodies.picture_prompts.picture import PictureBody
 
 class PicturePromptRoutes:
     """
-    Requests drawing exemplar boxes and object marks on the open pictures.
+    Requests drawing exemplar boxes and object marks on the open pictures, and undoing and redoing those edits per
+    media file.
     """
 
     def __init__(self, context: WebContext) -> None:
@@ -100,11 +103,30 @@ class PicturePromptRoutes:
             workspace.edit_picture_prompts(frame_key, lambda board: board.remove_mark(frame_key, body.object_id))
             return {}
 
+        @router.post("/prompts/remove")
+        async def remove_drawings(body: DrawingsRemovalBody) -> JsonObject:
+            workspace: Workspace = context.workspace
+            frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
+            workspace.edit_picture_prompts(
+                frame_key, lambda board: board.remove_drawings(frame_key, body.exemplar_indices, body.object_ids)
+            )
+            return {}
+
         @router.post("/prompts/clear")
         async def clear_picture(body: PictureBody) -> JsonObject:
             workspace: Workspace = context.workspace
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
             workspace.edit_picture_prompts(frame_key, lambda board: board.clear_picture(frame_key))
+            return {}
+
+        @router.post("/prompts/undo")
+        async def undo(body: PathBody) -> JsonObject:
+            context.workspace.undo_picture_prompts(Path(body.path))
+            return {}
+
+        @router.post("/prompts/redo")
+        async def redo(body: PathBody) -> JsonObject:
+            context.workspace.redo_picture_prompts(Path(body.path))
             return {}
 
         return router

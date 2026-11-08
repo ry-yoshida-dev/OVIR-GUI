@@ -125,6 +125,8 @@ export function ResultViewer({
   const comparedPrefix = compared === null ? "" : `${compared.model_name}: `;
   const scores = isFrameOfCurrent ? frame.scores : [];
   const colorOf = (className: string) => classColorOf(classColors, className);
+  // While a drawing tool is on, clicks on results draw instead of selecting them.
+  const isDrawing = drawing?.isDrawing ?? false;
   const selectFinding = (index: number) => {
     if (isFrameOfCurrent) onSelectFinding(frame.result_frame, index);
   };
@@ -155,7 +157,7 @@ export function ResultViewer({
             isRejected={isRejected}
             isHighlighted={isHighlighted}
             lineWidth={Math.max(1, options.lineWidth - 1)}
-            onClick={() => selectFinding(finding.index)}
+            onClick={isDrawing ? undefined : () => selectFinding(finding.index)}
           />
         )}
         <BoxShape
@@ -168,7 +170,7 @@ export function ResultViewer({
           isHighlighted={isHighlighted && (!hasMask || !options.isMaskShown)}
           isBoxHidden={hasMask && options.isMaskShown && !options.isMaskBoxShown && !isHighlighted}
           label={labelOf(finding, options)}
-          onClick={() => selectFinding(finding.index)}
+          onClick={isDrawing ? undefined : () => selectFinding(finding.index)}
         />
       </g>
     );
@@ -181,11 +183,14 @@ export function ResultViewer({
         fitKey={current.path}
         width={current.width}
         height={current.height}
-        isDrawing={drawing !== null}
+        isDrawing={isDrawing}
         drawColor={drawing?.color}
         onDrawn={drawing?.onBox}
         onPointClicked={drawing?.onPoint ?? undefined}
         onBackgroundClick={onClearSelection}
+        onEmptyClick={drawing?.onEmptyClick}
+        banner={drawing?.hint ?? null}
+        anchored={drawing?.anchored ?? null}
         shownPictureRef={shownPictureRef}
         onKeyDown={(event) => {
           const isVideo = current.kind === "video";

@@ -70,6 +70,68 @@ class TestPicturePromptBoard:
         with pytest.raises(IndexError):
             board.remove_exemplar(second, 1)
 
+    def test_edits_are_undone_and_redone_per_file(self) -> None:
+        board: PicturePromptBoard = PicturePromptBoard()
+        first: FrameKey = FrameKey(Path("/media/a.jpg"))
+        second: FrameKey = FrameKey(Path("/media/b.jpg"))
+        board.edit(first.path, lambda drawn: drawn.add_exemplar(ExemplarBox(first, "car", 0.0, 0.0, 5.0, 5.0)))
+        board.edit(second.path, lambda drawn: drawn.add_exemplar(ExemplarBox(second, "car", 0.0, 0.0, 6.0, 6.0)))
+        board.edit(first.path, lambda drawn: drawn.set_mark(ObjectMark(first, 1, "car", positive_points=((1.0, 1.0),))))
+        board.undo(first.path)
+        assert board.prompts.of(first).marks == ()
+        assert len(board.prompts.of(second).exemplars) == 1
+        board.undo(first.path)
+        assert board.prompts.of(first).exemplars == ()
+        assert not board.can_undo(first.path)
+        board.redo(first.path)
+        board.redo(first.path)
+        assert [mark.object_id for mark in board.prompts.of(first).marks] == [1]
+        assert not board.can_redo(first.path)
+        with pytest.raises(IndexError):
+            board.redo(first.path)
+
+    def test_a_new_edit_drops_the_undone_ones(self) -> None:
+        board: PicturePromptBoard = PicturePromptBoard()
+        image: FrameKey = FrameKey(Path("/media/a.jpg"))
+        board.edit(image.path, lambda drawn: drawn.add_exemplar(ExemplarBox(image, "car", 0.0, 0.0, 5.0, 5.0)))
+        board.undo(image.path)
+        board.edit(image.path, lambda drawn: drawn.add_exemplar(ExemplarBox(image, "car", 1.0, 1.0, 4.0, 4.0)))
+        assert not board.can_redo(image.path)
+
+    def test_edit_changing_nothing_is_not_a_step(self) -> None:
+        board: PicturePromptBoard = PicturePromptBoard()
+        image: FrameKey = FrameKey(Path("/media/a.jpg"))
+        board.edit(image.path, lambda drawn: drawn.remove_mark(image, 3))
+        assert not board.can_undo(image.path)
+
+    def test_undo_keeps_classes_renamed_or_removed_since(self) -> None:
+        board: PicturePromptBoard = PicturePromptBoard()
+        image: FrameKey = FrameKey(Path("/media/a.jpg"))
+        board.edit(image.path, lambda drawn: drawn.add_exemplar(ExemplarBox(image, "car", 0.0, 0.0, 5.0, 5.0)))
+        board.edit(image.path, lambda drawn: drawn.set_mark(ObjectMark(image, 1, "dog", positive_points=((1.0, 1.0),))))
+        board.edit(image.path, lambda drawn: drawn.clear_picture(image))
+        board.rename_class("car", "vehicle")
+        board.retain_classes(["vehicle"])
+        board.undo(image.path)
+        prompts: PicturePrompts = board.prompts
+        assert [box.class_name for box in prompts.exemplars] == ["vehicle"]
+        assert prompts.marks == ()
+
+    def test_drawings_removed_together_are_one_step(self) -> None:
+        board: PicturePromptBoard = PicturePromptBoard()
+        image: FrameKey = FrameKey(Path("/media/a.jpg"))
+        for left in (0.0, 1.0, 2.0):
+            board.add_exemplar(ExemplarBox(image, "car", left, 0.0, 9.0, 9.0))
+        board.set_mark(ObjectMark(image, 1, "car", positive_points=((1.0, 1.0),)))
+        board.edit(image.path, lambda drawn: drawn.remove_drawings(image, [0, 2], [1]))
+        assert [box.xyxy[0] for box in board.prompts.of(image).exemplars] == [1.0]
+        assert board.prompts.of(image).marks == ()
+        board.undo(image.path)
+        assert len(board.prompts.of(image).exemplars) == 3
+        assert len(board.prompts.of(image).marks) == 1
+        with pytest.raises(IndexError):
+            board.remove_drawings(image, [3], [])
+
     def test_mark_needs_a_positive_point_or_a_box(self) -> None:
         with pytest.raises(ValueError):
             ObjectMark(FrameKey(Path("/media/a.jpg")), 1, "car", negative_points=((1.0, 1.0),))

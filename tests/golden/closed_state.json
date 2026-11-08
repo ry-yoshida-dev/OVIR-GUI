@@ -919,6 +919,8 @@
     "#000075"
   ],
   "picture_prompt": {
+    "can_redo": false,
+    "can_undo": false,
     "exemplars": [],
     "frame": null,
     "marks": [],
