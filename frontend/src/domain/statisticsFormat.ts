@@ -19,7 +19,8 @@ export function formatShare(share: number | null): string {
   const percent = share * 100;
   if (percent === 0) return "0%";
   if (percent < 0.1) return "<0.1%";
-  return `${percent < 10 ? percent.toFixed(1) : Math.round(percent).toString()}%`;
+  const oneDecimal = percent.toFixed(1);
+  return `${Number(oneDecimal) < 10 ? oneDecimal : Math.round(percent).toString()}%`;
 }
 
 /**
