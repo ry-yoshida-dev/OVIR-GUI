@@ -52,13 +52,13 @@ class MediaRoutes:
         async def open_media(body: PathsBody) -> JsonObject:
             workspace: Workspace = context.workspace
             paths: list[Path] = [Path(path).expanduser() for path in body.paths]
-            workspace.open_paths(paths)
+            workspace.media_list.open_paths(paths)
             await context.media_opened()
             return {}
 
         @router.post("/media/close")
         async def close_media(body: PathsBody) -> JsonObject:
-            context.workspace.close_media([Path(path) for path in body.paths])
+            context.workspace.media_list.close([Path(path) for path in body.paths])
             return {}
 
         @router.post("/media/show")
@@ -92,7 +92,7 @@ class MediaRoutes:
                 )
                 for upload_file in files
             ]
-            workspace.open_paths(saved_paths, is_first_shown)
+            workspace.media_list.open_paths(saved_paths, is_first_shown)
             await context.media_opened()
             return {}
 

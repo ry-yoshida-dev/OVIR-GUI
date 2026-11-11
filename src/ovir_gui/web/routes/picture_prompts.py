@@ -59,14 +59,14 @@ class PicturePromptRoutes:
                 bottom=corners.bottom,
                 is_positive=body.is_positive,
             )
-            workspace.edit_picture_prompts(frame_key, lambda board: board.add_exemplar(box))
+            workspace.picture_prompts.edit(frame_key, lambda board: board.add_exemplar(box))
             return {}
 
         @router.post("/prompts/exemplars/remove")
         async def remove_exemplar(body: ExemplarRemovalBody) -> JsonObject:
             workspace: Workspace = context.workspace
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
-            workspace.edit_picture_prompts(frame_key, lambda board: board.remove_exemplar(frame_key, body.index))
+            workspace.picture_prompts.edit(frame_key, lambda board: board.remove_exemplar(frame_key, body.index))
             return {}
 
         @router.put("/prompts/marks")
@@ -87,7 +87,7 @@ class PicturePromptRoutes:
                 negative_points=self._points_of(body.negative_points),
                 box=None if body.box is None else BoxCorners.of(body.box).xyxy,
             )
-            workspace.edit_picture_prompts(frame_key, lambda board: board.set_mark(mark))
+            workspace.picture_prompts.edit(frame_key, lambda board: board.set_mark(mark))
             return {"object_id": object_id}
 
         @router.post("/prompts/marks/remove")
@@ -95,19 +95,19 @@ class PicturePromptRoutes:
             workspace: Workspace = context.workspace
             path: Path = Path(body.path)
             if body.frame is None and workspace.media_item(path).is_video:
-                workspace.edit_picture_prompts(
+                workspace.picture_prompts.edit(
                     workspace.media_item(path).key_at(None), lambda board: board.remove_object(path, body.object_id)
                 )
                 return {}
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
-            workspace.edit_picture_prompts(frame_key, lambda board: board.remove_mark(frame_key, body.object_id))
+            workspace.picture_prompts.edit(frame_key, lambda board: board.remove_mark(frame_key, body.object_id))
             return {}
 
         @router.post("/prompts/remove")
         async def remove_drawings(body: DrawingsRemovalBody) -> JsonObject:
             workspace: Workspace = context.workspace
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
-            workspace.edit_picture_prompts(
+            workspace.picture_prompts.edit(
                 frame_key, lambda board: board.remove_drawings(frame_key, body.exemplar_indices, body.object_ids)
             )
             return {}
@@ -116,17 +116,17 @@ class PicturePromptRoutes:
         async def clear_picture(body: PictureBody) -> JsonObject:
             workspace: Workspace = context.workspace
             frame_key: FrameKey = self._frame_key_of(workspace, body.path, body.frame)
-            workspace.edit_picture_prompts(frame_key, lambda board: board.clear_picture(frame_key))
+            workspace.picture_prompts.edit(frame_key, lambda board: board.clear_picture(frame_key))
             return {}
 
         @router.post("/prompts/undo")
         async def undo(body: PathBody) -> JsonObject:
-            context.workspace.undo_picture_prompts(Path(body.path))
+            context.workspace.picture_prompts.undo(Path(body.path))
             return {}
 
         @router.post("/prompts/redo")
         async def redo(body: PathBody) -> JsonObject:
-            context.workspace.redo_picture_prompts(Path(body.path))
+            context.workspace.picture_prompts.redo(Path(body.path))
             return {}
 
         return router

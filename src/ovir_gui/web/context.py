@@ -87,7 +87,7 @@ class WebContext:
         Wait until every file being opened has been added to the workspace.
         """
         opened: asyncio.Future[None] = asyncio.get_running_loop().create_future()
-        self.workspace.when_media_opened(lambda: None if opened.done() else opened.set_result(None))
+        self.workspace.media_list.when_opened(lambda: None if opened.done() else opened.set_result(None))
         await opened
 
     def detach(self) -> None:

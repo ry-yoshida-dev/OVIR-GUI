@@ -1,3 +1,4 @@
+from .classes.picture_prompt_editor import PicturePromptEditor
 from .classes.prompt_assembler import PromptAssembler
 from .classes.prompt_preparation import PromptPreparation
 from .classes.workbench import ClassWorkbench
@@ -24,6 +25,7 @@ from .messages.observer import WorkspaceObserver
 from .messages.status_notifier import StatusNotifier
 from .messages.topic import WorkspaceTopic
 from .open_media.addition import OpenedMedia
+from .open_media.media_list import MediaList
 from .playback.preparer import PlaybackPreparer
 from .playback.state import PlaybackState
 from .recognition.media_state import MediaState
@@ -59,12 +61,14 @@ __all__ = [
     "JobControl",
     "JobPurpose",
     "JobSummary",
+    "MediaList",
     "MediaState",
     "MediaStatus",
     "ModelChoice",
     "Notice",
     "NoticeLevel",
     "OpenedMedia",
+    "PicturePromptEditor",
     "PlaybackPreparer",
     "PlaybackState",
     "PromptAssembler",

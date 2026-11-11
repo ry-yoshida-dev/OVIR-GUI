@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable
 from pathlib import Path
 from typing import ClassVar
 
@@ -9,17 +9,16 @@ from ..inference import (
     ModelProfile,
     ModelSelection,
     ModelSelector,
-    RecognitionModel,
     RecognizerSession,
     WeightsStorage,
 )
-from ..media import FrameKey, InferenceMode, MediaCollection, MediaItem, VideoSampling
-from ..prompting import PicturePromptBoard, PicturePrompts
+from ..media import FrameKey, InferenceMode, MediaItem, VideoSampling
+from ..prompting import PicturePrompts
 from ..results import RecognitionTask
 from ..results.in_memory import ResultLibrary
-from ..storage import ResultsSnapshot, SessionMedia
+from ..storage import ResultsSnapshot
 from ..vocabulary import ClassDefinition
-from ..wording import CountedNoun
+from .classes.picture_prompt_editor import PicturePromptEditor
 from .classes.prompt_assembler import PromptAssembler
 from .classes.workbench import ClassWorkbench
 from .exporting.coordinator import ExportCoordinator
@@ -30,7 +29,7 @@ from .jobs.progress import RunProgress
 from .jobs.runner import InferenceRunner
 from .messages.status_notifier import StatusNotifier
 from .messages.topic import WorkspaceTopic
-from .open_media.addition import OpenedMedia
+from .open_media.media_list import MediaList
 from .playback.preparer import PlaybackPreparer
 from .recognition.model_choice import ModelChoice
 from .recognition.settings import RecognitionSettings
@@ -100,8 +99,6 @@ class Workspace:
             task=self.DEFAULT_TASK if self.DEFAULT_TASK in model_selector.tasks else model_selector.tasks[0]
         )
         self._scheduler: TaskScheduler = scheduler
-        self._opening_count: int = 0
-        self._opening_waiters: list[Callable[[], None]] = []
         self._library: ResultLibrary = self._load_results()
         self._results_save: DeferredSave[ResultsSnapshot] = DeferredSave(
             scheduler,
@@ -209,6 +206,26 @@ class Workspace:
             self._profiles,
             self._session,
             self._models.current_model,
+        )
+        self._media_list: MediaList = MediaList(
+            scheduler,
+            self._working,
+            self._settings,
+            self._session,
+            self._notifier,
+            self.show,
+            self._jobs.resume_background,
+            lambda: self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS),
+        )
+        self._picture_prompts: PicturePromptEditor = PicturePromptEditor(
+            self._working,
+            self._settings,
+            self._workbench,
+            stores.picture_prompt_store,
+            self._planner,
+            self._notifier,
+            self._models.current_model,
+            self._jobs.restart_background,
         )
         self._session.apply_stored()
         self._library.apply_aggregation(self._aggregation())
@@ -333,6 +350,30 @@ class Workspace:
             Profiles of the stored results.
         """
         return self._profiles
+
+    @property
+    def media_list(self) -> MediaList:
+        """
+        Opening and closing the images and videos of the current task.
+
+        Returns
+        -------
+        MediaList
+            Media list of the workspace.
+        """
+        return self._media_list
+
+    @property
+    def picture_prompts(self) -> PicturePromptEditor:
+        """
+        Exemplar boxes and object marks drawn on the pictures of the current task, with undo and redo.
+
+        Returns
+        -------
+        PicturePromptEditor
+            Editor of the drawings.
+        """
+        return self._picture_prompts
 
     @property
     def media(self) -> tuple[MediaItem, ...]:
@@ -523,64 +564,6 @@ class Workspace:
         """
         return self._jobs.is_busy
 
-    def open_paths(self, paths: Iterable[Path], is_first_shown: bool = True) -> None:
-        """
-        Add image and video files, or every one inside directories, to the open media.
-
-        The files are found and read off the owning thread, so a large or slow folder never holds up the other
-        requests; ``when_media_opened`` tells when they are added.
-
-        Parameters
-        ----------
-        paths : Iterable[Path]
-            Files and directories.
-        is_first_shown : bool, optional
-            Whether the first added file is shown; otherwise only when nothing was shown.
-        """
-        self._open_in_background(tuple(paths), lambda opened: self._add_opened(opened, is_first_shown))
-
-    def when_media_opened(self, callback: Callable[[], None]) -> None:
-        """
-        Run a callback on the owning thread once every file being opened has been added; at once when none is.
-
-        Parameters
-        ----------
-        callback : Callable[[], None]
-            Work to run.
-        """
-        if self._opening_count == 0:
-            callback()
-            return
-        self._opening_waiters.append(callback)
-
-    def restore_session(self) -> None:
-        """
-        Open the media the current task had open in the last session again and show the picture shown then; missing
-        files are skipped. The media of the other tasks are opened when they are shown.
-        """
-        self._open_remembered_media()
-
-    def close_media(self, paths: Iterable[Path]) -> None:
-        """
-        Close files, keeping their stored results; when the shown file is closed, the next remaining one is shown.
-
-        Parameters
-        ----------
-        paths : Iterable[Path]
-            Open files to close; others are ignored.
-        """
-        closed: frozenset[Path] = frozenset(paths) & frozenset(self._working.media)
-        if not closed:
-            return
-        current: FrameKey | None = self._working.current_key
-        if current is not None and current.path in closed:
-            following: Path | None = self._working.next_remaining_path(closed)
-            self._working.show_key(None if following is None else self._working.media[following].key_at(0))
-        for path in closed:
-            del self._working.media[path]
-        self._notifier.inform(f"Closed {CountedNoun('file').of(len(closed))}.")
-        self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
-
     def show(self, path: Path, frame_index: int | None = None, is_playing: bool = False) -> None:
         """
         Show an open image, or a frame of an open video; it is recognized first when it has no up-to-date result.
@@ -686,7 +669,7 @@ class Workspace:
         self._profiles.restore_comparison(kept_comparison)
         self._settings_changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
         if not is_media_kept:
-            self._open_remembered_media()
+            self._media_list.restore_session()
 
     def edit_classes(self, edit: Callable[[ClassWorkbench], object]) -> None:
         """
@@ -720,161 +703,12 @@ class Workspace:
         edit(self._workbench)
         self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.CLASS_SETS)
 
-    def edit_picture_prompts(self, frame_key: FrameKey, edit: Callable[[PicturePromptBoard], object]) -> None:
-        """
-        Change the exemplar boxes or object marks drawn on a picture for the current task, remember them, and
-        recognize the shown picture again when the chosen model reads them there.
-
-        Parameters
-        ----------
-        frame_key : FrameKey
-            Picture the edit is drawn on.
-        edit : Callable[[PicturePromptBoard], object]
-            Edit applied to the drawings; an error it raises is passed on and nothing else happens.
-
-        Raises
-        ------
-        KeyError
-            If the picture's file is not open.
-        """
-        self.media_item(frame_key.path)
-        self._workbench.picture_board.edit(frame_key.path, edit)
-        self._picture_prompts_changed(frame_key)
-
-    def undo_picture_prompts(self, path: Path) -> None:
-        """
-        Bring back the drawings of a media file as they were before its last edit, as ``edit_picture_prompts`` would.
-
-        Parameters
-        ----------
-        path : Path
-            Open image or video.
-
-        Raises
-        ------
-        KeyError
-            If the file is not open.
-        IndexError
-            If the file has no edit to undo.
-        """
-        self.media_item(path)
-        self._workbench.picture_board.undo(path)
-        self._picture_prompts_changed(self._shown_key_of(path))
-
-    def redo_picture_prompts(self, path: Path) -> None:
-        """
-        Apply the last undone drawing edit of a media file again, as ``edit_picture_prompts`` would.
-
-        Parameters
-        ----------
-        path : Path
-            Open image or video.
-
-        Raises
-        ------
-        KeyError
-            If the file is not open.
-        IndexError
-            If the file has no undone edit.
-        """
-        self.media_item(path)
-        self._workbench.picture_board.redo(path)
-        self._picture_prompts_changed(self._shown_key_of(path))
-
-    def _shown_key_of(self, path: Path) -> FrameKey:
-        current: FrameKey | None = self._working.current_key
-        return current if current is not None and current.path == path else self.media_item(path).key_at(None)
-
-    def _picture_prompts_changed(self, frame_key: FrameKey) -> None:
-        self._notifier.save_reporting_failure(
-            lambda: self._stores.picture_prompt_store.save(self._workbench.picture_prompts_by_task),
-            "Could not remember the drawings",
-        )
-        model: RecognitionModel = self._models.current_model()
-        is_drawing_read: bool = any(kind.is_drawn_on_picture for kind in model.supported_query_kinds)
-        is_shown: bool = frame_key == self._working.current_key
-        if self._settings.is_auto_inference and is_drawing_read and not model.is_sequential and is_shown:
-            self._working.requested_key = frame_key
-            self._planner.unpin()
-        self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
-        self._jobs.restart_background()
-
     def save_now(self) -> None:
         """
         Write the results and the session at once on the calling thread, e.g. when the application quits.
         """
         self._notifier.save_reporting_failure(self._results_save.save_now, "Could not save the results")
         self._session.save()
-
-    def _open_remembered_media(self) -> None:
-        remembered: SessionMedia | None = self._session.take_unopened_media(self._settings.task)
-        if remembered is None:
-            return
-        self._open_in_background(remembered.paths, lambda opened: self._add_remembered(remembered, opened))
-
-    def _add_remembered(self, remembered: SessionMedia, opened: OpenedMedia) -> None:
-        existing_count: int = len(remembered.paths) - opened.missing_count
-        if existing_count == 0:
-            self._notifier.inform(f"None of the {opened.missing_count} files of the last session exist any more.")
-            return
-        self._add_opened(opened, True)
-        if remembered.current_path is not None and remembered.current_path in self._working.media:
-            self.show(remembered.current_path, remembered.current_frame_index)
-        missing_note: str = f" ({opened.missing_count} missing skipped)" if opened.missing_count else ""
-        self._notifier.inform(f"Restored {CountedNoun('file').of(existing_count)} of the last session{missing_note}.")
-
-    def _open_in_background(self, paths: Sequence[Path], add: Callable[[OpenedMedia], None]) -> None:
-        task: RecognitionTask = self._settings.task
-        known_paths: frozenset[Path] = frozenset(self._working.media)
-        self._opening_count += 1
-        self._scheduler.run_blocking(
-            lambda: OpenedMedia.read(paths, known_paths),
-            lambda opened: self._finish_opening(lambda: self._add_if_task_kept(task, opened, add)),
-            lambda error: self._finish_opening(lambda: self._notifier.inform(f"Could not open the files: {error}")),
-        )
-
-    def _add_if_task_kept(self, task: RecognitionTask, opened: OpenedMedia, add: Callable[[OpenedMedia], None]) -> None:
-        if task is not self._settings.task:
-            self._notifier.inform(f"Files opened for {task.value} were not added, as the task changed meanwhile.")
-            return
-        add(opened)
-
-    def _finish_opening(self, apply: Callable[[], None]) -> None:
-        try:
-            apply()
-        finally:
-            self._opening_count -= 1
-            if self._opening_count == 0:
-                waiters: list[Callable[[], None]] = self._opening_waiters
-                self._opening_waiters = []
-                for waiter in waiters:
-                    waiter()
-
-    def _add_opened(self, opened: OpenedMedia, is_first_shown: bool) -> None:
-        collection: MediaCollection = opened.collection
-        missing_note: str = f" ({opened.missing_count} not found)" if opened.missing_count else ""
-        added: list[MediaItem] = [item for item in opened.items if item.path not in self._working.media]
-        if not added and not opened.unreadable:
-            self._notifier.inform(collection.describe(f"No new images or videos found{missing_note}"))
-            return
-        for item in added:
-            self._working.media[item.path] = item
-        if added and (is_first_shown or self._working.current_key is None):
-            self._working.show_key(added[0].key_at(0))
-        video_count: int = sum(1 for item in added if item.is_video)
-        image_count: int = len(added) - video_count
-        parts: list[str] = []
-        if image_count:
-            parts.append(CountedNoun("image").of(image_count))
-        if video_count:
-            parts.append(CountedNoun("video").of(video_count))
-        headline: str = f"Added {' and '.join(parts)}" if parts else "Added nothing"
-        if opened.unreadable:
-            headline = f"{headline}; could not open {', '.join(opened.unreadable)}"
-        self._notifier.inform(collection.describe(f"{headline}{missing_note}"))
-        self._session.save()
-        self._notifier.changed(WorkspaceTopic.STATE, WorkspaceTopic.RESULTS)
-        self._jobs.resume_background()
 
     def _load_results(self) -> ResultLibrary:
         try:

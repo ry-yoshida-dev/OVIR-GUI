@@ -144,9 +144,9 @@ class WebApplication:
         workspace: Workspace = Workspace(self._model_selector, self._stores, scheduler, self._session)
         self._context.attach(workspace)
         if self._initial_paths:
-            workspace.open_paths(self._initial_paths)
+            workspace.media_list.open_paths(self._initial_paths)
         else:
-            workspace.restore_session()
+            workspace.media_list.restore_session()
         await self._context.media_opened()
         try:
             yield
