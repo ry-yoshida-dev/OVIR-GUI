@@ -51,6 +51,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm --prefix lint ci --ignore-scripts
       - run: npm run lint
+      - run: npm test
       - run: npm run build
       - name: Committed build matches the sources
         run: |
