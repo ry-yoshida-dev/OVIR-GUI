@@ -237,7 +237,7 @@ class ClassWorkbench:
         """
         phrases: tuple[str, ...] = ClassDefinition.split_phrases(text)
         if not phrases:
-            raise ValueError("Type at least one phrase.")
+            raise ValueError("Type at least one prompt.")
         self._require_class(class_index)
         self._current.vocabulary.insert_phrases(class_index, position, phrases)
         self._current.is_edited = True

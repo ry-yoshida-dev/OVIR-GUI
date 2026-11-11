@@ -31,7 +31,7 @@ const REVIEW_MODES: Record<ReviewModeValue, ReviewMode> = {
     maximum: 1,
     highlight: "at-or-above",
     valueHint:
-      "Cosine similarity of each picture and the best phrase of its top class, before the scores are compared across classes.",
+      "Cosine similarity of each picture and the best prompt of its top class, before the scores are compared across classes.",
   },
   overlap: {
     value: "overlap",

@@ -90,7 +90,7 @@ class SegmentationMode(Enum):
             case SegmentationMode.OBJECT_TRACKING:
                 return "Track marked objects"
             case SegmentationMode.CONCEPT_TRACKING:
-                return "Track by phrases or examples"
+                return "Track by prompts or examples"
 
     @property
     def backend_prefix(self) -> str:

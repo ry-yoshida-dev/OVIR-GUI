@@ -321,7 +321,7 @@ class SegmentationModel(RecognitionModel):
         if QueryKind.EXEMPLAR in self.supported_query_kinds:
             descriptions.append(
                 "Draw exemplar boxes on a picture to show (+) or exclude (−) a class there; "  # noqa: RUF001
-                + "a class without phrases is segmented from its boxes alone."
+                + "a class without text prompts is segmented from its boxes alone."
             )
         if self._mark_model is not None:
             descriptions.append(f"Objects drawn on a picture are segmented too: {self._mark_model.usage_description}")

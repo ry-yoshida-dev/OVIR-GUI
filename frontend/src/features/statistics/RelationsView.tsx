@@ -27,7 +27,7 @@ export function RelationsView({ statistics, classColors }: RelationsViewProps) {
       {statistics.overlaps !== null && (
         <StatisticsCard
           title="Overlapping classes"
-          description={`Kept findings of two classes covering the same object (IoU ≥ ${statistics.overlap_threshold}). Frequent pairs point to phrases that describe the same things.`}
+          description={`Kept findings of two classes covering the same object (IoU ≥ ${statistics.overlap_threshold}). Frequent pairs point to prompts that describe the same things.`}
         >
           <div className="relation-layout">
             <PairRanking

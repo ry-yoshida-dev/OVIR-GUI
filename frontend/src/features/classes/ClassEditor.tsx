@@ -228,7 +228,7 @@ export function ClassEditor({
       label: "Set name",
       initialValue: classSet.name,
       confirmLabel: "Save",
-      hint: `Saved with the phrases and reference images in ${classSet.directory}.`,
+      hint: `Saved with the prompts and reference images in ${classSet.directory}.`,
     });
     if (name === null) return;
     if (classSet.names.includes(name) && name !== classSet.name) {
@@ -341,7 +341,7 @@ export function ClassEditor({
       <div className="tree-row">
         <span className="toggle" />
         <span className="swatch" style={{ background: SWATCH_FALLBACK_COLOR }} />
-        {renderEditing("class or class: phrase, phrase")}
+        {renderEditing("class or class: prompt, prompt")}
       </div>
     ) : null;
 
@@ -460,7 +460,7 @@ export function ClassEditor({
                     {editing?.kind === "new-phrase" &&
                       editing.classIndex === classIndex &&
                       editing.position === phraseIndex && (
-                        <div className="tree-row child">{renderEditing("phrase, phrase")}</div>
+                        <div className="tree-row child">{renderEditing("prompt, prompt")}</div>
                       )}
                     <PhraseRow
                       phrase={phrase}
@@ -475,7 +475,7 @@ export function ClassEditor({
                         editing?.kind === "rename-phrase" &&
                         editing.classIndex === classIndex &&
                         editing.phraseIndex === phraseIndex
-                          ? renderEditing("phrase", phrase)
+                          ? renderEditing("prompt", phrase)
                           : null
                       }
                       onSelect={() => setSelected({ kind: "phrase", classIndex, phraseIndex })}
@@ -486,7 +486,7 @@ export function ClassEditor({
                     />
                   </div>
                 ))}
-              {isAddingPhraseAtEnd && <div className="tree-row child">{renderEditing("phrase, phrase")}</div>}
+              {isAddingPhraseAtEnd && <div className="tree-row child">{renderEditing("prompt, prompt")}</div>}
               {isExpanded &&
                 entry.references.map((reference) => (
                   <ReferenceRow
@@ -553,7 +553,7 @@ export function ClassEditor({
               setSelected(null);
               setEditing({ kind: "new-class", position: classes.length });
             }}
-            title="Add a class; write 'class: phrase, phrase' to give it several phrases"
+            title="Add a class; write 'class: prompt, prompt' to give it several prompts"
           >
             + Add Class
           </button>

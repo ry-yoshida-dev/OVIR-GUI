@@ -22,8 +22,8 @@ const PROMPT_INPUTS: PromptInput[] = [
   },
   {
     kind: "text",
-    label: "Phrases",
-    hint: "Classes are found from their phrases",
+    label: "Text prompts",
+    hint: "Classes are found from their text prompts",
   },
   {
     kind: "visual",

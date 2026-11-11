@@ -64,7 +64,7 @@ class TextTemplateLibrary:
             If a template is repeated, is the plain template or does not have exactly one bare ``{}``.
         """
         if self.PLAIN_TEMPLATE in templates:
-            raise ValueError("The plain template '{}' is not saved; choose no template to use phrases as written.")
+            raise ValueError("The plain template '{}' is not saved; choose no template to use prompts as written.")
         if templates:
             TextTemplates(templates)
         self._templates = templates

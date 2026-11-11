@@ -40,11 +40,11 @@ class ClassDefinition:
             )
         text_queries: tuple[str, ...] = tuple(self.normalize(text_query) for text_query in self.text_queries)
         if any(not text_query for text_query in text_queries):
-            raise ValueError(f"Phrases of '{name}' must not be blank.")
+            raise ValueError(f"Prompts of '{name}' must not be blank.")
         if any(self.PHRASE_SEPARATOR in text_query for text_query in text_queries):
-            raise ValueError(f"Phrases of '{name}' must not contain '{self.PHRASE_SEPARATOR}'.")
+            raise ValueError(f"Prompts of '{name}' must not contain '{self.PHRASE_SEPARATOR}'.")
         if len({text_query.casefold() for text_query in text_queries}) != len(text_queries):
-            raise ValueError(f"Phrases of '{name}' must be unique: {', '.join(text_queries)}")
+            raise ValueError(f"Prompts of '{name}' must be unique: {', '.join(text_queries)}")
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "text_queries", text_queries)
 

@@ -408,14 +408,14 @@ class ReferenceBoard:
         if has_references:
             return (
                 f"'{class_name}' is queried only by reference images, which the selected model does not take. "
-                + "Add a phrase to the class or choose a model that takes image prompts."
+                + "Add a text prompt to the class or choose a model that takes image prompts."
             )
         if is_exemplar_supported:
             return (
-                f"'{class_name}' has no phrase and no exemplar box. "
-                + "Add a phrase to the class or draw an exemplar box of it on a picture."
+                f"'{class_name}' has no text prompt and no exemplar box. "
+                + "Add a text prompt to the class or draw an exemplar box of it on a picture."
             )
-        return f"'{class_name}' has no phrase and no reference image. Add a phrase to the class."
+        return f"'{class_name}' has no text prompt and no reference image. Add a text prompt to the class."
 
     @staticmethod
     def _require_inside(box: ReferenceBox, image: Image.Image) -> None:

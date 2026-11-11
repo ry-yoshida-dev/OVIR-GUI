@@ -143,7 +143,7 @@ class ConceptTrackingModel(RecognitionModel):
 
     @property
     def usage_description(self) -> str:
-        return "Detects every instance of the phrases and follows it through the video."
+        return "Detects every instance of the prompts and follows it through the video."
 
     @property
     def threshold_controls(self) -> ThresholdControls:

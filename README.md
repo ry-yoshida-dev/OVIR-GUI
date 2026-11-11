@@ -17,15 +17,17 @@ it.
 ## Installation
 
 ```bash
-pip install -e .
+uv sync                # the dependency versions tested in CI, from uv.lock
 ```
+
+`pip install -e .` also works, but takes the newest commit of every dependency installed from GitHub.
 
 YOLO-World and YOLOE run on [Ultralytics](https://www.ultralytics.com/license), which is licensed under AGPL-3.0, so it
 is not installed by default. Install it only if your use complies with AGPL-3.0 or you hold an Ultralytics Enterprise
 License:
 
 ```bash
-pip install -e ".[ultralytics]"
+uv sync --extra ultralytics
 ```
 
 You are asked to accept the license the first time one of these models is chosen; delete `license_consent.json` in the
@@ -37,6 +39,8 @@ Videos the browser cannot play (such as ProRes) are re-encoded with FFmpeg. On m
 [gyan.dev](https://github.com/GyanD/codexffmpeg). Without FFmpeg such videos are shown as frames decoded by the server.
 
 ## Usage
+
+Run the commands below in the environment of the installation (`uv run ovir-gui ...`, or after activating `.venv`).
 
 ```bash
 ovir-gui ~/footage            # open a folder of images and videos
