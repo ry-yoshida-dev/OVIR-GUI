@@ -11,6 +11,10 @@ or drawn as reference boxes on example images, and every model shipped as a pres
 played with the [VideoPlayerUI](https://github.com/ry-yoshida-dev/VideoPlayerUI) player, results are exported in
 common annotation formats, and other web applications can embed the interface.
 
+![Detection of six text prompts with Grounding DINO, showing the boxes on one image and the confidence of every class across a folder](docs/screenshot.webp)
+
+<sub>Photo: [Retired electrician](https://commons.wikimedia.org/wiki/File:Moscow_bicycle_parade_2026-05-24_pedestrians_10.jpg), CC0, via Wikimedia Commons.</sub>
+
 The server runs on this machine, and only the browser opening the printed address (it carries an access token) can use
 it.
 
